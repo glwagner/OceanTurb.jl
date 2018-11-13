@@ -14,12 +14,17 @@ end
 function Forcing(t; shortwave=nothing, longwave=nothing, latentflux=nothing, sensibleflux=nothing,
                     stress_x=nothing, stress_y=nothing, precip=nothing, evap=nothing)
 
-  for fld in fieldnames(Forcing)
-    eval(fld) == nothing && @eval $fld = 0t
-    length(t) == length(eval(fld)) || error("All forcing fields must have length(t)!")
-  end
+  nt = length(t)
+  if shortwave == nothing; shortwave = 0t; end
+  if longwave == nothing; longwave = 0t; end
+  if latentflux == nothing; latentflux = 0t; end
+  if sensibleflux == nothing; sensibleflux = 0t; end
+  if stress_x == nothing; stress_x = 0t; end
+  if stress_y == nothing; stress_y = 0t; end
+  if precip == nothing; precip = 0t; end
+  if evap == nothing; evap = 0t; end
 
-  Forcing(length(t), eval.(fieldnames(Forcing)))
+  Forcing(nt, t, shortwave, longwave, latentflux, sensibleflux, stress_x, stress_y, precip, evap)
 end
 
 iskey(key, c) = key in keys(c)

@@ -17,3 +17,8 @@ const p₀ = 1e5      # Reference pressure [Pa]. Not from Table 1.2 but text its
 const αᵥ = 2.07e-4  # Volumetric coefficient of thermal expansion for water [K⁻¹].
 
 density(T, S, p=1e5) = ρ₀ * (1 - βᵀ*(T-T₀) + βˢ*(S-S₀) + βᵖ*(p-p₀))
+
+function ρ!(p::Profile)
+  @. p.ρ = density(p.T, p.S)
+  nothing
+end

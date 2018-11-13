@@ -13,21 +13,53 @@ function testexample(H=200, nz=200)
   nz == examplemodel.profile.nz
 end
 
-function unstablemodel(H=100, z1=20, z2=40, nz=100)
-  examplemodel = loadexample(H, nz)
-  p = examplemodel.profile
-  for i = 1:nz
-    if p.z[i] < z2
-      p.ρ[i] = 2ρ₀
-    elseif p.z[i] < z1
-      p.ρ[i] = 0.5*ρ₀
-    else
-      p.ρ[i] = ρ₀
-    end
-  end
-  nothing
+function testconvect1()
+  H, nz = 1, 4
+  model = TestModel(H, nz)
+  p = model.profile
+  # Unstable profile.
+  p.ρ[4] = 4
+  p.ρ[3] = 2
+  p.ρ[2] = 5
+  p.ρ[1] = 5
+
+  ρanswer = zeros(nz)
+  ρanswer[4] = 3
+  ρanswer[3] = 3
+  ρanswer[2] = 5
+  ρanswer[1] = 5
+
+  convect!(p)
+  p.ρ == ρanswer
 end
+
+function testconvect2()
+  H, nz = 1, 4
+  model = TestModel(H, nz)
+  p = model.profile
+  # Unstable profile.
+  p.ρ[4] = 6
+  p.ρ[3] = 2
+  p.ρ[2] = 2
+  p.ρ[1] = 2
+
+  p.T .= 1:4 # 1+2+3+4 = 10
+  Tanswer = 2.5*fill(1, (nz,))
+
+  ρanswer = zeros(nz)
+  ρanswer[4] = 3
+  ρanswer[3] = 3
+  ρanswer[2] = 3
+  ρanswer[1] = 3
+
+  convect!(p)
+  isapprox(p.ρ, ρanswer) && isapprox(Tanswer, p.T)
+end
+
+
 
 @test testzeros(Float64)
 @test testzeros(Float32)
 @test testexample()
+@test testconvect1()
+@test testconvect2()

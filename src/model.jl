@@ -1,30 +1,30 @@
-struct Profile{T}
+struct Profile{El, A}
   nz::Int
-  dz::Float64
-  z::T
-  u::T
-  v::T     
-  T::T     
-  S::T     
-  ρ::T  
-  dudz::T
-  dvdz::T
-  dUdz::T
-  dρdz::T  
-  Ri::T
+  dz::El
+  z::A
+  u::A
+  v::A     
+  T::A     
+  S::A     
+  ρ::A  
+  dudz::A
+  dvdz::A
+  dUdz::A
+  dρdz::A  
+  Ri::A
 end
 
-function Profile(Tel, H, nz)
-  z = collect(Tel, range(-H, length=nz, stop=0))
-  dz = z[2]-z[1]
-  @zeros Tel (nz,) u v T S ρ dudz dvdz dUdz dρdz Ri
-  Profile(nz, Float64(dz), z, u, v, T, S, ρ, dudz, dvdz, dUdz, dρdz, Ri)
+function Profile(El, H, nz)
+  dz = H/nz
+  z = collect(El, range(-H+dz/2, step=dz, stop=-dz/2))
+  @zeros El (nz,) u v T S ρ dudz dvdz dUdz dρdz Ri
+  Profile(nz, dz, z, u, v, T, S, ρ, dudz, dvdz, dUdz, dρdz, Ri)
 end
 
 Profile(H, nz) = Profile(Float64, H, nz)
 
-struct Model{T}
-  profile::Profile{T} 
+struct Model{El, T}
+  profile::Profile{El, T} 
   forcing::Forcing{T}
 end
 

@@ -4,16 +4,21 @@ export
   Forcing,
   Profile,
   Model,
-
   density,
-
+  convect!,
   @zeros,
-  loadexample
+  loadexample,
+  TestModel
 
 using
   JLD2
 
-const g = 9.81
+using Statistics: mean
+
+const DEBUG = true
+
+const g = 9.807
+const Cₚ = 3900.0
 
 macro zeros(T, dims, vars...)
   expr = Expr(:block)
@@ -24,6 +29,7 @@ end
 include("forcing.jl")
 include("model.jl")
 include("eos.jl")
+include("mixing.jl")
 
 function loadexample(H=400, nz=400)
   datapath = joinpath(dirname(pathof(PriceWellerPinkel)), "..", "data")
@@ -33,5 +39,6 @@ function loadexample(H=400, nz=400)
   Model(forcing, H, nz) 
 end
 
+TestModel(H, nz, nt=4) = Model(Forcing(zeros(nt)), H, nz) 
 
 end # module
