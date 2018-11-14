@@ -19,20 +19,23 @@ function convect!(prof::Profile)
   dρdz = prof.dρdz
   ρ = prof.ρ
 
+  imix = nothing
   while unstable(prof)
-    _convect!(prof)
+    imix = _convect!(prof)
     dz!(prof, :ρ)
   end
-  nothing # exits with dρdz calculated.
+
+  imix # exits with dρdz calculated.
 end
 
 function _convect!(prof)
   imix = prof.nz-1
   while imix != 1 && prof.ρ[imix] >= prof.ρ[prof.nz]
+    # keep track of running average
     imix -= 1 # quest downward
   end
   homogenize!(prof, imix) # Mix the profile from i to nz.
-  nothing
+  imix
 end
 
 function homogenize!(prof, ih)
@@ -45,12 +48,12 @@ function homogenize!(prof, ih)
 end
 
 function bulk_richardson(prof, ih)
-   h = prof.z[ih]
-  ∂ρ = (prof.ρ[ih] - prof.ρ[ih-1]) / prof.dz  
-  ∂u = (prof.u[ih] - prof.u[ih-1]) / prof.dz
-  ∂v = (prof.v[ih] - prof.v[ih-1]) / prof.dz
-  ∂Usq = ∂u^2 + ∂v^2
-  -g*∂ρ*h / (ρ₀*∂Usq) # should be positive...
+   h = -prof.z[ih]
+  Δρ = prof.ρ[ih] - prof.ρ[ih-1] 
+  Δu = prof.u[ih] - prof.u[ih-1]
+  Δv = prof.v[ih] - prof.v[ih-1]
+  ΔUsq = Δu^2 + Δv^2
+  -g*Δρ*h / (ρ₀*ΔUsq) # should be positive...
 end
 
 function grad_richardson!(prof)
@@ -76,8 +79,6 @@ function dz!(prof, ss::Symbol)
   dsdz[1] = 0
   nothing
 end
-
-
 
 # positive dρdz (inc z, inc ρ) => unstable
 

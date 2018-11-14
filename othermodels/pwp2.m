@@ -93,26 +93,35 @@ for t=t0+dt:dt:t0+tmax
   [qi,ql,lgt]=heating(t,qdm);
   [qip,qlp,lgtp]=heating(t+dt,qdm);
 
-  T=T+qi*ab*dts;
-  T(1)=T(1)+ql/rhocpw/dz*dts;
+  % Forward Euler timestep for temperature
+  T=T+qi*ab*dts; % flux divergence of shortwave solar insolation
+  T(1)=T(1)+ql/rhocpw/dz*dts; % flux divergence of longwave solar insolation 
 
-  [mixmat,ind]=cadj(T);
+  [mixmat,ind]=cadj(T); % convective adjustment. mixmat: homogenizer; ind: mixed layer depth index
   T=mixmat*T;
   u=mixmat*u;
   v=mixmat*v;
 
-  mld=ind*dz;
+  mld=ind*dz; % mixed layer depth
 
   ca_cnt=[ca_cnt,ind];
 
-  tau=tau0*24*3600/rho0/mld*dt;
-  ut=u*ca+v*sa;
+
+  tau=tau0*24*3600/rho0/mld*dt; % constant wind stress
+
+  ut=u*ca+v*sa; % u at next timestep (analytical integration of u_t + im f u = 0)
+
+  % Update v
   v=v*ca-u*sa;
   u=ut;
+
+  % distribute windstress over mixed layer (may need to divide by mld)
   du=tau*(z > -mld);
   u=u+du;
+
   ut=u*ca+v*sa;
   v=v*ca-u*sa;
+
   u=ut;
 
   [mixmat,ind]=bulkri(alphag*T,u,v,ind,dz);
