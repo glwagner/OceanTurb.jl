@@ -14,6 +14,7 @@ end
 
 unstable(profile) = any(s -> s>0, profile.dρdz)
 
+#=
 function convect!(prof::Profile)
   dz!(prof, :ρ)
   dρdz = prof.dρdz
@@ -27,14 +28,15 @@ function convect!(prof::Profile)
 
   imix # exits with dρdz calculated.
 end
+=#
 
-function _convect!(prof)
-  imix = prof.nz-1
-  while imix != 1 && prof.ρ[imix] >= prof.ρ[prof.nz]
-    # keep track of running average
+function convect!(prof, imix=prof.nz)
+  avgρ = prof.ρ[imix] # mixed layer density
+  while imix > 1 && avgρ >= prof.ρ[imix-1]
     imix -= 1 # quest downward
+    avgρ = (prof.ρ[imix] + (prof.nz-imix)*avgρ) / (prof.nz-imix+1) # running average
   end
-  homogenize!(prof, imix) # Mix the profile from i to nz.
+  homogenize!(prof, imix) # mix the profile from i to nz.
   imix
 end
 

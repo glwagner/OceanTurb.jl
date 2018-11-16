@@ -52,7 +52,8 @@ function testconvect2()
   ρanswer[2] = 3
   ρanswer[1] = 3
 
-  convect!(p)
+  imix = convect!(p)
+
   isapprox(p.ρ, ρanswer) && isapprox(Tanswer, p.T)
 end
 
