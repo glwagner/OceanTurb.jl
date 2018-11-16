@@ -1,30 +1,20 @@
 struct Forcing{T}
-  nt::Int
-  t::T
-  shortwave::T
-  longwave::T
-  latentflux::T
-  sensibleflux::T
-  stress_x::T
-  stress_y::T
-  precip::T
-  evap::T
+  ndata::Int
+  tdata::AbstractArray{T,1}
+  shortwave::AbstractArray{T,1}
+  longwave::AbstractArray{T,1}
+  latentflux::AbstractArray{T,1}
+  sensibleflux::AbstractArray{T,1}
+  stress_x::AbstractArray{T,1}
+  stress_y::AbstractArray{T,1}
+  precip::AbstractArray{T,1}
+  evap::AbstractArray{T,1}
 end
 
-function Forcing(t; shortwave=nothing, longwave=nothing, latentflux=nothing, sensibleflux=nothing,
-                    stress_x=nothing, stress_y=nothing, precip=nothing, evap=nothing)
-
-  nt = length(t)
-  if shortwave == nothing; shortwave = 0t; end
-  if longwave == nothing; longwave = 0t; end
-  if latentflux == nothing; latentflux = 0t; end
-  if sensibleflux == nothing; sensibleflux = 0t; end
-  if stress_x == nothing; stress_x = 0t; end
-  if stress_y == nothing; stress_y = 0t; end
-  if precip == nothing; precip = 0t; end
-  if evap == nothing; evap = 0t; end
-
-  Forcing(nt, t, shortwave, longwave, latentflux, sensibleflux, stress_x, stress_y, precip, evap)
+function Forcing(; tdata=[0, year], shortwave=0tdata, longwave=0tdata, latentflux=0tdata, 
+                 sensibleflux=0tdata, stress_x=0tdata, stress_y=0tdata, precip=0tdata, evap=0tdata)
+  Forcing(length(tdata), tdata, 
+          shortwave, longwave, latentflux, sensibleflux, stress_x, stress_y, precip, evap)
 end
 
 iskey(key, c) = key in keys(c)
@@ -75,4 +65,28 @@ function loadforcing(filepath)
     forcingfields["precip"],
     forcingfields["evap"]
    )
+end
+
+struct ForcingInterpolant{T}
+  shortwave::ScaledInterpolation{T}
+  longwave::ScaledInterpolation{T}
+  latentflux::ScaledInterpolation{T}
+  sensibleflux::ScaledInterpolation{T}
+  stress_x::ScaledInterpolation{T}
+  stress_y::ScaledInterpolation{T}
+  precip::ScaledInterpolation{T}
+  evap::ScaledInterpolation{T}
+end
+
+function ForcingInterpolant(forcing)
+  dt = forcing.tdata[2]-forcing.tdata[1]
+  t⁰ = forcing.tdata[1]
+  tᶠ = forcing.tdata[end]
+  for name in fieldnames(ForcingInterpolant)
+    field = getfield(forcing, name)
+    @eval begin
+      $name = scale(interpolate($field, BSpline(Linear())), $t⁰:$dt:$tᶠ)
+    end
+  end
+  ForcingInterpolant(eval.(fieldnames(ForcingInterpolant))...)
 end

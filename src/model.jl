@@ -1,4 +1,4 @@
-struct Profile{El, A}
+struct Profile{El,A}
   nz::Int
   dz::El
   z::A
@@ -23,12 +23,35 @@ end
 
 Profile(H, nz) = Profile(Float64, H, nz)
 
-struct Model{El, T}
-  profile::Profile{El, T} 
-  forcing::Forcing{T}
+struct Constants
+  f::Float64
+  dsw::Float64
+  dlw::Float64
+  Cᵖ::Float64
+  ρ₀::Float64
 end
 
-function Model(forcing::Forcing{T}, H, nz=100) where T
-  profile = Profile(eltype(T), H, nz)
-  Model(profile, forcing)
+function Constants(; # verbose names for API:            
+                                 latitude = 45,   # degrees
+                     shortwavepenetration = 0.6,  # meters
+                      longwavepenetration = 20,   # meters
+                             heatcapacity = 3900, # ?
+                               refdensity = 1025, # kg/m^3
+                         # short names
+                         dsw=shortwavepenetration, dlw=longwavepenetration, 
+                         Cᵖ=heatcapacity, ρ₀=refdensity)
+  latradians = latitude * π/180
+  f = 2Ω*sin(latradians)
+  Constants(f, dsw, dlw, Cᵖ, ρ₀)
+end
+
+struct Model{T,AP,AF,TFI}
+  constants::Constants
+  profile::Profile{T,AP} 
+  forcing::Forcing{AF}
+  finterp::ForcingInterpolant{TFI}
+end
+
+function Model(; forcing=Forcing(), constants=Constants(), H=100, nz=100, T=Float64)
+  Model(constants, Profile(T, H, nz), forcing, ForcingInterpolant(forcing))
 end

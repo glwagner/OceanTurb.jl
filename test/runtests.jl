@@ -2,6 +2,8 @@ using
   PriceWellerPinkel,
   Test
 
+const year = PriceWellerPinkel.year
+
 function testzeros(T=Float64, dims=(13, 45))
   a1, b1 = zeros(T, dims), zeros(T, dims)
   @zeros T dims a2 b2
@@ -13,9 +15,29 @@ function testexample(H=200, nz=200)
   nz == examplemodel.profile.nz
 end
 
+#=
+for name in fieldnames(ForcingInterpolant)
+  @eval begin
+    function testforcinginterpolant_$name()
+      forcing = Forcing(tdata=[0, year], $name=[0, 1.0])
+      finterp = ForcingInterpolant(forcing)
+      isapprox(finterp.$name(0.6year), 0.6)
+    end
+  end
+end
+=#
+
+function testforcinginterpolant(fld=:shortwave)
+  kwargs = Dict(:tdata=>[0, year], fld=>[0, 1.0])
+  forcing = Forcing(; kwargs...)
+  finterp = ForcingInterpolant(forcing)
+  isapprox(getfield(finterp, fld)(0.6year), 0.6)
+end
+
+
 function testconvect1()
   H, nz = 1, 4
-  model = TestModel(H, nz)
+  model = Model(H=H, nz=nz)
   p = model.profile
   # Unstable profile.
   p.ρ[4] = 4
@@ -35,7 +57,7 @@ end
 
 function testconvect2()
   H, nz = 1, 4
-  model = TestModel(H, nz)
+  model = Model(H=H, nz=nz)
   p = model.profile
   # Unstable profile.
   p.ρ[4] = 6
@@ -59,8 +81,19 @@ end
 
 
 
-@test testzeros(Float64)
-@test testzeros(Float32)
-@test testexample()
-@test testconvect1()
-@test testconvect2()
+@testset "Utilities" begin
+  @test testzeros(Float64)
+  @test testzeros(Float32)
+end
+
+@testset "Forcing" begin
+  for fld in fieldnames(ForcingInterpolant)
+    @test testforcinginterpolant(fld)
+  end
+end
+
+@testset "Model" begin
+  @test testexample()
+  @test testconvect1()
+  @test testconvect2()
+end
