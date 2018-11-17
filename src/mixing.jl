@@ -69,21 +69,6 @@ function grad_richardson!(prof)
   nothing
 end
 
-function dz!(prof, ss::Symbol)
-  nz = prof.nz
-
-  s = getfield(prof, ss)
-
-  sdsdz = Symbol(:d, ss, :dz)
-  dsdz = getfield(prof, sdsdz)
-
-  @views @. dsdz[2:end] = s[2:end] - s[1:end-1]
-  dsdz[1] = 0
-  nothing
-end
-
-# positive dρdz (inc z, inc ρ) => unstable
-
 function diffuse!(u, κ)
   @. u *= (1-2κ)
   u[1] = u[2] # no flux bottom boundary condition

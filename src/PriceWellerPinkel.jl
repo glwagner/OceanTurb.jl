@@ -1,18 +1,23 @@
 module PriceWellerPinkel
 
 export
-  Forcing,
-  ForcingInterpolant,
-  Profile,
-  Model,
-  density,
-  convect!,
-  @zeros,
-  loadexample
+    Constants,
+    Forcing,
+    ForcingInterpolant,
+    Profile,
+    Model,
+    density,
+    @zeros,
+    updatevars!,
+
+    convect!,
+    step_U!,
+
+    loadexample
 
 using
-  JLD2,
-  Interpolations
+    JLD2,
+    Interpolations
 
 using Statistics: mean
 
@@ -31,23 +36,24 @@ const stellaryear = 23hour + 56minute + 4.098903691
 const Ω = 2π/stellaryear
 
 macro zeros(T, dims, vars...)
-  expr = Expr(:block)
-  append!(expr.args, [:($(esc(var)) = zeros($(esc(T)), $(esc(dims))); ) for var in vars])
-  expr
+    expr = Expr(:block)
+    append!(expr.args, [:($(esc(var)) = zeros($(esc(T)), $(esc(dims))); ) for var in vars])
+    expr
 end
 
 include("forcing.jl")
 include("model.jl")
 include("eos.jl")
 include("mixing.jl")
+include("integrate.jl")
 
 "Example model forced by Southern Ocean data."
 function loadexample(H=400, nz=400)
-  datapath = joinpath(dirname(pathof(PriceWellerPinkel)), "..", "data")
-  filename = "example_southern_ocean_forcing.jld2"
-  filepath = joinpath(datapath, filename)
-  forcing = loadforcing(filepath)
-  Model(forcing=forcing, H=H, nz=nz) 
+    filename = "example_southern_ocean_forcing.jld2"
+    datapath = joinpath(dirname(pathof(PriceWellerPinkel)), "..", "data")
+    filepath = joinpath(datapath, filename)
+    forcing = loadforcing(filepath)
+    Model(forcing=forcing, H=H, nz=nz) 
 end
 
 end # module
