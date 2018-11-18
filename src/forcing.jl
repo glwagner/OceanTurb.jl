@@ -1,3 +1,8 @@
+alternatenametable = Dict(
+    "τˣ"=>"stress_x",
+    "τʸ"=>"stress_y"
+)
+
 struct Forcing{T}
   ndata::Int
   tdata::AbstractArray{T,1}
@@ -5,16 +10,16 @@ struct Forcing{T}
   longwave::AbstractArray{T,1}
   latentflux::AbstractArray{T,1}
   sensibleflux::AbstractArray{T,1}
-  stress_x::AbstractArray{T,1}
-  stress_y::AbstractArray{T,1}
+  τˣ::AbstractArray{T,1}
+  τʸ::AbstractArray{T,1}
   precip::AbstractArray{T,1}
   evap::AbstractArray{T,1}
 end
 
 function Forcing(; tdata=[0, year], shortwave=0tdata, longwave=0tdata, latentflux=0tdata, 
-                 sensibleflux=0tdata, stress_x=0tdata, stress_y=0tdata, precip=0tdata, evap=0tdata)
-  Forcing(length(tdata), tdata, 
-          shortwave, longwave, latentflux, sensibleflux, stress_x, stress_y, precip, evap)
+                 sensibleflux=0tdata, stress_x=0tdata, stress_y=0tdata, precip=0tdata, evap=0tdata,
+                 τˣ=stress_x, τʸ=stress_y)
+  Forcing(length(tdata), tdata, shortwave, longwave, latentflux, sensibleflux, τˣ, τʸ, precip, evap)
 end
 
 iskey(key, c) = key in keys(c)
@@ -44,7 +49,9 @@ function loadforcing(filepath)
     for fieldsym in fieldnames(Forcing)
       if fieldsym != :nt
         fieldstr = String(fieldsym)
-        forcingfields[fieldstr] = iskey(fieldstr, file) ? file[fieldstr] : 0t
+        filefieldstr = (!iskey(fieldstr, file) && iskey(fieldstr, alternatenametable)
+                        ? alternatenametable[fieldstr] : fieldstr)
+        forcingfields[fieldstr] = iskey(filefieldstr, file) ? file[filefieldstr] : 0t
         nt == length(forcingfields[fieldstr]) || error("Length of forcing field $fieldstr is incompatable with t")
       end
     end
@@ -60,8 +67,8 @@ function loadforcing(filepath)
     forcingfields["longwave"],
     forcingfields["latentflux"],
     forcingfields["sensibleflux"],
-    forcingfields["stress_x"],
-    forcingfields["stress_y"],
+    forcingfields["τˣ"],
+    forcingfields["τʸ"],
     forcingfields["precip"],
     forcingfields["evap"]
    )
@@ -72,8 +79,8 @@ struct ForcingInterpolant{T}
   longwave::ScaledInterpolation{T}
   latentflux::ScaledInterpolation{T}
   sensibleflux::ScaledInterpolation{T}
-  stress_x::ScaledInterpolation{T}
-  stress_y::ScaledInterpolation{T}
+  τˣ::ScaledInterpolation{T}
+  τʸ::ScaledInterpolation{T}
   precip::ScaledInterpolation{T}
   evap::ScaledInterpolation{T}
 end
@@ -90,3 +97,5 @@ function ForcingInterpolant(forcing)
   end
   ForcingInterpolant(eval.(fieldnames(ForcingInterpolant))...)
 end
+
+shortwave_absorption(z, fʳᵉᵈ, fᵇˡᵘᵉ, dʳᵉᵈ, dᵇˡᵘᵉ) = fʳᵉᵈ*exp(z/dʳᵉᵈ) + fᵇˡᵘᵉ*exp(z/dᵇˡᵘᵉ)

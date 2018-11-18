@@ -18,7 +18,7 @@ const αᵥ = 2.07e-4  # Volumetric coefficient of thermal expansion for water [
 
 density(T, S, p=1e5) = ρ₀ * (1 - βᵀ*(T-T₀) + βˢ*(S-S₀) + βᵖ*(p-p₀))
 
-function ρ!(p::Profile)
-  @. p.ρ = density(p.T, p.S)
+function calc_ρ!(ocean::Ocean)
+  @. ocean.ρ = density(ocean.T, ocean.S)
   nothing
 end

@@ -7,85 +7,138 @@ bottom      mld   surface
   note dρdz[2] = ρ[2]-d
 =#
 
-function pressenter()
-  println("\nPress enter to continue.")
-  chomp(readline())
+function convect!(ocean::Ocean, imix)
+    avgρ = ocean.ρ[imix] # mixed layer density
+    while imix > 1 && avgρ >= ocean.ρ[imix-1]
+        imix -= 1 # quest downward
+        avgρ = (ocean.ρ[imix] + (ocean.nz-imix)*avgρ) / (ocean.nz-imix+1) # running average
+    end
+    homogenize!(ocean, imix) # mix the oile from i to nz.
+    imix
 end
 
-unstable(profile) = any(s -> s>0, profile.dρdz)
-
-#=
-function convect!(prof::Profile)
-  dz!(prof, :ρ)
-  dρdz = prof.dρdz
-  ρ = prof.ρ
-
-  imix = nothing
-  while unstable(prof)
-    imix = _convect!(prof)
-    dz!(prof, :ρ)
-  end
-
-  imix # exits with dρdz calculated.
-end
-=#
-
-function convect!(prof, imix=prof.nz)
-  avgρ = prof.ρ[imix] # mixed layer density
-  while imix > 1 && avgρ >= prof.ρ[imix-1]
-    imix -= 1 # quest downward
-    avgρ = (prof.ρ[imix] + (prof.nz-imix)*avgρ) / (prof.nz-imix+1) # running average
-  end
-  homogenize!(prof, imix) # mix the profile from i to nz.
-  imix
+function convect!(model::Model) 
+    model.imix = convect!(model.ocean, model.imix)
+    nothing
 end
 
-function homogenize!(prof, ih)
-  @views prof.u[ih:prof.nz] .= mean(prof.u[ih:prof.nz])
-  @views prof.v[ih:prof.nz] .= mean(prof.v[ih:prof.nz])
-  @views prof.T[ih:prof.nz] .= mean(prof.T[ih:prof.nz])
-  @views prof.S[ih:prof.nz] .= mean(prof.S[ih:prof.nz])
-  @views prof.ρ[ih:prof.nz] .= mean(prof.ρ[ih:prof.nz])
-  nothing
+function homogenize!(ocean, i)
+    @views ocean.U[i:end] .= mean(ocean.U[i:end])
+    @views ocean.T[i:end] .= mean(ocean.T[i:end])
+    @views ocean.S[i:end] .= mean(ocean.S[i:end])
+    @views ocean.ρ[i:end] .= mean(ocean.ρ[i:end])
+    nothing
 end
 
-function bulk_richardson(prof, ih)
-   h = -prof.z[ih]
-  Δρ = prof.ρ[ih] - prof.ρ[ih-1] 
-  Δu = prof.u[ih] - prof.u[ih-1]
-  Δv = prof.v[ih] - prof.v[ih-1]
-  ΔUsq = Δu^2 + Δv^2
-  -g*Δρ*h / (ρ₀*ΔUsq) # should be positive...
+gradRi(j::Int, ρ, U, dz, g, ρ₀) = -g * dz * (ρ[j]-ρ[j-1]) / (ρ₀ * abs2(U[j]-U[j-1]))
+gradRi(j::Int, o::Ocean, p::Parameters) = gradRi(j, o.ρ, o.U, o.dz, p.g, p.ρ₀)
+
+function gradRi!(o::Ocean, p::Parameters, jrange)
+    for j in jrange
+        o.Ri[j] = j > 1 ? gradRi(j, o, p) : Inf
+    end
+    NaN2Inf!(o.Ri)
+    nothing
 end
 
-function grad_richardson!(prof)
-  ρ!(prof)
-  dz!(prof, :ρ)
-  dz!(prof, :u)
-  dz!(prof, :v)
-  noflux!(prof)
-  @. prof.dUdz = sqrt(prof.dudz^2 + prof.dvdz^2)
-  @. prof.Ri = g*prof.dρdz / (ρ₀*prof.dUdz^2)
-  nothing
+function gradRi!(ocean::Ocean, params::Parameters, imix::Int)
+    ocean.Ri .= Inf # Ri not defined at bottom point and in mixed layer
+    gradRi!(ocean, params, 2:imix)
+    nothing
 end
 
-function diffuse!(u, κ)
-  @. u *= (1-2κ)
-  u[1] = u[2] # no flux bottom boundary condition
-  @views @. u[2:end-1] = κ*(u[1:end-2] + u[2:end])
-  nothing
+gradRi!(model::Model) = gradRi!(model.ocean, model.params, model.imix)
+
+function NaN2Inf!(a) 
+    @. a[isnan(a)] = Inf
+    nothing
 end
 
-function noflux!(p::Profile)
-  p.dρdz[1] = 0
-  p.dudz[1] = 0
-  p.dvdz[1] = 0
-  p.u[1] = p.u[2]
-  p.v[1] = p.v[2]
-  p.T[1] = p.T[2]
-  p.S[1] = p.S[2]
-  p.ρ[1] = p.ρ[2]
-  nothing
+
+"""
+    shearmix!(u, j, Ri, Riᵐⁱˣ)
+
+Mix values of `u` by the ratio `Ri/Riᵐⁱˣ` between `j` and `j-1`  to emulate shear mixing.
+`Ri` should always be less than 0.25; therefore `Riᵐⁱˣ < 0.25` implies imperfect mixing.
+The default value for `Riᵐⁱˣ` is 0.3.
+"""
+function shearmix!(u, j, Ri, Riᵐⁱˣ)
+    uᵐⁱˣ = 0.5 * (1 - Ri[j]/Riᵐⁱˣ) * (u[j-1] - u[j])
+    u[j-1] -= uᵐⁱˣ
+    u[j]   += uᵐⁱˣ
+    nothing
 end
 
-bulkmixing!(profile, Ri) = nothing
+function shearmix!(ocean::Ocean, j, Riᵐⁱˣ)
+    shearmix!(ocean.U, j, ocean.Ri, Riᵐⁱˣ)
+    shearmix!(ocean.T, j, ocean.Ri, Riᵐⁱˣ)
+    shearmix!(ocean.S, j, ocean.Ri, Riᵐⁱˣ)
+    shearmix!(ocean.ρ, j, ocean.Ri, Riᵐⁱˣ)
+    nothing
+end
+
+function gradientmix!(ocean, params, imix)
+    gradRi!(ocean, params, imix)
+    Riᵐⁱⁿ, jᵐⁱⁿ = findmin(ocean.Ri)
+
+    while Riᵐⁱⁿ <= params.gradRiᶜ
+        shearmix!(ocean, jᵐⁱⁿ, params.gradRiᵐⁱˣ) # perform shear mixing between jᵐⁱⁿ-1 and jᵐⁱⁿ
+
+        # Recompute Ri, taking care not to leave domain
+        jlower = jᵐⁱⁿ > 1           ? jᵐⁱⁿ-1 : 1
+        jupper = jᵐⁱⁿ+2 <= ocean.nz ? jᵐⁱⁿ+2 : ocean.nz
+        gradRi!(ocean, params, jlower:jupper)
+
+        Riᵐⁱⁿ, jᵐⁱⁿ = findmin(ocean.Ri) # recompute minimium Ri
+    end
+
+    nothing
+end
+
+gradientmix!(model::Model) = gradientmix!(model.ocean, model.params, model.imix)
+
+function bulkRi(ρ, U, zᶠ, dz, imix, g, ρ₀)
+    if imix > 1
+        h = mixedlayerdepth(zᶠ, imix)
+        Δρ = ρ[imix] - ρ[imix-1] # negative if stably stratified
+        ΔU = U[imix] - U[imix-1]
+        return -g*Δρ*h / (ρ₀*abs2(ΔU)) # > 0
+    else
+        return Inf
+    end
+end
+
+bulkRi(o::Ocean, p::Parameters, imix) = bulkRi(o.ρ, o.U, o.zᶠ, o.dz, imix, p.g, p.ρ₀)
+bulkRi(m::Model) = bulkRi(m.ocean, m.params, m.imix)
+
+function deepen!(ocean, imix)
+    if imix > 1
+        nmld = ocean.nz - imix + 1
+        for fldname in (:U, :T, :S, :ρ)
+            fld = getfield(ocean, fldname)
+            deepen!(fld, imix, nmld)
+        end
+        imix -= 1
+    end
+    imix
+end
+
+function deepen!(fld, imix, nmld)
+    newmixedlayerfld = (nmld*fld[imix] + fld[imix-1]) / (nmld+1)
+    @views @. fld[imix-1:end] = newmixedlayerfld
+    nothing
+end
+
+function bulkmix!(ocean, params, imix)
+    Riᵇ = bulkRi(ocean, params, imix)
+    while isfinite(Riᵇ) && Riᵇ <= params.bulkRiᶜ
+        imix = deepen!(ocean, imix)
+        Riᵇ = bulkRi(ocean, params, imix)
+    end
+    imix
+end
+
+function bulkmix!(m::Model) 
+    m.imix = bulkmix!(m.ocean, m.params, m.imix)
+    nothing
+end
