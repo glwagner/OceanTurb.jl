@@ -24,7 +24,7 @@ if U(0) = 0 => e^{ift} U = (1/if) * (e^{ift}-1)*τˣ
 function teststepuv2(; τˣ=1.0, imix=3, nt=100)
     model.ocean.U .= 0.0
     model.imix = imix
-    h = mixedlayerdepth(model.ocean.zᶠ, imix)
+    h = mixedlayerdepth(model.ocean.zᴳ, imix)
     f, ρ₀ = model.params.f, model.params.ρ₀
     dt = 1e-9
     tf = nt*dt

@@ -97,5 +97,3 @@ function ForcingInterpolant(forcing)
   end
   ForcingInterpolant(eval.(fieldnames(ForcingInterpolant))...)
 end
-
-shortwave_absorption(z, fʳᵉᵈ, fᵇˡᵘᵉ, dʳᵉᵈ, dᵇˡᵘᵉ) = fʳᵉᵈ*exp(z/dʳᵉᵈ) + fᵇˡᵘᵉ*exp(z/dᵇˡᵘᵉ)

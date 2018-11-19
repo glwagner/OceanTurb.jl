@@ -1,7 +1,5 @@
 struct Parameters
     f::Float64
-    λˢʷ::Float64 # decay scale for shortwave absorption
-    λˡʷ::Float64 # decay scale for longwave absorption
     Cᵖ::Float64
     ρ₀::Float64
     g::Float64
@@ -12,14 +10,15 @@ struct Parameters
     βˢ::Float64 
     T₀::Float64 
     S₀::Float64 
-    αᵥ::Float64 
+    dʳᵉᵈ::Float64    
+    dᵇˡᵘᵉ::Float64
+    fracʳᵉᵈ::Float64    
+    fracᵇˡᵘᵉ::Float64
 end
 
 function Parameters(; # Verbose names for API:            
                                  latitude = 45,        # Latitude [degrees]
-                     shortwavepenetration = 0.6,       # Penetration depth for long wave radiation [m]
-                      longwavepenetration = 20,        # Penetration depth for long wave radiation [m]
-                             heatcapacity = 3900,      # Heat capacity of water [?]
+                             heatcapacity = 3990,      # Heat capacity of water [?]
                          referencedensity = 1.027e3,   # Reference density [g/m^3]
                                         g = 9.807,     # Gravitational acceleration [g/s^2]
                            criticalbulkRi = 0.65,      # Critical value for bulk Richardson number instability
@@ -29,17 +28,25 @@ function Parameters(; # Verbose names for API:
                                        βˢ = 0.78e-3,   # Haline contraction coefficient [1/ppt]
                                        T₀ = 283,       # Reference temperature [K]
                                        S₀ = 35,        # Reference salinity [g/kg]
-                                       αᵥ = 2.07e-4,   # Volumetric coefficient of thermal expansion for water [K⁻¹]
+                     shortwavepenetration = 0.6,       # Penetration depth for long wave radiation [m]
+                      longwavepenetration = 20,        # Penetration depth for long wave radiation [m]
+                        shortwavefraction = 0.62,       # Penetration depth for long wave radiation [m]
+                         longwavefraction = 0.38,        # Penetration depth for long wave radiation [m]
                          # Short names
-                               λˢʷ = shortwavepenetration, 
-                               λˡʷ = longwavepenetration,
                                  f = 2Ω*sin(latitude*π/180), 
                                 Cᵖ = heatcapacity, 
                                 ρ₀ = referencedensity,
                            bulkRiᶜ = criticalbulkRi, 
                            gradRiᶜ = criticalgradientRi,
-                         gradRiᵐⁱˣ = gradientRimix
+                         gradRiᵐⁱˣ = gradientRimix,
+                              dʳᵉᵈ = shortwavepenetration,   
+                             dᵇˡᵘᵉ = longwavepenetration,   
+                           fracʳᵉᵈ = shortwavefraction,   
+                          fracᵇˡᵘᵉ = longwavefraction
                      )
                          
-    Parameters(f, λˢʷ, λˡʷ, Cᵖ, ρ₀, g, bulkRiᶜ, gradRiᶜ, gradRiᵐⁱˣ, βᵀ, βˢ, T₀, S₀, αᵥ)
+    Parameters(f, Cᵖ, ρ₀, g, bulkRiᶜ, gradRiᶜ, gradRiᵐⁱˣ, βᵀ, βˢ, T₀, S₀,
+               dʳᵉᵈ, dᵇˡᵘᵉ, fracʳᵉᵈ, fracᵇˡᵘᵉ)
 end
+
+insolationprofile(z, fʳᵉᵈ, fᵇˡᵘᵉ, dʳᵉᵈ, dᵇˡᵘᵉ) = fʳᵉᵈ*exp(z/dʳᵉᵈ) + fᵇˡᵘᵉ*exp(z/dᵇˡᵘᵉ)

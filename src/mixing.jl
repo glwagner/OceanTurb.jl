@@ -97,9 +97,9 @@ end
 
 gradientmix!(model::Model) = gradientmix!(model.ocean, model.params, model.imix)
 
-function bulkRi(ρ, U, zᶠ, dz, imix, g, ρ₀)
+function bulkRi(ρ, U, zᴳ, dz, imix, g, ρ₀)
     if imix > 1
-        h = mixedlayerdepth(zᶠ, imix)
+        h = mixedlayerdepth(zᴳ, imix)
         Δρ = ρ[imix] - ρ[imix-1] # negative if stably stratified
         ΔU = U[imix] - U[imix-1]
         return -g*Δρ*h / (ρ₀*abs2(ΔU)) # > 0
@@ -108,7 +108,7 @@ function bulkRi(ρ, U, zᶠ, dz, imix, g, ρ₀)
     end
 end
 
-bulkRi(o::Ocean, p::Parameters, imix) = bulkRi(o.ρ, o.U, o.zᶠ, o.dz, imix, p.g, p.ρ₀)
+bulkRi(o::Ocean, p::Parameters, imix) = bulkRi(o.ρ, o.U, o.zᴳ, o.dz, imix, p.g, p.ρ₀)
 bulkRi(m::Model) = bulkRi(m.ocean, m.params, m.imix)
 
 function deepen!(ocean, imix)
