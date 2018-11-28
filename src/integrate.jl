@@ -29,25 +29,25 @@ function stepforward!(model, dt)
 end
 
 function stepforward!(model, dt, nsteps::Int)
-    for i = 1:nsteps
-        stepforward!(model, dt)
-    end
-    nothing
+  for i = 1:nsteps
+    stepforward!(model, dt)
+  end
+  nothing
 end
 
 function step_shortwaveinsolation!(T, dt, shortwaveflux, Iˢʷ)
-   @. T += dt * shortwaveflux * Iˢʷ
-   nothing
+ @. T += dt * shortwaveflux * Iˢʷ
+ nothing
 end
 
 function step_surfaceheatflux!(T, dz, dt, latentflux, sensibleflux, longwaveflux, Cᵖ, ρ₀)
-    T[end] += dt * (latentflux + sensibleflux + longwaveflux) / (Cᵖ*ρ₀*dz)
-    nothing
+  T[end] += dt * (latentflux + sensibleflux + longwaveflux) / (Cᵖ*ρ₀*dz)
+  nothing
 end
 
 function step_surfacesalinityflux!(S, dz, dt, evap, precip)
-    S[end] += dt * S[end] * (evap-precip) / dz
-    nothing
+  S[end] += dt * S[end] * (evap-precip) / dz
+  nothing
 end
 
 """
@@ -56,11 +56,11 @@ end
 Step forward the temperature and salinity fields.
 """
 function step_TS!(model, dt, latentflux, sensibleflux, shortwaveflux, longwaveflux, evap, precip)
-    step_shortwaveinsolation!(model.ocean.T, dt, shortwaveflux, model.Iˢʷ)
-    step_surfaceheatflux!(model.ocean.T, model.ocean.dz, dt, latentflux, sensibleflux, longwaveflux,
-                          model.params.Cᵖ, model.params.ρ₀)
-    step_surfacesalinityflux!(model.ocean.S, model.ocean.dz, dt, evap, precip)
-    nothing
+  step_shortwaveinsolation!(model.ocean.T, dt, shortwaveflux, model.Iˢʷ)
+  step_surfaceheatflux!(model.ocean.T, model.ocean.dz, dt, latentflux, sensibleflux, longwaveflux,
+                        model.params.Cᵖ, model.params.ρ₀)
+  step_surfacesalinityflux!(model.ocean.S, model.ocean.dz, dt, evap, precip)
+  nothing
 end
 
 """
@@ -69,21 +69,21 @@ end
 Step forward `U = u + im*v` by `dt`, forcing the layer defined by `model.imix` by `τˣ + im*τʸ`.
 """
 function step_U!(U, zᴳ, f, ρ₀, imix, τˣ, τʸ, dt) 
-    #=
-    Some math. With U = u + iv:
-    ∂ₜ(e^{ift}*U) = e^{ift} * Gz/ρ₀
-    => e^{if(t+dt)}*U₊₁ = e^{ift}*U + dt * e^{ift} * Gz/ρ₀
-    => U = e^{-ifdt}*U + dt * e^{-ifdt} * Gz/ρ₀
-    =#
+  #=
+  Some math. With U = u + iv:
+  ∂ₜ(e^{ift}*U) = e^{ift} * Gz/ρ₀
+  => e^{if(t+dt)}*U₊₁ = e^{ift}*U + dt * e^{ift} * Gz/ρ₀
+  => U = e^{-ifdt}*U + dt * e^{-ifdt} * Gz/ρ₀
+  =#
 
-    # Forward euler, exponential integral step.
-    @. U *= exp(-im*f*dt)
+  # Forward euler, exponential integral step.
+  @. U *= exp(-im*f*dt)
 
-    # Forcing by surface stress, distributed over mixed layer depth `h`:
-    # Recall that ∂U = -Gz
-    h = mixedlayerdepth(zᴳ, imix) # distribute momentum uniformly throughout mixed layer
-    @views @. U[imix:end] -= dt * exp(-im*f*dt)*(τˣ + im*τʸ) / (ρ₀*h)
-    nothing
+  # Forcing by surface stress, distributed over mixed layer depth `h`:
+  # Recall that ∂U = -Gz
+  h = mixedlayerdepth(zᴳ, imix) # distribute momentum uniformly throughout mixed layer
+  @views @. U[imix:end] -= dt * exp(-im*f*dt)*(τˣ + im*τʸ) / (ρ₀*h)
+  nothing
 end
 
 step_U!(o::Ocean, p::Parameters, imix, τˣ, τʸ, dt) = step_U!(o.U, o.zᴳ, p.f, p.ρ₀, imix, τˣ, τʸ, dt)

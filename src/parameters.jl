@@ -1,19 +1,19 @@
 struct Parameters
-    f::Float64
-    Cᵖ::Float64
-    ρ₀::Float64
-    g::Float64
-    bulkRiᶜ::Float64
-    gradRiᶜ::Float64
-    gradRiᵐⁱˣ::Float64
-    βᵀ::Float64 
-    βˢ::Float64 
-    T₀::Float64 
-    S₀::Float64 
-    dʳᵉᵈ::Float64    
-    dᵇˡᵘᵉ::Float64
-    fracʳᵉᵈ::Float64    
-    fracᵇˡᵘᵉ::Float64
+  f::Float64
+  Cᵖ::Float64
+  ρ₀::Float64
+  g::Float64
+  bulkRiᶜ::Float64
+  gradRiᶜ::Float64
+  gradRiᵐⁱˣ::Float64
+  βᵀ::Float64 
+  βˢ::Float64 
+  T₀::Float64 
+  S₀::Float64 
+  dʳᵉᵈ::Float64    
+  dᵇˡᵘᵉ::Float64
+  fracʳᵉᵈ::Float64    
+  fracᵇˡᵘᵉ::Float64
 end
 
 function Parameters(; # Verbose names for API:            
@@ -45,8 +45,8 @@ function Parameters(; # Verbose names for API:
                           fracᵇˡᵘᵉ = longwavefraction
                      )
                          
-    Parameters(f, Cᵖ, ρ₀, g, bulkRiᶜ, gradRiᶜ, gradRiᵐⁱˣ, βᵀ, βˢ, T₀, S₀,
-               dʳᵉᵈ, dᵇˡᵘᵉ, fracʳᵉᵈ, fracᵇˡᵘᵉ)
+  Parameters(f, Cᵖ, ρ₀, g, bulkRiᶜ, gradRiᶜ, gradRiᵐⁱˣ, βᵀ, βˢ, T₀, S₀,
+             dʳᵉᵈ, dᵇˡᵘᵉ, fracʳᵉᵈ, fracᵇˡᵘᵉ)
 end
 
 insolationprofile(z, fʳᵉᵈ, fᵇˡᵘᵉ, dʳᵉᵈ, dᵇˡᵘᵉ) = fʳᵉᵈ*exp(z/dʳᵉᵈ) + fᵇˡᵘᵉ*exp(z/dᵇˡᵘᵉ)

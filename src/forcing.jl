@@ -1,6 +1,6 @@
 alternatenametable = Dict(
-    "τˣ"=>"stress_x",
-    "τʸ"=>"stress_y"
+  "τˣ"=>"stress_x",
+  "τʸ"=>"stress_y"
 )
 
 struct Forcing{T}
