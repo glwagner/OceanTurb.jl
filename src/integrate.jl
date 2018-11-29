@@ -70,10 +70,21 @@ Step forward `U = u + im*v` by `dt`, forcing the layer defined by `model.imix` b
 """
 function step_U!(U, zᴳ, f, ρ₀, imix, τˣ, τʸ, dt) 
   #=
-  Some math. With U = u + iv:
-  ∂ₜ(e^{ift}*U) = e^{ift} * Gz/ρ₀
-  => e^{if(t+dt)}*U₊₁ = e^{ift}*U + dt * e^{ift} * Gz/ρ₀
-  => U = e^{-ifdt}*U + dt * e^{-ifdt} * Gz/ρ₀
+  This function uses Forward Euler exponential integration on the complexified momentum equation.
+
+  With U = u + iv, the momentum equation is:
+
+  ∂ₜ(e^{ift}*U) = e^{ift} * Tz/ρ₀, (1)
+
+  where T = τˣ + im*τʸ is the complexified momentum flux, and Tz is its z-derivative.
+  Using forward Euler to integrate (1) yields
+
+  e^{if(t+dt)}*U₊₁ = e^{ift}*U + dt * e^{ift} * Tz/ρ₀
+
+  which, multiplying through by e^{-ift}, implies that
+
+  U₊₁ = e^{-ifdt}*U + dt * e^{-ifdt} * Tz/ρ₀
+
   =#
 
   # Forward euler, exponential integral step.
