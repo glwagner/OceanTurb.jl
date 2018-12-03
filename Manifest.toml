@@ -15,9 +15,9 @@ version = "0.8.10"
 
 [[BinaryProvider]]
 deps = ["Libdl", "Pkg", "SHA", "Test"]
-git-tree-sha1 = "9930c1a6cd49d9fcd7218df6be417e6ae4f1468a"
+git-tree-sha1 = "055eb2690182ebc31087859c3dd8598371d3ef9e"
 uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
-version = "0.5.2"
+version = "0.5.3"
 
 [[CodecZlib]]
 deps = ["BinaryProvider", "Libdl", "Test", "TranscodingStreams"]
@@ -82,9 +82,9 @@ version = "0.1.0"
 
 [[FileIO]]
 deps = ["Pkg", "Random", "Test"]
-git-tree-sha1 = "481e4db939f005db39f7296599d0543c0744fe30"
+git-tree-sha1 = "1a114d08094e7267ba8d4d684f930d5a722184de"
 uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-version = "1.0.2"
+version = "1.0.4"
 
 [[FixedPointNumbers]]
 deps = ["Test"]
@@ -94,9 +94,9 @@ version = "0.5.3"
 
 [[Formatting]]
 deps = ["Compat"]
-git-tree-sha1 = "6b5c29ec39a54fa823beb31f836431969e83fb74"
+git-tree-sha1 = "289003271ce9c8194c1ce56a3c433f1c51841125"
 uuid = "59287772-0a20-5a39-b81b-1366585eb4c0"
-version = "0.3.4"
+version = "0.3.5"
 
 [[InteractiveUtils]]
 deps = ["LinearAlgebra", "Markdown"]
@@ -104,9 +104,9 @@ uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
 [[Interpolations]]
 deps = ["AxisAlgorithms", "LinearAlgebra", "OffsetArrays", "Random", "Ratios", "SharedArrays", "SparseArrays", "StaticArrays", "Test", "WoodburyMatrices"]
-git-tree-sha1 = "2a3b97b4f4cd6f6be5c73f07b15a30e9eaba465d"
+git-tree-sha1 = "3493536a64dae5a21c0cc8aecf680647f3e12313"
 uuid = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
-version = "0.10.6"
+version = "0.11.0"
 
 [[JLD2]]
 deps = ["CodecZlib", "DataStructures", "FileIO", "LinearAlgebra", "Mmap", "Printf", "Random", "Test"]
@@ -116,9 +116,9 @@ version = "0.1.2"
 
 [[JSON]]
 deps = ["Dates", "Distributed", "Mmap", "Sockets", "Test", "Unicode"]
-git-tree-sha1 = "fec8e4d433072731466d37ed0061b3ba7f70eeb9"
+git-tree-sha1 = "1f7a25b53ec67f5e9422f1f551ee216503f4a0fa"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
-version = "0.19.0"
+version = "0.20.0"
 
 [[LaTeXStrings]]
 deps = ["Compat"]
@@ -154,15 +154,15 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[NetCDF]]
 deps = ["BinDeps", "CondaBinDeps", "Formatting", "Libdl", "Random", "Test"]
-git-tree-sha1 = "f88da71d28e99f1eb1e4836fd48ad0c13e966803"
+git-tree-sha1 = "0cf8e9276c5c426e43dad43863a4e86d6ce62c17"
 uuid = "30363a11-5582-574a-97bb-aa9a979735b9"
-version = "0.7.1"
+version = "0.7.2"
 
 [[OffsetArrays]]
 deps = ["DelimitedFiles", "Test"]
-git-tree-sha1 = "f8cd140824f74f2948ff8660bc2292e16d29c1b7"
+git-tree-sha1 = "f446248f2dfbc13039a0b90994dd25b059b01eab"
 uuid = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
-version = "0.8.1"
+version = "0.9.0"
 
 [[OrderedCollections]]
 deps = ["Random", "Serialization", "Test"]
@@ -192,7 +192,7 @@ version = "2.6.3"
 
 [[PyPlotPlus]]
 deps = ["PyCall", "PyPlot", "Reexport"]
-git-tree-sha1 = "e4cde6f98a74ca2150757009f86ddff8725ea0b5"
+git-tree-sha1 = "869d29e4db5939f6c3fdc627ef47444d0f3f2ed7"
 repo-rev = "master"
 repo-url = "https://github.com/glwagner/PyPlotPlus.jl.git"
 uuid = "5c289bae-b820-11e8-3dc3-cf50833a5df7"
@@ -237,9 +237,9 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[StaticArrays]]
 deps = ["InteractiveUtils", "LinearAlgebra", "Random", "Statistics", "Test"]
-git-tree-sha1 = "ebc5c2a27d91d5ec611a9861168182e2168effd3"
+git-tree-sha1 = "97c4bf0f647488dd7ac01ea12be5885f88762938"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "0.9.2"
+version = "0.10.0"
 
 [[Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
