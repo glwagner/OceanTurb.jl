@@ -41,7 +41,7 @@ end
 mixedlayerdepth(zᴳ, imix) = -zᴳ[imix] #+ 0.5*dz
 
 density(T, S, ρ₀=1.027e3, T₀=283, S₀=35, βᵀ=1.67e-4, βˢ=0.78e-3) = ρ₀*(1 - βᵀ*(T-T₀) + βˢ*(S-S₀))
-density(T, S, params::Parameters) = density(T, S, params.ρ₀, params.T₀, params.S₀, params.βᵀ, params.βˢ)
+density(T, S, params::AbstractParameters) = density(T, S, params.ρ₀, params.T₀, params.S₀, params.βᵀ, params.βˢ)
 
 function updatedensity!(ocean::Ocean, params)
   @. ocean.ρ = density(ocean.T, ocean.S,

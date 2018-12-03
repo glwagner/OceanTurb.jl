@@ -1,4 +1,4 @@
-mutable struct Model{T,AF,TFI}
+mutable struct PriceWellerPinkelModel{T,AF,TFI} <: Model
   t::Float64
   step::Int
   imix::Int
@@ -9,9 +9,9 @@ mutable struct Model{T,AF,TFI}
   finterp::ForcingInterpolant{TFI}
 end
 
-function Model(; forcing=Forcing(), params=Parameters(), ocean=Ocean())
+function PriceWellerPinkelModel(; forcing=Forcing(), params=Parameters(), ocean=Ocean())
   Iˢʷ = insolationprofile(ocean, params) 
-  Model(0.0, 0, ocean.nz, Iˢʷ, params, ocean, forcing, ForcingInterpolant(forcing))
+  PriceWellerPinkelModel(0.0, 0, ocean.nz, Iˢʷ, params, ocean, forcing, ForcingInterpolant(forcing))
 end
 
 function updatevars!(model)
