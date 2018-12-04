@@ -16,10 +16,15 @@ struct Forcing{T}
   evap::AbstractArray{T,1}
 end
 
-function Forcing(; tdata=[0, year], shortwave=0tdata, longwave=0tdata, latentflux=0tdata, 
-                 sensibleflux=0tdata, stress_x=0tdata, stress_y=0tdata, precip=0tdata, evap=0tdata,
-                 τˣ=stress_x, τʸ=stress_y)
-  Forcing(length(tdata), tdata, shortwave, longwave, latentflux, sensibleflux, τˣ, τʸ, precip, evap)
+function Forcing(; tdata=[0, year], 
+                  shortwave=0tdata, longwave=0tdata, latentflux=0tdata, 
+                  sensibleflux=0tdata, stress_x=0tdata, stress_y=0tdata, 
+                  precip=0tdata, evap=0tdata,
+                  τˣ=stress_x, τʸ=stress_y
+                 )
+
+  Forcing(length(tdata), tdata, shortwave, longwave, latentflux, sensibleflux, 
+          τˣ, τʸ, precip, evap)
 end
 
 iskey(key, c) = key in keys(c)
@@ -29,8 +34,8 @@ setforcingvar(varsym, forcingdict) = eval(varsym) = forcingdict[String(varsym)]
 """
     loadforcing(filepath)
 
-Initalize a `Forcing` from the JLD2 file at `filepath`. The names of the file's fields must
-correspond to the names of the `Forcing` fields.
+Initalize a `Forcing` from the JLD2 file at `filepath`. The names of the file's 
+fields must correspond to the names of the `Forcing` fields.
 """
 function loadforcing(filepath)
 
@@ -49,10 +54,13 @@ function loadforcing(filepath)
     for fieldsym in fieldnames(Forcing)
       if fieldsym != :nt
         fieldstr = String(fieldsym)
-        filefieldstr = (!iskey(fieldstr, file) && iskey(fieldstr, alternatenametable)
+        filefieldstr = (!iskey(fieldstr, file) && 
+                        iskey(fieldstr, alternatenametable)
                         ? alternatenametable[fieldstr] : fieldstr)
-        forcingfields[fieldstr] = iskey(filefieldstr, file) ? file[filefieldstr] : 0t
-        nt == length(forcingfields[fieldstr]) || error("Length of forcing field $fieldstr is incompatable with t")
+        forcingfields[fieldstr] = (iskey(filefieldstr, file) ? 
+                                   file[filefieldstr] : 0t)
+        nt == length(forcingfields[fieldstr]) || (
+          error("Length of forcing field $fieldstr is incompatable with t"))
       end
     end
 

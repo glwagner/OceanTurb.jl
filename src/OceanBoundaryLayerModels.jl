@@ -2,16 +2,26 @@ module OceanMixedLayerModels
 
 export
     Ocean,
+
+    AbstractParameters,
+    ModelParameters,
     Parameters,
+
     Forcing,
     ForcingInterpolant,
+
     Model,
-    PriceWellerPinkelModel,
+
     density,
     stepforward!,
     updatevars!,
     mixedlayerdepth,
-    loadexample
+
+    loadforcing,
+
+    Ω,
+
+    @zeros
 
 using
     JLD2,
@@ -35,21 +45,11 @@ const year = 365day
 const stellaryear = 23hour + 56minute + 4.098903691
 const Ω = 2π/stellaryear
 
-
-
-
-
 include("utils.jl")
 include("forcing.jl")
 include("parameters.jl")
 include("ocean.jl")
 
-include("PriceWellerPinkel/pricewellerpinkel_parameters.jl")
-include("PriceWellerPinkel/pricewellerpinkel_mixing.jl")
-include("PriceWellerPinkel/pricewellerpinkel_model.jl")
-include("PriceWellerPinkel/pricewellerpinkel_integrate.jl")
-
-include("example.jl")
-
+include("PriceWellerPinkel/PriceWellerPinkel.jl")
 
 end # module

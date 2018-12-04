@@ -1,18 +1,16 @@
 using Pkg
 Pkg.activate("..")
 
-using 
-  Documenter,
-  PriceWellerPinkel
+using Documenter, OceanMixedLayerModels
 
 makedocs(
-   modules = [PriceWellerPinkel],
+   modules = [OceanMixedLayerModels],
    doctest = false, 
      clean = true,
  checkdocs = :all,
     format = :html,
    authors = "Gregory L. Wagner",
-  sitename = "PriceWellerPinkel.jl",
+  sitename = "OceanMixedLayerModels.jl",
      pages = Any[
               "Home" => "index.md",
                 "DocStrings" => Any[
@@ -21,6 +19,7 @@ makedocs(
                     ]
 )
 
+#=
 deploydocs(
        repo = "github.com/glwagner/PriceWellerPinkel.jl.git",
      target = "build",
@@ -29,3 +28,4 @@ deploydocs(
        deps = nothing,
        make = nothing
  )
+ =#

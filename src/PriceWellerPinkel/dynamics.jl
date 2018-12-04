@@ -1,3 +1,46 @@
+mutable struct PriceWellerPinkelModel{T,AF,TFI} <: Model
+  t::Float64
+  step::Int
+  imix::Int
+  Iˢʷ::AbstractArray{T}
+  params::Parameters
+  ocean::Ocean{T} 
+  forcing::Forcing{AF}
+  finterp::ForcingInterpolant{TFI}
+end
+
+
+
+
+
+
+function PriceWellerPinkelModel(; forcing=Forcing(), params=Parameters(), 
+                                  ocean=Ocean())
+  Iˢʷ = insolationprofile(ocean, params) 
+  PriceWellerPinkelModel(0.0, 0, ocean.nz, Iˢʷ, params, ocean, forcing, 
+                         ForcingInterpolant(forcing))
+end
+
+function updatevars!(model)
+  updatedensity!(model)
+  @. model.ocean.u = real(model.ocean.U)
+  @. model.ocean.v = imag(model.ocean.U)
+  nothing
+end
+
+mixedlayerdepth(model) = mixedlayerdepth(model.ocean.zF, model.imix)
+updatedensity!(model) = updatedensity!(model.ocean, model.params)
+
+function insolationprofile(ocean, params)
+  @views @. (
+      insolationprofile(ocean.zF[2:end], params.frac_red, params.frac_blue, 
+                        params.depth_red, params.depth_blue)
+      - insolationprofile(ocean.zF[1:end-1], params.frac_red, params.frac_blue, 
+                          params.depth_red, params.depth_blue))
+                          
+end
+
+
 #=
 bottom      mld   surface
   -H ~~~~~~ -h ~~~~~ 0
@@ -11,7 +54,8 @@ function convect!(ocean::Ocean, imix)
   avgρ = ocean.ρ[imix] # mixed layer density
   while imix > 1 && avgρ >= ocean.ρ[imix-1]
     imix -= 1 # quest downward
-    avgρ = (ocean.ρ[imix] + (ocean.nz-imix)*avgρ) / (ocean.nz-imix+1) # running average
+    # Keep a running average of density
+    avgρ = (ocean.ρ[imix] + (ocean.nz-imix)*avgρ) / (ocean.nz-imix+1)
   end
   homogenize!(ocean, imix) # mix the oile from i to nz.
   imix
@@ -30,14 +74,19 @@ function homogenize!(ocean, i)
   nothing
 end
 
-gradRi(j::Int, ρ, U, dz, g, ρ₀) = -g * dz * (ρ[j]-ρ[j-1]) / (ρ₀ * abs2(U[j]-U[j-1]))
-gradRi(j::Int, o::Ocean, p::Parameters) = gradRi(j, o.ρ, o.U, o.dz, p.g, p.ρ₀)
+gradRi(j, ρ, U, dz, g, ρ0) = -g*dz * (ρ[j]-ρ[j-1]) / (ρ0 * abs2(U[j]-U[j-1]))
 
-function gradRi!(o::Ocean, p::Parameters, jrange)
+gradRi(j, ocean, p) = gradRi(j, ocean.ρ, ocean.U, ocean.dz, p.g, p.ρ0)
+
+function gradRi(j, ocean::Ocean, p::PriceWellerPinkelParameters) 
+  gradRi(j, ocean.ρ, ocean.U, ocean.dz, p.g, p.ρ0)
+end
+
+function gradRi!(ocean::Ocean, p::Parameters, jrange)
   for j in jrange
-    o.Ri[j] = j > 1 ? gradRi(j, o, p) : Inf
+    ocean.Ri[j] = j > 1 ? gradRi(j, ocean, p) : Inf
   end
-  NaN2Inf!(o.Ri)
+  NaN2Inf!(ocean.Ri)
   nothing
 end
 
@@ -58,9 +107,9 @@ end
 """
     shearmix!(u, j, Ri, Riᵐⁱˣ)
 
-Mix values of `u` by the ratio `Ri/Riᵐⁱˣ` between `j` and `j-1`  to emulate shear mixing.
-`Ri` should always be less than 0.25; therefore `Riᵐⁱˣ < 0.25` implies imperfect mixing.
-The default value for `Riᵐⁱˣ` is 0.3.
+Mix values of `u` by the ratio `Ri/Riᵐⁱˣ` between `j` and `j-1`  to emulate 
+shear mixing. `Ri` should always be less than 0.25; therefore `Riᵐⁱˣ < 0.25` 
+implies imperfect mixing. The default value for `Riᵐⁱˣ` is 0.3.
 """
 function shearmix!(u, j, Ri, Riᵐⁱˣ)
   uᵐⁱˣ = 0.5 * (1 - Ri[j]/Riᵐⁱˣ) * (u[j-1] - u[j])
@@ -82,7 +131,7 @@ function gradientmix!(ocean, params, imix)
   Riᵐⁱⁿ, jᵐⁱⁿ = findmin(ocean.Ri)
 
   while Riᵐⁱⁿ <= params.gradRiᶜ
-    shearmix!(ocean, jᵐⁱⁿ, params.gradRiᵐⁱˣ) # perform shear mixing between jᵐⁱⁿ-1 and jᵐⁱⁿ
+    shearmix!(ocean, jᵐⁱⁿ, params.gradRiᵐⁱˣ)
 
     # Recompute Ri, taking care not to leave domain
     jlower = jᵐⁱⁿ > 1           ? jᵐⁱⁿ-1 : 1
@@ -97,18 +146,19 @@ end
 
 gradientmix!(model::Model) = gradientmix!(model.ocean, model.params, model.imix)
 
-function bulkRi(ρ, U, zᴳ, dz, imix, g, ρ₀)
+function bulkRi(ρ, U, zF, dz, imix, g, ρ0)
   if imix > 1
-    h = mixedlayerdepth(zᴳ, imix)
+    h = mixedlayerdepth(zF, imix)
     Δρ = ρ[imix] - ρ[imix-1] # negative if stably stratified
     ΔU = U[imix] - U[imix-1]
-    return -g*Δρ*h / (ρ₀*abs2(ΔU)) # > 0
+    return -g*Δρ*h / (ρ0*abs2(ΔU)) # > 0
   else
     return Inf
   end
 end
 
-bulkRi(o::Ocean, p::Parameters, imix) = bulkRi(o.ρ, o.U, o.zᴳ, o.dz, imix, p.g, p.ρ₀)
+bulkRi(o::Ocean, p::Parameters, imix) = bulkRi(o.ρ, o.U, o.zF, o.dz, imix, p.g, 
+                                               p.ρ0)
 bulkRi(m::Model) = bulkRi(m.ocean, m.params, m.imix)
 
 function deepen!(ocean, imix)

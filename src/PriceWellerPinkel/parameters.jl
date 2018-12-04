@@ -9,8 +9,8 @@ end
 
 struct Parameters <: AbstractParameters
   f::Float64
-  Cᵖ::Float64
-  ρ₀::Float64
+  Cp::Float64
+  ρ0::Float64
   g::Float64
   bulkRiᶜ::Float64
   gradRiᶜ::Float64
@@ -59,4 +59,5 @@ function Parameters(; # Verbose names for API:
              dʳᵉᵈ, dᵇˡᵘᵉ, fracʳᵉᵈ, fracᵇˡᵘᵉ)
 end
 
-insolationprofile(z, fʳᵉᵈ, fᵇˡᵘᵉ, dʳᵉᵈ, dᵇˡᵘᵉ) = fʳᵉᵈ*exp(z/dʳᵉᵈ) + fᵇˡᵘᵉ*exp(z/dᵇˡᵘᵉ)
+insolationprofile(z, frac_red, frac_blue, depth_red, depth_blue) = (
+  frac_red*exp(z/depth_red) + frac_blue*exp(z/depth_blue))

@@ -1,9 +1,9 @@
 # Functions
 
-## Functions exported from `PriceWellerPinkel`:
+## Functions exported from `OceanMixedLayerModels`:
 
 ```@autodocs
-Modules = [PriceWellerPinkel]
+Modules = [OceanMixedLayerModels]
 Private = false
 Order = [:function]
 ```
