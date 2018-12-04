@@ -13,7 +13,7 @@ git clone https://github.com/glwagner/OceanBoundaryLayerModels.jl.git
 
 ## Documentation
 
-* [STABLE](https://glwagner.github.io/OceanBoundaryLayerModels.jl/stable)
+* [LATEST](https://glwagner.github.io/OceanBoundaryLayerModels.jl/latest)
 
 ## Example(s)
 
