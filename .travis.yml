@@ -1,3 +1,11 @@
+langugage: julia
+
+os:
+  - osx
+  - linux
+
+julia: 1.0
+
 jobs:
   include:
     - stage: "Documentation"
