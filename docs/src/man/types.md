@@ -1,9 +1,9 @@
 # Private types
 
-## Private types in module `PriceWellerPinkel`:
+## Private types in module `OceanBoundaryLayerModels`:
 
 ```@autodocs
-Modules = [PriceWellerPinkel]
+Modules = [OceanBoundaryLayerModels]
 Public = false
 Order = [:type]
 ```

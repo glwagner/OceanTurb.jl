@@ -1,5 +1,5 @@
 params = Parameters(f=2π, ρ₀=1.0, g=1.0, gradRiᵐⁱˣ=0.5)
-model = Model(params=params, ocean=Ocean(H=4, nz=4))
+model = PriceWellerPinkelModel(params=params, ocean=Ocean(H=4, nz=4))
 ocean = model.ocean
 
 function testconvect1()

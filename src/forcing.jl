@@ -1,36 +1,54 @@
-alternatenametable = Dict(
-  "τˣ"=>"stress_x",
-  "τʸ"=>"stress_y"
-)
-
 struct Forcing{T}
   ndata::Int
   tdata::AbstractArray{T,1}
   shortwave::AbstractArray{T,1}
   longwave::AbstractArray{T,1}
-  latentflux::AbstractArray{T,1}
-  sensibleflux::AbstractArray{T,1}
-  τˣ::AbstractArray{T,1}
-  τʸ::AbstractArray{T,1}
+  latent::AbstractArray{T,1}
+  sensible::AbstractArray{T,1}
+  xstress::AbstractArray{T,1}
+  ystress::AbstractArray{T,1}
   precip::AbstractArray{T,1}
   evap::AbstractArray{T,1}
 end
 
-function Forcing(; tdata=[0, year], shortwave=0tdata, longwave=0tdata, latentflux=0tdata, 
-                 sensibleflux=0tdata, stress_x=0tdata, stress_y=0tdata, precip=0tdata, evap=0tdata,
-                 τˣ=stress_x, τʸ=stress_y)
-  Forcing(length(tdata), tdata, shortwave, longwave, latentflux, sensibleflux, τˣ, τʸ, precip, evap)
+"""
+    Forcing(; tdata=[0, year], forcingfields...)
+
+Construct a `Forcing` specified at time points in `tdata`. The forcing
+fields, which are arrays of data corresponding to the times in `tdata` and 
+are assumed to be measured/calculated/specified at the surface
+and `z=0`, are specified by keyword arguments.
+Their default values are `0tdata`. Possible forcing inputs are
+
+  * `shortwave` : incoming shortwave radiation
+  * `longwave`  : outgoing longwave radiation
+  * `latent`    : incoming latent heat flux
+  * `sensible`  : incoming latent heat flux
+  * `precip`    : precipitation
+  * `evap`      : evaporation
+  * `xstress`   : wind stress in the `x`-direction
+  * `ystress`   : wind stress in the `y`-direction
+
+"""
+function Forcing(; tdata=[0, year], 
+                  shortwave=0tdata, longwave=0tdata,
+                  latent=0tdata, sensible=0tdata,
+                  precip=0tdata, evap=0tdata,
+                  xstress=0tdata, ystress=0tdata
+                 )
+
+  Forcing(length(tdata), tdata, shortwave, longwave, latent, sensible, 
+          xstress, ystress, precip, evap)
 end
 
 iskey(key, c) = key in keys(c)
-
 setforcingvar(varsym, forcingdict) = eval(varsym) = forcingdict[String(varsym)]
 
 """
     loadforcing(filepath)
 
-Initalize a `Forcing` from the JLD2 file at `filepath`. The names of the file's fields must
-correspond to the names of the `Forcing` fields.
+Initalize a `Forcing` from the JLD2 file at `filepath`. The names of the file's 
+fields must correspond to the names of the `Forcing` fields.
 """
 function loadforcing(filepath)
 
@@ -49,10 +67,13 @@ function loadforcing(filepath)
     for fieldsym in fieldnames(Forcing)
       if fieldsym != :nt
         fieldstr = String(fieldsym)
-        filefieldstr = (!iskey(fieldstr, file) && iskey(fieldstr, alternatenametable)
+        filefieldstr = (!iskey(fieldstr, file) && 
+                        iskey(fieldstr, alternatenametable)
                         ? alternatenametable[fieldstr] : fieldstr)
-        forcingfields[fieldstr] = iskey(filefieldstr, file) ? file[filefieldstr] : 0t
-        nt == length(forcingfields[fieldstr]) || error("Length of forcing field $fieldstr is incompatable with t")
+        forcingfields[fieldstr] = (iskey(filefieldstr, file) ? 
+                                   file[filefieldstr] : 0t)
+        nt == length(forcingfields[fieldstr]) || (
+          error("Length of forcing field $fieldstr is incompatable with t"))
       end
     end
 
@@ -65,10 +86,10 @@ function loadforcing(filepath)
     forcingfields["t"],
     forcingfields["shortwave"],
     forcingfields["longwave"],
-    forcingfields["latentflux"],
-    forcingfields["sensibleflux"],
-    forcingfields["τˣ"],
-    forcingfields["τʸ"],
+    forcingfields["latent"],
+    forcingfields["sensible"],
+    forcingfields["xstress"],
+    forcingfields["ystress"],
     forcingfields["precip"],
     forcingfields["evap"]
    )
@@ -77,10 +98,10 @@ end
 struct ForcingInterpolant{T}
   shortwave::ScaledInterpolation{T}
   longwave::ScaledInterpolation{T}
-  latentflux::ScaledInterpolation{T}
-  sensibleflux::ScaledInterpolation{T}
-  τˣ::ScaledInterpolation{T}
-  τʸ::ScaledInterpolation{T}
+  latent::ScaledInterpolation{T}
+  sensible::ScaledInterpolation{T}
+  xstress::ScaledInterpolation{T}
+  ystress::ScaledInterpolation{T}
   precip::ScaledInterpolation{T}
   evap::ScaledInterpolation{T}
 end

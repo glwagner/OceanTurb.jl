@@ -1,0 +1,6 @@
+language: julia
+julia: 1.0
+os: linux
+after_sucesss:
+  - julia --project=docs/ -e 'using Pkg; Pkg.instantiate(); Pkg.develop(PackageSpec(path=pwd()))'
+  - julia --project=docs/ docs/make.jl

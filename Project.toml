@@ -1,9 +1,10 @@
-name = "PriceWellerPinkel"
-uuid = "c6b662ea-e463-11e8-1222-914bc916cf2a"
+name = "OceanBoundaryLayerModels"
+uuid = "5b88d936-f7d9-11e8-3eb6-5956042c8a9f"
 authors = ["Gregory Wagner <wagner.greg@gmail.com>"]
 version = "0.1.0"
 
 [deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 EarthConstants = "384beef0-e39c-11e8-0524-11a529e18135"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"

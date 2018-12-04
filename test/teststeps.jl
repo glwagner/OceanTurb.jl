@@ -1,5 +1,5 @@
 params = Parameters(f=2π, ρ₀=1.0, g=1.0, gradRiᵐⁱˣ=0.5) # simple parameters for testing
-model = Model(params=params, ocean=Ocean(H=1, nz=4)) # model with zero forcing
+model = PriceWellerPinkelModel(params=params, ocean=Ocean(H=1, nz=4)) # model with zero forcing
 
 function teststepuv1()
   model.ocean.U .= 1.0

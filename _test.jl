@@ -1,3 +1,3 @@
 using Pkg
-Pkg.update()
 Pkg.activate(".")
+Pkg.test()

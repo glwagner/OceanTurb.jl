@@ -1,5 +1,7 @@
-# PriceWellerPinkel.jl Documentation
+# OceanBoundaryLayerModels.jl
 
-## Overview
+`OceanBoundaryLayerModels.jl` implements models for the ocean's boundary layer.
 
-This code implements the PriceWellerPinkel mixed layer model.
+## Installation
+
+## Authors
