@@ -31,4 +31,4 @@ models as possible. The models currently on our horizon are
 
 # Authors
 
-Currently just [Greg][glwagner.github.io].
+Currently just [Greg](glwagner.github.io).
