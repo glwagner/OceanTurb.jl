@@ -1,6 +1,6 @@
 module PriceWellerPinkel
 
-using OceanMixedLayerModels
+using OceanBoundaryLayerModels
 
 export
   PriceWellerPinkelModel,

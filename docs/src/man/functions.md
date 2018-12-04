@@ -1,9 +1,9 @@
 # Functions
 
-## Functions exported from `OceanMixedLayerModels`:
+## Functions exported from `OceanBoundaryLayerModels`:
 
 ```@autodocs
-Modules = [OceanMixedLayerModels]
+Modules = [OceanBoundaryLayerModels]
 Private = false
 Order = [:function]
 ```

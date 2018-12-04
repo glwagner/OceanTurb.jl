@@ -1,16 +1,16 @@
 using
-  OceanMixedLayerModels,
-  OceanMixedLayerModels.PriceWellerPinkel,
+  OceanBoundaryLayerModels,
+  OceanBoundaryLayerModels.PriceWellerPinkel,
   Test
 
-# OMLM: OceanMixedLayerModels
+# OBLM: OceanBoundaryLayerModels
 # PWP:  Price-Weller-Pinkel
 # MY:   Mellor-Yamada
 # KPP:  Kappa Profile Parameterization
 
-const OMLM = OceanMixedLayerModels
-const PWP = OceanMixedLayerModels.PriceWellerPinkel # temporary fix
-const year = OMLM.year
+const OBLM = OceanBoundaryLayerModels
+const PWP = OBLM.PriceWellerPinkel # temporary fix
+const year = OBLM.year
 
 # --
 # Test running section

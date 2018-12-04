@@ -1,9 +1,9 @@
 # Private types
 
-## Private types in module `OceanMixedLayerModels`:
+## Private types in module `OceanBoundaryLayerModels`:
 
 ```@autodocs
-Modules = [OceanMixedLayerModels]
+Modules = [OceanBoundaryLayerModels]
 Public = false
 Order = [:type]
 ```

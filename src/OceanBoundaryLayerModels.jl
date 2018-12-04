@@ -1,4 +1,4 @@
-module OceanMixedLayerModels
+module OceanBoundaryLayerModels
 
 export
     Ocean,
