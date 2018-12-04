@@ -13,7 +13,14 @@ git clone https://github.com/glwagner/OceanBoundaryLayerModels.jl.git
 
 ## Documentation
 
-# Boundary Layer Models
+* [STABLE](https://glwagner.github.io/OceanBoundaryLayerModels.jl/stable)
+
+## Example(s)
+
+Coming soon.
+
+
+# The Boundary Layer Models
 
 This code aims to provide solvers for as many oceanic boundary layer
 models as possible. The models currently on our horizon are
