@@ -85,13 +85,6 @@ git-tree-sha1 = "9f2135e0e7ecb63f9c3ef73ea15a31d8cdb79bb7"
 uuid = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 version = "0.20.0"
 
-[[EarthConstants]]
-git-tree-sha1 = "fc68021584d9d1540a03179c100d42db1f743ff9"
-repo-rev = "master"
-repo-url = "https://github.com/glwagner/EarthConstants.jl.git"
-uuid = "384beef0-e39c-11e8-0524-11a529e18135"
-version = "0.1.0"
-
 [[FileIO]]
 deps = ["Pkg", "Random", "Test"]
 git-tree-sha1 = "1a114d08094e7267ba8d4d684f930d5a722184de"
