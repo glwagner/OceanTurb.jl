@@ -1,20 +1,6 @@
-langugage: julia
-
-os: linux
-
+language: julia
 julia: 1.0
-
-matrix:
-  allow_failures:
-    - julia: 1.0
-
-jobs:
-  include:
-    - stage: "Documentation"
-      julia: 1.0
-      os: linux
-      script:
-        - julia --project=docs/ -e 'using Pkg; Pkg.instantiate();
-                                    Pkg.develop(PackageSpec(path=pwd()))'
-        - julia --project=docs/ docs/make.jl
-      after_success: skip
+os: linux
+after_sucesss:
+  - julia --project=docs/ -e 'using Pkg; Pkg.instantiate(); Pkg.develop(PackageSpec(path=pwd()))'
+  - julia --project=docs/ docs/make.jl
