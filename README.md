@@ -1,4 +1,4 @@
-# OceanBoundaryLayerModels.jl
+# OceanicBoundaryLayers.jl
 
 This code provides models that approximate the physics of the surface
 boundary layer of the ocean.
