@@ -21,7 +21,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Home",
     "title": "Installation",
     "category": "section",
-    "text": ""
+    "text": "As simple as git clone https://github.com/glwagner/OceanBoundaryLayerModels.jl.git"
 },
 
 {
@@ -29,7 +29,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Home",
     "title": "Authors",
     "category": "section",
-    "text": ""
+    "text": "Gregory L. Wagner"
 },
 
 {
