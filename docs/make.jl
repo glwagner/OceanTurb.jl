@@ -10,8 +10,7 @@ makedocs(
   sitename = "OceanBoundaryLayerModels.jl",
      pages = Any[
               "Home" => "index.md",
-              "Physics" => "physics.md",
-              "Modeling" => "numerics.md",
+              "Basics" => "basics.md",
               "Boundary layer models" => Any[
                 "models/pricewellerpinkel.md"],
               "DocStrings" => Any[

@@ -1,5 +1,7 @@
 ```math
 \newcommand{\c}{\, ,}
+\newcommand{\p}{\, .}
+\newcommand{\d}{\partial}
 
 \newcommand{\r}[1]{\mathrm{#1}}
 
@@ -12,15 +14,20 @@
 \newcommand{\eeqs}{\end{gather}}
 ```
 
-# Numerical modeling of the oceanic boundary layer
+# Physics and modeling of the oceanic boundary layer
 
 Models for the oceanic boundary layer are partial
 differential equations that approximate the effects of 
 
-* Atmospheric and radiative forcing;
-* Parameterization of convection due to surface cooling;
-* Parameterization of mechanical mixing by mixed layer turbulence due mainly
-  to wind forcing of boundary-layer currents.
+* Internal and surface fluxes of heat, salinity, and momentum due to
+  - absorption of incoming solar radiation;
+  - cooling by outgoing radiation;
+  - latent and sensible heat exchange with the atmosphere;
+  - evaporation and precipitation;
+  - wind forcing;
+* Vertical turbulent fluxes due to
+  - convection / gravitational instability;
+  - mechanical mixing due to wind and boundary current shear 
 
 `OceanMixedLayerModels.jl` uses 
 an implementation of atmospheric and radiative forcings that is shared
@@ -42,18 +49,21 @@ horizontal momentum, salinity, and temperature are
 
 ```math
 \beqs
-u_t - f v = -G^u_z - F^u_z \c \\
-v_t + f u = -G^v_z - F^v_z \c \\
-      S_t = -G^S_z - F^S_z \c \\
-      T_t = -G^T_z - F^T_z \c
+u_t =   f v - G^u_z - F^u \c \label{xmomentum} \\
+v_t = - f u - G^v_z - F^v \c \\
+S_t =       - G^S_z - F^S \c \\
+T_t =       - G^T_z - F^T \c \label{temperature}
 \eeqs
 ```
 
 where subscripts ``t`` and ``z`` denote derivatives with respect to time 
-and the vertical coordinate ``z``, ``f`` is the Coriolis parameter, 
-``G^\phi = \overline{w \phi}`` denotes the turbulent vertical flux of 
-a quantity ``\phi``, while ``F^\phi`` denotes vertical fluxes due to 
-forcing.
+and the vertical coordinate ``z`` and ``f`` is the Coriolis parameter. 
+In \eqref{xmomentum}--\eqref{temperature}, internal and boundary forcing of a
+quantity ``\phi`` is denoted ``F^\phi``, while vertical turbulent fluxes are
+
+```math
+G^\phi = \overline{w \phi} \p
+````
 
 ### Temperature forcing
 
@@ -66,8 +76,8 @@ F^T = F^{\r{lat}} + F^{\r{sens}} + F^{\r{longwave}}
 
 in terms of the four contributions from latent heating, sensible heating, 
 outgoing longwave radiation, and incoming shortwave radiation. 
-The first three contributions are implemented as effective boundary conditions
-in the uppermost gridpoints of the model.
+The first three contributions are boundary terms whose direct effect
+is felt only at the surface.
 Shortwave radiation, on the other hand, heats the interior of the boundary 
 layer. 
 We parameterize the effect of interior heating by shortwave radiation by
@@ -77,7 +87,7 @@ components and introducing a ``z``-dependent absorption function such that
 ```math
 \beq
 F^{\r{shortwave}}(z) = F^{\r{shortwave}}_0
-    \left ( \alpha_{\r{IR}} \exp \left [ z/d_{\r{IR}} \right ] 
+    \d_z \left ( \alpha_{\r{IR}} \exp \left [ z/d_{\r{IR}} \right ] 
           + \alpha_{\r{UV}} \exp \left [ z/d_{\r{UV}} \right ] \right ) \c
 \label{shortwaverad}
 \eeq
