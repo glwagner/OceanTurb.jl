@@ -1,15 +1,35 @@
-struct Forcing{T}
-  ndata::Int
-  tdata::AbstractArray{T,1}
-  shortwave::AbstractArray{T,1}
-  longwave::AbstractArray{T,1}
-  latent::AbstractArray{T,1}
-  sensible::AbstractArray{T,1}
-  xstress::AbstractArray{T,1}
-  ystress::AbstractArray{T,1}
-  precip::AbstractArray{T,1}
-  evap::AbstractArray{T,1}
+iskey(key, c) = key in keys(c)
+setforcingvar(varsym, forcingdict) = eval(varsym) = forcingdict[String(varsym)]
+
+struct Forcing{A,ITP}
+  data::ForcingData{A}
+  interp::ITP
 end
+
+struct ForcingData{A}
+  ndata::Int
+  tdata::A
+  shortwave::A
+  longwave::A
+  latent::A
+  sensible::A
+  xstress::A
+  ystress::A
+  precip::A
+  evap::A
+end
+
+struct ForcingInterpolant{T}
+  shortwave::ScaledInterpolation{T}
+  longwave::ScaledInterpolation{T}
+  latent::ScaledInterpolation{T}
+  sensible::ScaledInterpolation{T}
+  precip::ScaledInterpolation{T}
+  evap::ScaledInterpolation{T}
+  xstress::ScaledInterpolation{T}
+  ystress::ScaledInterpolation{T}
+end
+
 
 """
     Forcing(; tdata=[0, year], forcingfields...)
@@ -30,20 +50,46 @@ Their default values are `0tdata`. Possible forcing inputs are
   * `ystress`   : wind stress in the `y`-direction
 
 """
-function Forcing(; tdata=[0, year], 
-                  shortwave=0tdata, longwave=0tdata,
-                  latent=0tdata, sensible=0tdata,
-                  precip=0tdata, evap=0tdata,
-                  xstress=0tdata, ystress=0tdata
-                 )
+function ForcingData(; 
+      tdata = [0, year], 
+  shortwave = 0tdata, 
+   longwave = 0tdata,
+     latent = 0tdata, 
+   sensible = 0tdata,
+     precip = 0tdata, 
+       evap = 0tdata,
+    xstress = 0tdata, 
+    ystress = 0tdata
+)
 
-  Forcing(length(tdata), tdata, shortwave, longwave, latent, sensible, 
-          xstress, ystress, precip, evap)
+  dt = tdata[2]-tdata[1]
+  if any(dt .!= tdata[2:end]-tdata[1:end-1]) 
+    error("Data must be evenly spaced in time")
+  end
+
+  ndata = length(tdata) 
+  # TODO: ensure all fields have the same length
+  # for name in fieldnames(ForcingInterpolant)...
+  
+  ForcingData(tdata, shortwave, longwave, latent, sensible, xstress, ystress, 
+              precip, evap)
+              
 end
 
-iskey(key, c) = key in keys(c)
-setforcingvar(varsym, forcingdict) = eval(varsym) = forcingdict[String(varsym)]
+function ForcingInterpolant(forcing)
+  dt = forcing.tdata[2]-forcing.tdata[1]
+  t0 = forcing.tdata[1]
+  tf = forcing.tdata[end]
+  for name in fieldnames(ForcingInterpolant)
+    field = getfield(forcing, name)
+    @eval begin
+      $name = scale(interpolate($field, BSpline(Linear())), $t0:$dt:$tf)
+    end
+  end
+  ForcingInterpolant(eval.(fieldnames(ForcingInterpolant))...)
+end
 
+#=
 """
     loadforcing(filepath)
 
@@ -94,27 +140,4 @@ function loadforcing(filepath)
     forcingfields["evap"]
    )
 end
-
-struct ForcingInterpolant{T}
-  shortwave::ScaledInterpolation{T}
-  longwave::ScaledInterpolation{T}
-  latent::ScaledInterpolation{T}
-  sensible::ScaledInterpolation{T}
-  xstress::ScaledInterpolation{T}
-  ystress::ScaledInterpolation{T}
-  precip::ScaledInterpolation{T}
-  evap::ScaledInterpolation{T}
-end
-
-function ForcingInterpolant(forcing)
-  dt = forcing.tdata[2]-forcing.tdata[1]
-  t⁰ = forcing.tdata[1]
-  tᶠ = forcing.tdata[end]
-  for name in fieldnames(ForcingInterpolant)
-    field = getfield(forcing, name)
-    @eval begin
-      $name = scale(interpolate($field, BSpline(Linear())), $t⁰:$dt:$tᶠ)
-    end
-  end
-  ForcingInterpolant(eval.(fieldnames(ForcingInterpolant))...)
-end
+=#
