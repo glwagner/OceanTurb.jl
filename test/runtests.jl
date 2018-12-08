@@ -24,6 +24,7 @@ const year = OBLM.year
   @test testzeros(Float32)
 end
 
+#=
 @testset "Forcing" begin
 
   function testforcinginterpolant(fld=:shortwave)
@@ -37,6 +38,7 @@ end
     @test testforcinginterpolant(fld)
   end
 end
+=#
 
 #=
 @testset "Mixing" begin

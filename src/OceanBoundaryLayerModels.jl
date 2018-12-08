@@ -32,6 +32,7 @@ using Statistics: mean
 const DEBUG = true
 
 abstract type Model end
+abstract type AbstractParameters end
 
 # Gregorian calendar-ic globals
 const second = 1.0

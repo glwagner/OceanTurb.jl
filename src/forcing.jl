@@ -1,11 +1,6 @@
 iskey(key, c) = key in keys(c)
 setforcingvar(varsym, forcingdict) = eval(varsym) = forcingdict[String(varsym)]
 
-struct Forcing{A,ITP}
-  data::ForcingData{A}
-  interp::ITP
-end
-
 struct ForcingData{A}
   ndata::Int
   tdata::A
@@ -29,6 +24,13 @@ struct ForcingInterpolant{T}
   xstress::ScaledInterpolation{T}
   ystress::ScaledInterpolation{T}
 end
+
+struct Forcing{T,A}
+  data::ForcingData{A}
+  interp::ForcingInterpolant{T}
+end
+
+
 
 
 """
