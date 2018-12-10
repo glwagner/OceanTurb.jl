@@ -33,99 +33,35 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "physics/#",
-    "page": "Physics",
-    "title": "Physics",
+    "location": "basics/#",
+    "page": "Basics",
+    "title": "Basics",
     "category": "page",
-    "text": "newcommandc \n\nnewcommandr1mathrm1\n\nnewcommandeemathrme\n\nnewcommandbeqbeginequation\nnewcommandeeqendequation\n\nnewcommandbeqsbegingather\nnewcommandeeqsendgather"
+    "text": "newcommandc \nnewcommandp \nnewcommanddpartial\n\nnewcommandr1mathrm1\n\nnewcommandeemathrme\n\nnewcommandbeqbeginequation\nnewcommandeeqendequation\n\nnewcommandbeqsbegingather\nnewcommandeeqsendgather"
 },
 
 {
-    "location": "physics/#Physics-of-the-oceanic-boundary-layer-1",
-    "page": "Physics",
-    "title": "Physics of the oceanic boundary layer",
+    "location": "basics/#Physics-and-modeling-of-the-oceanic-boundary-layer-1",
+    "page": "Basics",
+    "title": "Physics and modeling of the oceanic boundary layer",
     "category": "section",
-    "text": "The dynamics of the ocean\'s boundary layer are dominated by forcing from the atmosphere. Atmospheric forcing includes momentum forcing by winds, salinity forcing by evaporation and precipitation, and heat forcing by latent heat fluxes, sensible heat fluxes, and incoming and outgoing radiation."
+    "text": "Models for the oceanic boundary layer are partial differential equations that approximate the effects of Internal and surface fluxes of heat, salinity, and momentum due to\nabsorption of incoming solar radiation;\ncooling by outgoing radiation;\nlatent and sensible heat exchange with the atmosphere;\nevaporation and precipitation;\nwind forcing;\nVertical turbulent fluxes due to\nconvection / gravitational instability;\nmechanical mixing due to wind and boundary current shear OceanMixedLayerModels.jl uses  an implementation of atmospheric and radiative forcings that is shared across all models. The models therefore differ mainly in the way they parameterize convective and mechanical mixing."
 },
 
 {
-    "location": "physics/#Models-of-the-oceanic-boundary-layer-1",
-    "page": "Physics",
-    "title": "Models of the oceanic boundary layer",
-    "category": "section",
-    "text": "Models for the oceanic boundary layer are partial differential equations that approximate the effects of Atmospheric and radiative forcing;\nParameterization of convection due to surface cooling;\nParameterization of mechanical mixing by mixed layer turbulence due mainly to wind forcing of boundary-layer currents.OceanMixedLayerModels.jl uses  an implementation of atmospheric and radiative forcings that is shared across all models. The models therefore differ mainly in the way they parameterize convective and mechanical mixing."
-},
-
-{
-    "location": "physics/#Coordinate-system-1",
-    "page": "Physics",
+    "location": "basics/#Coordinate-system-1",
+    "page": "Basics",
     "title": "Coordinate system",
     "category": "section",
     "text": "We use a Cartesian coordinate system in which gravity points downwards,  toward the ground or bottom of the ocean. The vertical coordinate z  thus increases upwards. We locate the surface at z=0. This means that if the boundary layer has depth h, the bottom of the boundary layer is  located at z=-h."
 },
 
 {
-    "location": "physics/#Governing-equations-1",
-    "page": "Physics",
+    "location": "basics/#Governing-equations-1",
+    "page": "Basics",
     "title": "Governing equations",
     "category": "section",
-    "text": "The one-dimensional, horizontally-averaged boundary-layer equations for  horizontal momentum, salinity, and temperature are beqs\nu_t - f v = -G^u_z - F^u_z c \nv_t + f u = -G^v_z - F^v_z c \n      S_t = -G^S_z - F^S_z c \n      T_t = -G^T_z - F^T_z c\neeqswhere subscripts t and z denote derivatives with respect to time  and the vertical coordinate z, f is the Coriolis parameter,  G^phi = overlinew phi denotes the turbulent vertical flux of  a quantity phi, while F^phi denotes vertical fluxes due to  forcing."
-},
-
-{
-    "location": "physics/#Temperature-forcing-1",
-    "page": "Physics",
-    "title": "Temperature forcing",
-    "category": "section",
-    "text": "We write the temperature forcing F^T asF^T = F^rlat + F^rsens + F^rlongwave \n        + F^rshortwave cin terms of the four contributions from latent heating, sensible heating,  outgoing longwave radiation, and incoming shortwave radiation.  The first three contributions are implemented as effective boundary conditions in the uppermost gridpoints of the model. Shortwave radiation, on the other hand, heats the interior of the boundary  layer.  We parameterize the effect of interior heating by shortwave radiation by dividing the shortwave spectrum into infrared (IR) and ultraviolet (UV) components and introducing a z-dependent absorption function such thatbeq\nF^rshortwave(z) = F^rshortwave_0\n    left ( alpha_rIR exp left  zd_rIR right  \n          + alpha_rUV exp left  zd_rUV right  right ) c\nlabelshortwaverad\neeqwhere F^rshortwave_0 is the incoming shortwave radiation at the  surface, which is provided as an input to the boundary layer model. In \\eqref{shortwaverad},  d_rIR and d_rUV are the  penetration scales of infrared and ultraviolet radiation, and alpha_rIR and alpha_rUV are the fractions of total shortwave radiation with infrared and ultraviolet wavelengths, respectively, such that  alpha_rIR + alpha_rUV = 1."
-},
-
-{
-    "location": "physics/#Salinity-forcing-1",
-    "page": "Physics",
-    "title": "Salinity forcing",
-    "category": "section",
-    "text": "Salinity forcing F^S at the surface isbeq\nF^S(z=0) = S(z=0)(E-P) c\nlabelsalinityflux\neeqwhere S is salinity, E is evaporation, and P is precipitation. Equation \\eqref{salinityflux} is implemented as an effective boundary condition in the uppermost grid points of the model."
-},
-
-{
-    "location": "physics/#Momentum-forcing-1",
-    "page": "Physics",
-    "title": "Momentum forcing",
-    "category": "section",
-    "text": "Momentum forcing at the surface is beq\nF^u(z=0) = fractau^xrho_0 c\nlabeluforcing\neeqwhere tau^x is the wind stress in the x-direction with units of  Nrm^2, and rho_0 is a reference density. A similar form is used for y-momentum. Equation \\eqref{uforcing} is implemented as an effective boundary condition."
-},
-
-{
-    "location": "numerics/#",
-    "page": "Modeling",
-    "title": "Modeling",
-    "category": "page",
-    "text": "newcommandc \n\nnewcommandr1mathrm1\n\nnewcommandeemathrme\n\nnewcommandbeqbeginequation\nnewcommandeeqendequation\n\nnewcommandbeqsbegingather\nnewcommandeeqsendgather"
-},
-
-{
-    "location": "numerics/#Numerical-modeling-of-the-oceanic-boundary-layer-1",
-    "page": "Modeling",
-    "title": "Numerical modeling of the oceanic boundary layer",
-    "category": "section",
-    "text": ""
-},
-
-{
-    "location": "numerics/#Basic-form-1",
-    "page": "Modeling",
-    "title": "Basic form",
-    "category": "section",
-    "text": "Models for the oceanic boundary layer are partial differential equations of  the formbeq\nphi_t = L phi + N(phi) c\nlabelmathematicalform\neeqwhere phi is a variable like velocity, temperature, or salinity, L is  a linear operator, and N is a nonlinear operator."
-},
-
-{
-    "location": "numerics/#Time-stepping-1",
-    "page": "Modeling",
-    "title": "Time-stepping",
-    "category": "section",
-    "text": "An explicit forward Euler time integration scheme discretizes \\eqref{mathematicalform} in time withbeq\nphi^n+1 = phi^n + Delta t left  L phi^n + N(phi^n) right  \neeq where the superscripts n and n+1 denote the solution at  time-step n and n+1, respectively."
+    "text": "The one-dimensional, horizontally-averaged boundary-layer equations for  horizontal momentum, salinity, and temperature are beqs\nu_t =   f v - G^u_z - F^u c labelxmomentum \nv_t = - f u - G^v_z - F^v c \nS_t =       - G^S_z - F^S c \nT_t =       - G^T_z - F^T c labeltemperature\neeqswhere subscripts t and z denote derivatives with respect to time  and the vertical coordinate z and f is the Coriolis parameter.  In \\eqref{xmomentum}–\\eqref{temperature}, internal and boundary forcing of a quantity phi is denoted F^phi, while vertical turbulent fluxes areG^phi = overlinew phi p\n\n\n Numerical modeling of the oceanic boundary layer\n\n Basic form\n\nModels for the oceanic boundary layer are partial differential equations of \nthe form\nmath \\beq \\phi_t = L \\phi + N(\\phi) \\c \\label{mathematicalform}faf0627972293e4cfa03da9de9e9daa31143d1d5:docs/src/numerics.md\\eeq\nwhere ``phi`` is a variable like velocity, temperature, or salinity, ``L`` is \na linear operator, and ``N`` is a nonlinear operator.\n\n## Time-stepping\n\nAn explicit forward Euler time integration scheme discretizes\n\\eqref{mathematicalform} in time with\nmath \\beq \\phi^{n+1} = \\phi^{n} + \\Delta t \\left [ L \\phi^n + N(\\phi^n) \\right ] \\, \\eeq  ```where the superscripts n and n+1 denote the solution at  time-step n and n+1, respectively."
 },
 
 {
