@@ -65,70 +65,34 @@ quantity ``\phi`` is denoted ``F^\phi``, while vertical turbulent fluxes are
 G^\phi = \overline{w \phi} \p
 ````
 
-### Temperature forcing
+# Numerical modeling of the oceanic boundary layer
 
-We write the temperature forcing ``F^T`` as
+## Basic form
 
-```math
-F^T = F^{\r{lat}} + F^{\r{sens}} + F^{\r{longwave}} 
-        + F^{\r{shortwave}} \c
-```
-
-in terms of the four contributions from latent heating, sensible heating, 
-outgoing longwave radiation, and incoming shortwave radiation. 
-The first three contributions are boundary terms whose direct effect
-is felt only at the surface.
-Shortwave radiation, on the other hand, heats the interior of the boundary 
-layer. 
-We parameterize the effect of interior heating by shortwave radiation by
-dividing the shortwave spectrum into infrared (IR) and ultraviolet (UV)
-components and introducing a ``z``-dependent absorption function such that
+Models for the oceanic boundary layer are partial differential equations of 
+the form
 
 ```math
 \beq
-F^{\r{shortwave}}(z) = F^{\r{shortwave}}_0
-    \d_z \left ( \alpha_{\r{IR}} \exp \left [ z/d_{\r{IR}} \right ] 
-          + \alpha_{\r{UV}} \exp \left [ z/d_{\r{UV}} \right ] \right ) \c
-\label{shortwaverad}
+\phi_t = L \phi + N(\phi) \c
+\label{mathematicalform}
+>>>>>>> faf0627972293e4cfa03da9de9e9daa31143d1d5:docs/src/numerics.md
 \eeq
 ```
 
-where ``F^{\r{shortwave}}_0`` is the incoming shortwave radiation at the 
-surface, which is provided as an input to the boundary layer model.
-In \eqref{shortwaverad}, 
-``d_{\r{IR}}`` and ``d_{\r{UV}}`` are the 
-penetration scales of infrared and ultraviolet radiation, and
-``\alpha_{\r{IR}}`` and ``\alpha_{\r{UV}}``
-are the fractions of total shortwave radiation with infrared and
-ultraviolet wavelengths, respectively, such that 
-``\alpha_{\r{IR}} + \alpha_{\r{UV}} = 1``.
+where ``phi`` is a variable like velocity, temperature, or salinity, ``L`` is 
+a linear operator, and ``N`` is a nonlinear operator.
 
-### Salinity forcing
+## Time-stepping
 
-Salinity forcing ``F^S`` at the surface is
+An explicit forward Euler time integration scheme discretizes
+\eqref{mathematicalform} in time with
 
 ```math
 \beq
-F^S(z=0) = S(z=0)(E-P) \c
-\label{salinityflux}
-\eeq
-```
-where ``S`` is salinity, ``E`` is evaporation, and ``P`` is precipitation.
-Equation \eqref{salinityflux} is implemented as an effective boundary
-condition in the uppermost grid points of the model.
-
-### Momentum forcing
-
-Momentum forcing at the surface is 
-
-```math
-\beq
-F^u(z=0) = \frac{\tau^x}{\rho_0} \c
-\label{uforcing}
-\eeq
+\phi^{n+1} = \phi^{n} + \Delta t \left [ L \phi^n + N(\phi^n) \right ] \,
+\eeq 
 ```
 
-where ``\tau^x`` is the wind stress in the ``x``-direction with units of 
-``N/\r{m^2}``, and ``\rho_0`` is a reference density.
-A similar form is used for ``y``-momentum.
-Equation \eqref{uforcing} is implemented as an effective boundary condition.
+where the superscripts ``n`` and ``n+1`` denote the solution at 
+time-step ``n`` and ``n+1``, respectively.
