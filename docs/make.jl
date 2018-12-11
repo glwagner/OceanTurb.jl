@@ -1,9 +1,11 @@
-using Documenter, OceanBoundaryLayerModels
+using 
+  Documenter,
+  OceanBoundaryLayerModels
 
 makedocs(
    modules = [OceanBoundaryLayerModels],
-   doctest = false, 
      clean = true,
+   doctest = false, 
  checkdocs = :all,
     format = :html,
    authors = "Gregory L. Wagner",
@@ -12,7 +14,7 @@ makedocs(
               "Home" => "index.md",
               "Basics" => "basics.md",
               "Boundary layer models" => Any[
-                "models/pricewellerpinkel.md"],
+                "models/pacanowskiphilander.md"],
               "DocStrings" => Any[
                     "man/types.md",
                     "man/functions.md"]
