@@ -87,12 +87,14 @@ struct Problem # ?
   timestepper
 end
 
+struct PhilanderPacanowski <: Model
+end
 
 
+include("idealizedforcing.jl")
 
-include("parameters.jl")
-include("ocean.jl")
-
-include("PriceWellerPinkel/PriceWellerPinkel.jl")
+#include("parameters.jl")
+#include("ocean.jl")
+#include("PriceWellerPinkel/PriceWellerPinkel.jl")
 
 end # module

@@ -19,7 +19,6 @@ atmosphere. Atmospheric forcing includes momentum forcing by winds, salinity
 forcing by evaporation and precipitation, and heat forcing by latent heat
 fluxes, sensible heat fluxes, and incoming and outgoing radiation.
 
-
 # Models of the oceanic boundary layer
 
 Models for the oceanic boundary layer are partial
