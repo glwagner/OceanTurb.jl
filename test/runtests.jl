@@ -1,16 +1,6 @@
 using
-  OceanBoundaryLayerModels,
-  OceanBoundaryLayerModels.PriceWellerPinkel,
+  OceanTurb,
   Test
-
-# OBLM: OceanBoundaryLayerModels
-# PWP:  Price-Weller-Pinkel
-# MY:   Mellor-Yamada
-# KPP:  Kappa Profile Parameterization
-
-const OBLM = OceanBoundaryLayerModels
-const PWP = OBLM.PriceWellerPinkel # temporary fix
-const year = OBLM.year
 
 # --
 # Test running section
@@ -18,8 +8,6 @@ const year = OBLM.year
 
 @testset "Basic" begin
   include("testbasic.jl")
-  #@test testparams()
-  #@test testexample()
   @test testzeros(Float64)
   @test testzeros(Float32)
 end
