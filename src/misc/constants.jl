@@ -1,4 +1,4 @@
-struct PhysicalParameters
+struct BoundaryLayerConstants <: Constants
   f::Float64
   Cp::Float64
   ρ0::Float64
@@ -7,13 +7,13 @@ struct PhysicalParameters
   βS::Float64 
   T0::Float64 
   S0::Float64 
-  depth_red::Float64    
+  depth_red::Float64
   depth_blue::Float64
   frac_red::Float64    
   frac_blue::Float64
 end
 
-function PhysicalParameters(; 
+function BoundaryLayerConstants(; 
   # Verbose names for API:            
                 latitude = 45,        # Latitude [degrees]
             heatcapacity = 3990,      # Heat capacity of water [?]
@@ -37,6 +37,6 @@ function PhysicalParameters(;
   frac_blue = shortwavefraction_blue,
   )
                          
-  PhysicalParameters(f, Cp, ρ0, g, βT, βS, T0, S0, depth_red, depth_blue, 
+  BoundaryLayerConstants(f, Cp, ρ0, g, βT, βS, T0, S0, depth_red, depth_blue, 
                      frac_red, frac_blue)
 end

@@ -6,11 +6,11 @@ export
   shortwave_daily,
   longwave_daily
 
-using OceanBoundaryLayerModels
+using OceanTurb
 using Statistics: mean
 
-const day = OceanBoundaryLayerModels.day
-const year = OceanBoundaryLayerModels.year
+const day = OceanTurb.day
+const year = OceanTurb.year
 
 #=
 This module constructs idealized forcing for test cases.
