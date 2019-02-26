@@ -13,11 +13,11 @@ function Timestepper(stepper, args...)
 end
 
 struct ForwardEulerTimestepper{S} <: Timestepper
-  RHS::S
+  rhs::S
 end
 
-function step!(model{G,C,P,E,S,T}, stepper{S}, dt) where S <: Field
+function step!(model, stepper::ForwardEulerTimestepper{S}, dt) where S <: Field
   calc_rhs!(stepper.rhs, equation, model)
-  @. model.solution += dt*stepper.RHS
+  @. model.solution += dt*stepper.rhs
   nothing
 end

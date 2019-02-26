@@ -32,6 +32,10 @@ export
 
 abstract type Grid{T,A} end
 
+# Staggered grid sizes for fields
+cell_field_size(nz) = nz+2
+face_field_size(nz) = nz+1
+
 """
     UniformGrid([A, T], Lz, nz)
 
@@ -46,21 +50,20 @@ struct UniformGrid{T,A} <: Grid{T,A}
   Lz::T
   dzc::T
   dzf::T
-  zc::A
+  zc::OffsetArray{T,1,A}
   zf::A
 end
 
 function UniformGrid(A, T, nz, Lz)
   dz = Lz/nz
-  zc = collect(T, range(-Lz-0.5*dz, step=dz, stop=0.5*dz)) # centers with ghost cells
-  zf = collect(T, range(-Lz, step=dz, stop=0)) # faces
+
+  zc = collect(T, range(-Lz-0.5*dz, step=dz, length=nz+2)) # centers with ghost cells
+  zc = OffsetVector(zc, 0:nz+1)
+
+  zf = collect(T, range(-Lz, step=dz, length=nz+1)) # faces
   UniformGrid{T,A}(nz, Lz, dz, dz, zc, zf)
 end
 
 # Defaults
 UniformGrid(T, nz, Lz) = UniformGrid(Array{T,1}, T, nz, Lz)
 UniformGrid(nz, Lz) = UniformGrid(Float64, nz, Lz)
-
-# Staggered grid sizes for fields
-cell_field_size(nz) = nz+2
-face_field_size(nz) = nz+1

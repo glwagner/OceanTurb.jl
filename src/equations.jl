@@ -2,10 +2,10 @@
 
 export
   LinearOperator,
-  DifferentialOperator
+  DifferentialOperator,
   Equation,
   StandardEquation,
-  calc_rhs!(rhs, model)
+  calc_rhs!
 
 abstract type LinearOperator end
 
@@ -17,25 +17,39 @@ struct DiagonalOperator{A} <: LinearOperator
   L::A
 end
 
-struct NullOperator <: LinearOperator end
-
 abstract type Equation end
 
 """
-    Equation(L, N)
+    StandardEquation(L, N)
 
 Defines the PDE for a solution vector Φ such that
 
-∂t(Φ) = L*Φ + N(Φ).
+∂t(Φ) = L*Φ + N(Φ) ,
       = rhs
 """
-struct StandardEquation{LO} <: Equation
+struct StandardEquation{LO,NO} <: Equation
   L::LO # Linear operator
-  N::Function # Nonlinear operator
+  N::NO # Nonlinear operator
 end
 
 function calc_rhs!(rhs, model)
   #equation.L(rhs, model)
-  equation.N(rhs, model)
+  model.equation.N(rhs, model)
+  nothing
+end
+
+#
+# Zero-flux boundary conditions
+#
+
+function zero_flux!(f::FaceField)
+  f.data[1] = 0
+  f.data[f.grid.nz+1] = 0
+  nothing
+end
+
+function zero_flux!(c::CellField)
+  c.data[0] = c.data[1]
+  c.data[end] = c.data[end-1]
   nothing
 end
