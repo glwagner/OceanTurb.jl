@@ -32,18 +32,6 @@ The most import function that we output is `∂z`.
 
 import Base: setindex!, getindex, eachindex, +, *, -, similar
 
-export
-  Field,
-  CellField,
-  FaceField,
-  dzc,
-  dzf,
-  ∂z,
-  ∂²z,
-  ∂z!
-
-abstract type Field{T,A,G} end
-
 struct CellField{T,A,G} <: Field{T,A,G} 
   data::OffsetArray{T,1,A}
   grid::G
@@ -52,11 +40,15 @@ end
 struct FaceField{T,A,G} <: Field{T,A,G}
   data::A
   grid::G
+  function FaceField(data::Array, grid::Grid{T,A}) where {T,A} 
+    Tdata = typeof(collect(grid.zcf))
+    new{T,typeof(data),typeof(grid)}(data, grid)
+  end
 end
 
 function CellField(data::Array, grid::Grid{T,A}) where {T,A}
   sz = cell_field_size(grid.nz)
-  data = OffsetVector(A(data), 0:sz-1)
+  data = OffsetVector(data, 0:sz-1)
   return CellField(data, grid)
 end
 
@@ -72,7 +64,6 @@ function FaceField(grid::Grid{T,A}) where {T,A}
   return FaceField{T,A,typeof(grid)}(data, grid)
 end
 
-FaceField(data::Array, grid::Grid{T,A}) where {T,A} = FaceField{T,A,typeof(grid)}(data, grid)
 
 @inline eachindex(c::CellField) = 1:c.grid.nz
 @inline eachindex(f::FaceField) = 1:f.grid.nz+1

@@ -26,12 +26,6 @@ Accordingly, variables located in cells (`CellFields`) have dimension nz+2,
 and variables located at cell faces (`FaceFields`) have dimension dimension nz+1.
 =#
 
-export
-  Grid,
-  UniformGrid
-
-abstract type Grid{T,A} end
-
 # Staggered grid sizes for fields
 cell_field_size(nz) = nz+2
 face_field_size(nz) = nz+1
@@ -55,15 +49,18 @@ struct UniformGrid{T,A} <: Grid{T,A}
 end
 
 function UniformGrid(A, T, nz, Lz)
+  Lz = convert(T, Lz)
   dz = Lz/nz
 
-  zc = collect(T, range(-Lz-0.5*dz, step=dz, length=nz+2)) # centers with ghost cells
-  zc = OffsetVector(zc, 0:nz+1)
+  zc = OffsetVector(-Lz-0.5dz:dz:dz, 0:nz+1)
+  zf = -Lz:dz:0
 
-  zf = collect(T, range(-Lz, step=dz, length=nz+1)) # faces
   UniformGrid{T,A}(nz, Lz, dz, dz, zc, zf)
 end
 
 # Defaults
-UniformGrid(T, nz, Lz) = UniformGrid(Array{T,1}, T, nz, Lz)
+function UniformGrid(T, nz, Lz) 
+  UniformGrid(StepRangeLen{T,Base.TwicePrecision{T},Base.TwicePrecision{T}}, T, nz, Lz)
+end
+
 UniformGrid(nz, Lz) = UniformGrid(Float64, nz, Lz)

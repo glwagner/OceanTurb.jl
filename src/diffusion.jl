@@ -28,11 +28,10 @@ function Model(;
 
   grid = UniformGrid(nz, Lz)
   parameters = DiffusionParameters(κ)
-  equation = StandardEquation(nothing, diffusion_operator!)
   constants = nothing
   solution = CellField(grid)
 
-  OceanTurb.Model(grid, constants, parameters, equation, solution)
+  OceanTurb.Model(grid, constants, parameters, solution)
 end
 
 function set!(model, c)
