@@ -2,7 +2,6 @@ using
   OceanTurb,
   Test
 
-import OceanTurb
 import OceanTurb: Diffusion
 
 # --
@@ -43,6 +42,21 @@ end
   end
   @test test_field_indexing()
 end
+
+
+function test_model(; nz=3, Lz=1.5, timestepper=NullTimestepper())
+  grid = UniformGrid(nz, Lz)
+  model = Model(grid=grid, solution=CellField(grid), timestepper=timestepper)
+  model.solution.data == [0, 0, 0]
+end
+
+#=
+@testset "Model" begin
+  @test test_model()
+  solution = CellField(UniformGrid(3, 1.5))
+  @test test_model(timestepper=ForwardEulerTimestepper(solution))
+end
+=#
 
 @testset "Diffusion" begin
   include("diffusiontests.jl")

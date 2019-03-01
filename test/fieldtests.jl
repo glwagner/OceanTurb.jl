@@ -5,13 +5,13 @@
 function test_cell_field_construction(T, nz, Lz)
   grid = UniformGrid(T, nz, Lz)
   c = CellField(grid)
-  size(c.data) == (OceanTurb.cell_field_size(nz),)
+  length(c.data) == OceanTurb.cell_length(nz) && size(c.data) == OceanTurb.cell_size(nz)
 end
 
 function test_face_field_construction(T, nz, Lz)
   grid = UniformGrid(T, nz, Lz)
   f = FaceField(grid)
-  size(f.data) == (OceanTurb.face_field_size(nz),)
+  length(f.data) == OceanTurb.face_length(nz) && size(f.data) == OceanTurb.face_size(nz)
 end
 
 function test_field_indexing()
@@ -30,9 +30,10 @@ function test_cell_∂z(T)
   nz = 2
   Lz = 2.0
   grid = UniformGrid(T, nz, Lz)
-  c = CellField([2, 4, 6, 8], grid)
-  f = ∂z(c)
-  f.data == Vector{Float64}([2, 2, 2])
+  c = CellField([2, 4], grid)
+  cz = ∂z(c)
+  cz_answer = FaceField([0, 2, 0], grid)
+  cz.data == cz_answer.data
 end
 
 function test_face_∂z(T)
@@ -40,13 +41,13 @@ function test_face_∂z(T)
   Lz = 2.0
   grid = UniformGrid(T, nz, Lz)
   f = FaceField([2, 4, 6], grid)
-  c = ∂z(f)
-  c_answer = CellField([0, 2, 2, 0], grid)
-  c.data == c_answer.data
+  fz = ∂z(f)
+  fz_answer = CellField([2, 2], grid)
+  fz.data == fz_answer.data
 end
 
 function test_cell_plus(T)
-  nz = 2
+  nz = 4
   Lz = 2.0
   grid = UniformGrid(T, nz, Lz)
   c1 = CellField([0, 1, 2, 0], grid)
@@ -57,7 +58,7 @@ function test_cell_plus(T)
 end
 
 function test_cell_times(T)
-  nz = 2
+  nz = 4
   Lz = 2.0
   grid = UniformGrid(T, nz, Lz)
   c1 = CellField([0, 1, 2, 0], grid)
@@ -88,4 +89,3 @@ function test_face_times(T)
   f1_times_f2 = f1 * f2
   f1_times_f2.data == f3.data
 end
-

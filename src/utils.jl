@@ -1,15 +1,3 @@
-export
-  second,
-  minute,
-  hour,
-  day,
-  year,
-  stellaryear,
-  Ω,
-
-  pressenter,
-  @zeros
-
 # Gregorian calendar-ic globals
 const second = 1.0
 const minute = 60second
@@ -28,4 +16,12 @@ macro zeros(T, dims, vars...)
   expr = Expr(:block)
   append!(expr.args, [:($(esc(var)) = zeros($(esc(T)), $(esc(dims))); ) for var in vars])
   expr
+end
+
+macro def(name, definition)
+  return quote
+      macro $(esc(name))()
+          esc($(Expr(:quote, definition)))
+      end
+  end
 end

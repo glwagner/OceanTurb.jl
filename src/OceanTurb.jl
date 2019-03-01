@@ -1,13 +1,29 @@
 module OceanTurb
 
-export
+export # by this file:
   Model,
   Clock,
   Grid,
   Field,
   Constants,
-  Parameters,
+  AbstractParameters,
+  AbstractSolution,
   Timestepper,
+  AbstractModel,
+  time,
+  iter,
+  set!,
+
+  # utils.jl
+  second,
+  minute,
+  hour,
+  day,
+  year,
+  stellaryear,
+  Ω,
+  pressenter,
+  @zeros,
 
   # grids.jl
   UniformGrid,
@@ -21,12 +37,14 @@ export
   ∂z,
   ∂²z,
   ∂z!,
+  set!,
 
   # timesteppers.jl
+  NullTimestepper,
   ForwardEulerTimestepper
 
 using
-  OffsetArrays
+  StaticArrays
 
 import Base: time
 
@@ -35,10 +53,12 @@ import Base: time
 #
 
 abstract type Grid{T,A} end
-abstract type Field{T,A,G} end
+abstract type Field{A,G} end
+abstract type AbstractSolution{N,T<:Field} <: FieldVector{N,T} end
+abstract type AbstractParameters end
 abstract type Constants end
-abstract type Parameters end
 abstract type Timestepper end
+abstract type AbstractModel{G<:Grid,S<:AbstractSolution,TS<:Timestepper} end  # Explain: what is a `Model`?
 
 #
 # Core OceanTurb.jl functionality
@@ -49,36 +69,24 @@ include("grids.jl")
 include("fields.jl")
 include("timesteppers.jl")
 
-
 mutable struct Clock{T}
   time::T
   iter::Int
 end
 
 Clock() = Clock(0.0, 0)
+time(m::AbstractModel) = model.clock.time
+iter(m::AbstractModel) = model.clock.iter
 
-# Explain: what is a `Model`?
-
-mutable struct Model{G<:Grid,C<:Constants,P<:Parameters,S,TS<:Timestepper,X,T<:AbstractFloat}
-  grid::G
-  constants::C
-  parameters::P
-  solution::S
-  timestepper::TS
-  auxiliaries::X # auxiliary variables needed to compute d(solution)/dt
-  clock::Clock{T}
+#=
+# Future functionality!
+function set!(solution::FieldVector; kwargs...)
+  for (k, v) in kwargs
+    setproperty!(solution, k, v)
+  end
+  return nothing
 end
-
-time(m::Model) = model.clock.time
-iter(m::Model) = model.clock.iter
-
-function Model(grid, constants, parameters, solution)
-  Model(grid, constants, parameters, solution, NullTimestepper(), nothing, Clock())
-end
-
-function Model(grid, constants, parameters, solution, timestepper)
-  Model(grid, constants, parameters, solution, timestepper, nothing, Clock())
-end
+=#
 
 #
 # Ocean Turbulence Models
