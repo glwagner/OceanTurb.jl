@@ -13,7 +13,7 @@ git clone https://github.com/glwagner/OceanTurb.jl.git
 
 ## Documentation
 
-* [LATEST](https://glwagner.github.io/OceanTurb.jl/latest)
+* [**latest**](https://glwagner.github.io/OceanTurb.jl/latest)
 
 ## Example(s)
 
