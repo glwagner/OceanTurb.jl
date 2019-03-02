@@ -94,16 +94,14 @@ and other variables.
 An ASCII-art respresentation of an exmaple grid with `nz=3` is
 
 ```text
-      ▲ z 
-      |   
-        
-                j=4   ===       ▲              
-         i=3           *        | dzf (i=3)
-                j=3   ---       ▼
-         i=2           *    ▲            
-                j=2   ---   | dzc (j=2) 
-         i=1           *    ▼  
-                j=1   ===     
+ ▲ z 
+ |              j=4   ===  Top   ▲              
+         i=3           *         | dzf (i=3)
+                j=3   ---        ▼
+         i=2           *             ▲            
+                j=2   ---            | dzc (j=2) 
+         i=1           *             ▼  
+                j=1   ===  Bottom
 ```
 
 where the double lines indicate the top and bottom of the domain,
