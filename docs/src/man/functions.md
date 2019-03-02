@@ -1,7 +1,7 @@
 # Functions
 
 ```@autodocs
-Modules = [OceanBoundaryLayerModels]
+Modules = [OceanTurb]
 Private = false
 Order = [:function]
 ```

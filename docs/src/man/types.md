@@ -1,7 +1,7 @@
 # Private types
 
 ```@autodocs
-Modules = [OceanBoundaryLayerModels]
+Modules = [OceanTurb]
 Public = false
 Order = [:type]
 ```
