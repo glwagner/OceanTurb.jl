@@ -9,11 +9,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "#OceanBoundaryLayerModels.jl-1",
+    "location": "#OceanTurb.jl-1",
     "page": "Home",
-    "title": "OceanBoundaryLayerModels.jl",
+    "title": "OceanTurb.jl",
     "category": "section",
-    "text": "OceanBoundaryLayerModels.jl implements models for the ocean\'s boundary layer."
+    "text": "OceanTurb.jl implements models for the ocean\'s turbulent surface boundary layer."
 },
 
 {
@@ -21,7 +21,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Home",
     "title": "Installation",
     "category": "section",
-    "text": "As simple as git clone https://github.com/glwagner/OceanBoundaryLayerModels.jl.git"
+    "text": "As simple as git clone https://github.com/glwagner/OceanTurb.jl.git"
 },
 
 {
@@ -29,7 +29,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Home",
     "title": "Authors",
     "category": "section",
-    "text": "Gregory L. Wagner"
+    "text": "Gregory L. Wagner."
 },
 
 {
@@ -126,14 +126,6 @@ var documenterSearchIndex = {"docs": [
     "title": "Private types",
     "category": "page",
     "text": ""
-},
-
-{
-    "location": "man/types/#OceanBoundaryLayerModels.ForcingData-Tuple{}",
-    "page": "Private types",
-    "title": "OceanBoundaryLayerModels.ForcingData",
-    "category": "method",
-    "text": "Forcing(; tdata=[0, year], forcingfields...)\n\nConstruct a Forcing specified at time points in tdata. The forcing fields, which are arrays of data corresponding to the times in tdata and  are assumed to be measured/calculated/specified at the surface and z=0, are specified by keyword arguments. Their default values are 0tdata. Possible forcing inputs are\n\nshortwave : incoming shortwave radiation\nlongwave  : outgoing longwave radiation\nlatent    : incoming latent heat flux\nsensible  : incoming latent heat flux\nprecip    : precipitation\nevap      : evaporation\nxstress   : wind stress in the x-direction\nystress   : wind stress in the y-direction\n\n\n\n\n\n"
 },
 
 {
