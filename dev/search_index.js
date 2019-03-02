@@ -133,7 +133,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Private types",
     "title": "Private types",
     "category": "section",
-    "text": "Modules = [OceanBoundaryLayerModels]\nPublic = false\nOrder = [:type]"
+    "text": "Modules = [OceanTurb]\nPublic = false\nOrder = [:type]"
 },
 
 {
@@ -145,11 +145,123 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "man/functions/#OceanTurb.ZeroFlux-Tuple{}",
+    "page": "Functions",
+    "title": "OceanTurb.ZeroFlux",
+    "category": "method",
+    "text": "Returns FieldBoundaryConditions with zero flux at top and bottom.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.dzc-Tuple{Any,Any}",
+    "page": "Functions",
+    "title": "OceanTurb.dzc",
+    "category": "method",
+    "text": "Return the cell spacing at index i.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.dzf-Tuple{Any,Any}",
+    "page": "Functions",
+    "title": "OceanTurb.dzf",
+    "category": "method",
+    "text": "Return the face spacing at index i.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.iterate!-Tuple{Any,Any,Any}",
+    "page": "Functions",
+    "title": "OceanTurb.iterate!",
+    "category": "method",
+    "text": "iterate!(model, Δt, nt=1)\n\nStep model forward in time by one time-step with step-size Δt.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.set!-Tuple{AbstractSolution}",
+    "page": "Functions",
+    "title": "OceanTurb.set!",
+    "category": "method",
+    "text": "set!(solution, kwargs...)\n\nSet the fields of a solution. For example, use \n\nT0 = rand(4) S0(z) = exp(-z^2/10) set!(solution, T=T0, S=S0)\n\nTo set solution.T and solution.S to T0 and S0.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.set_bc!-Union{Tuple{B}, Tuple{Any,Any,BoundaryCondition{B}}} where B<:Bottom",
+    "page": "Functions",
+    "title": "OceanTurb.set_bc!",
+    "category": "method",
+    "text": "set_bc!(model, fld, bc)\nset_bc!(Boundary, model, fld, bc)\n\nAdd bc to model as (a) boundary condition(s) for fld. If Boundary = Top or Bottom is specified, the boundary condition is applied to the top or bottom accordingly.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.set_bcs!-Tuple{Any}",
+    "page": "Functions",
+    "title": "OceanTurb.set_bcs!",
+    "category": "method",
+    "text": "set_bcs!(model; kwargs...)\n\nSet boundary conditions for model.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.set_flux_bcs!-Tuple{Any}",
+    "page": "Functions",
+    "title": "OceanTurb.set_flux_bcs!",
+    "category": "method",
+    "text": "set_flux_bcs!(model; kwargs...)\n\nSet flux boundary conditions for model.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.set_value_bcs!-Tuple{Any}",
+    "page": "Functions",
+    "title": "OceanTurb.set_value_bcs!",
+    "category": "method",
+    "text": "set_value_bcs!(model; kwargs...)\n\nSet value boundary conditions for model.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.∂z!-Tuple{Field{Cell,A,G} where G where A,Field{Face,A,G} where G where A}",
+    "page": "Functions",
+    "title": "OceanTurb.∂z!",
+    "category": "method",
+    "text": "Calculate c = ∂f/∂z in the grid interior.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.∂z!-Tuple{Field{Face,A,G} where G where A,Field{Cell,A,G} where G where A}",
+    "page": "Functions",
+    "title": "OceanTurb.∂z!",
+    "category": "method",
+    "text": "Calculate f = ∂c/∂z in the grid interior.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.∂z-Tuple{Field{Cell,A,G} where G where A,Any}",
+    "page": "Functions",
+    "title": "OceanTurb.∂z",
+    "category": "method",
+    "text": "Return ∂c/∂z at index i.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.∂z-Tuple{Field{Cell,A,G} where G where A}",
+    "page": "Functions",
+    "title": "OceanTurb.∂z",
+    "category": "method",
+    "text": "Return the FaceField ∂c/∂z, where c is a CellField.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.∂z-Tuple{Field{Face,A,G} where G where A}",
+    "page": "Functions",
+    "title": "OceanTurb.∂z",
+    "category": "method",
+    "text": "Return the CellField ∂f/∂z, where f is a FaceField.\n\n\n\n\n\n"
+},
+
+{
     "location": "man/functions/#Functions-1",
     "page": "Functions",
     "title": "Functions",
     "category": "section",
-    "text": "Modules = [OceanBoundaryLayerModels]\nPrivate = false\nOrder = [:function]"
+    "text": "Modules = [OceanTurb]\nPrivate = false\nOrder = [:function]"
 },
 
 ]}
