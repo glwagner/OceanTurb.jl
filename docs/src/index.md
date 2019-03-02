@@ -13,4 +13,4 @@ git clone https://github.com/glwagner/OceanTurb.jl.git
 
 ## Authors
 
-[Gregory L. Wagner](https://glwagner.github.io) and Andre Souza.
+[Gregory L. Wagner](https://glwagner.github.io).

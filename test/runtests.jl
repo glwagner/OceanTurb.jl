@@ -4,9 +4,9 @@ using
 
 import OceanTurb: Diffusion
 
-# --
+# 
 # Run tests
-# --
+#
 
 @testset "Utils" begin
   include("utilstests.jl")
@@ -16,8 +16,7 @@ end
 
 @testset "Grids" begin
   include("gridtests.jl")
-  nz = 3
-  Lz = 4.2
+  nz, Lz = 3, 4.2
   for T in (Float64, Float32, Float16)
     @test test_uniform_grid_type(T, nz, Lz)
     @test test_uniform_grid_spacing(T, nz, Lz)
@@ -30,8 +29,7 @@ end
 
 @testset "Fields" begin
   include("fieldtests.jl")
-  nz = 3
-  Lz = 4.2
+  nz, Lz = 3, 4.2
   for T in (Float64, Float32, Float16)
     @test test_cell_field_construction(T, nz, Lz)
     @test test_face_field_construction(T, nz, Lz)
@@ -39,24 +37,14 @@ end
     @test test_face_∂z(T)
     @test test_cell_plus(T)
     @test test_cell_times(T)
+    for loc in (Face, Cell)
+      @test test_set_scalar_field(loc, T)
+      @test test_set_array_field(loc, T)
+      @test test_set_function_field(loc, T)
+    end
   end
   @test test_field_indexing()
 end
-
-
-function test_model(; nz=3, Lz=1.5, timestepper=NullTimestepper())
-  grid = UniformGrid(nz, Lz)
-  model = Model(grid=grid, solution=CellField(grid), timestepper=timestepper)
-  model.solution.data == [0, 0, 0]
-end
-
-#=
-@testset "Model" begin
-  @test test_model()
-  solution = CellField(UniformGrid(3, 1.5))
-  @test test_model(timestepper=ForwardEulerTimestepper(solution))
-end
-=#
 
 @testset "Diffusion" begin
   include("diffusiontests.jl")

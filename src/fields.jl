@@ -102,6 +102,8 @@ end
 
 FaceField(grid) = FaceField(0, grid)
 CellField(grid) = CellField(0, grid)
+Field(::Type{Face}, grid) = FaceField(grid)
+Field(::Type{Cell}, grid) = CellField(grid)
 
 CellField(data::Function, grid) = CellField(data.(grid.zc), grid)
 FaceField(data::Function, grid) = FaceField(data.(grid.zf), grid)
@@ -109,6 +111,9 @@ FaceField(data::Function, grid) = FaceField(data.(grid.zf), grid)
 #
 # Basic 'Field' functionality
 # 
+
+@inline zdata(c::CellField) = c.grid.zc
+@inline zdata(f::FaceField) = f.grid.zf
 
 @inline length(c::CellField) = cell_length(c.grid)
 @inline length(f::FaceField) = face_length(f.grid)
@@ -127,8 +132,7 @@ FaceField(data::Function, grid) = FaceField(data.(grid.zf), grid)
 
 set!(c::AbstractField, data::Number) = fill!(c.data, data)
 set!(c::AbstractField{A}, data::AbstractArray) where A = c.data .= convert(A, data)
-set!(f::CellField{A}, data::Function) where A = c.data .= convert(A, data.(c.grid.zc))
-set!(f::FaceField{A}, data::Function) where A = f.data .= convert(A, data.(f.grid.zf))
+set!(c::AbstractField{A}, data::Function) where A = c.data .= convert(A, data.(zdata(c)))
 set!(c::AbstractField{Ac,G}, d::AbstractField{Ad,G}) where {Ac,Ad,G} = c.data .= convert(Ac, d.data)
 
 similar(c::CellField) = CellField(c.grid)

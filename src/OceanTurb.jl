@@ -39,6 +39,7 @@ export # This file, core functionality:
   ∂z,
   ∂²z,
   ∂z!,
+  zdata,
   set!,
   interior,
   top,
@@ -61,14 +62,14 @@ export # This file, core functionality:
   ValueBC
 
 using
-  StaticArrays,
-  Parameters
+  StaticArrays
 
 import Base: time, setproperty!
 
 #
 # Preliminary abstract types for OceanTurb.jl
 #
+
 abstract type AbstractParameters end
 abstract type Grid{T,A} end
 abstract type Timestepper end
