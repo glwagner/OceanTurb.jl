@@ -59,7 +59,13 @@ export # This file, core functionality:
   FieldBoundaryConditions,
   ZeroFlux,
   FluxBC,
-  ValueBC
+  ValueBC,
+  set_bc!,
+  set_bcs!,
+  set_flux_bc!,
+  set_value_bc!,
+  set_flux_bcs!,
+  set_value_bcs!
 
 using
   StaticArrays
