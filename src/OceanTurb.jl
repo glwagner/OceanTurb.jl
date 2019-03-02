@@ -9,6 +9,7 @@ export # by this file:
   AbstractParameters,
   AbstractSolution,
   Timestepper,
+  BoundaryCondition,
   AbstractModel,
   time,
   iter,
@@ -44,7 +45,12 @@ export # by this file:
 
   # timesteppers.jl
   NullTimestepper,
-  ForwardEulerTimestepper
+  ForwardEulerTimestepper,
+
+  # boundary_conditions.jl
+  FieldBoundaryConditions,
+  FluxBC,
+  ConstBC
 
 using
   StaticArrays
@@ -61,6 +67,7 @@ abstract type AbstractSolution{N,T<:Field} <: FieldVector{N,T} end
 abstract type AbstractParameters end
 abstract type Constants end
 abstract type Timestepper end
+abstract type BoundaryCondition{side} end
 abstract type AbstractModel{G<:Grid,S<:AbstractSolution,TS<:Timestepper} end  # Explain: what is a `Model`?
 
 #
@@ -70,6 +77,7 @@ abstract type AbstractModel{G<:Grid,S<:AbstractSolution,TS<:Timestepper} end  # 
 include("utils.jl")
 include("grids.jl")
 include("fields.jl")
+include("boundary_conditions.jl")
 include("timesteppers.jl")
 
 mutable struct Clock{T}
