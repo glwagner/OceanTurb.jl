@@ -45,7 +45,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Basics",
     "title": "Physics and modeling of the oceanic boundary layer",
     "category": "section",
-    "text": "Models for the oceanic boundary layer are partial differential equations that approximate the effects of internal and surface fluxes, and\nturbulent vertical fluxeson the evolution of temperature, salinity, and momentum in the near-surface ocean.Internal and surface fluxes of heat are due toabsorption of incoming shortwave solar radiation;\ncooling by outgoing longwave radiation;\nlatent and sensible heat exchange with the atmosphere.Surface fluxes of salinity occur due to evaporation and precipitation,  while momentum fluxes are associated with atmospheric winds.Vertical turbulent fluxes are typically associated withgravitational instability and convection, and\nmechanical turbulent mixing associated with currents and wind forcing.OceanMixedLayerModels.jl uses  an implementation of atmospheric and radiative forcings that is shared across all models. The models therefore differ mainly in the way they parameterize convective and mechanical mixing."
+    "text": "Models for the oceanic boundary layer are partial differential equations that approximate the effects of internal and surface fluxes, and\nturbulent vertical fluxeson the evolution of temperature, salinity, and momentum in the near-surface ocean.Internal and surface fluxes of heat are due toabsorption of incoming shortwave solar radiation;\ncooling by outgoing longwave radiation;\nlatent and sensible heat exchange with the atmosphere.Surface fluxes of salinity occur due to evaporation and precipitation,  while momentum fluxes are associated with atmospheric winds.Vertical turbulent fluxes are typically associated withgravitational instability and convection, and\nmechanical turbulent mixing associated with currents and wind forcing.OceanTurb.jl uses  an implementation of atmospheric and radiative forcings that is shared across all models. The models therefore differ mainly in the way they parameterize convective and mechanical mixing."
 },
 
 {
@@ -77,7 +77,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Basics",
     "title": "Spatial discretization",
     "category": "section",
-    "text": "OceanBoundaryLayerModels.jl uses a finite volume method to discretize the oceanic boundary layer in z."
+    "text": "OceanTurb.jl uses a finite-volume method with one-dimensional analog of  the staggered Arakawa C-grid to discretize momentum, temperature, salinity, and other variables.An ASCII-art respresentation of an exmaple grid with nz=3 is      ▲ z \n      |   \n        \n                j=4   ===       ▲              \n         i=3           *        | dzf (i=3)\n                j=3   ---       ▼\n         i=2           *    ▲            \n                j=2   ---   | dzc (j=2) \n         i=1           *    ▼  \n                j=1   ===     where the double lines indicate the top and bottom of the domain, the single lines indicate \"face\" boundaries, the i\'s index cell centers and j\'s index face-located grid points  and variables. Horizontal momentum and tracer variables are located at cell centers,  while fluxes of these quantities (and vertical-velocity-like variables when present) are located at cell faces. "
 },
 
 {
