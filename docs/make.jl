@@ -1,15 +1,15 @@
 using 
   Documenter,
-  OceanBoundaryLayerModels
+  OceanTurb
 
 makedocs(
-   modules = [OceanBoundaryLayerModels],
+   modules = [OceanTurb],
      clean = true,
    doctest = false, 
  checkdocs = :all,
     format = :html,
    authors = "Gregory L. Wagner",
-  sitename = "OceanBoundaryLayerModels.jl",
+  sitename = "OceanTurb.jl",
      pages = Any[
               "Home" => "index.md",
               "Basics" => "basics.md",
@@ -22,5 +22,5 @@ makedocs(
 )
 
 deploydocs(
-  repo = "github.com/glwagner/OceanBoundaryLayerModels.jl.git",
+  repo = "github.com/glwagner/OceanTurb.jl.git",
 )

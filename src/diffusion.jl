@@ -44,7 +44,7 @@ function set_kappa!(model, κ)
 end
 
 #
-# Model specification
+# Equation specification
 #
 
 # Convenient operators
