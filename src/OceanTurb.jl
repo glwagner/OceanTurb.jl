@@ -38,6 +38,9 @@ export # by this file:
   ∂²z,
   ∂z!,
   set!,
+  interior,
+  top,
+  bottom,
 
   # timesteppers.jl
   NullTimestepper,

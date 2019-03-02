@@ -33,7 +33,7 @@ From the standpoint of designing new turbulence closures,
 the most important function that we output is `∂z`.
 =#
 
-import Base: +, *, -, setindex!, getindex, eachindex, similar, setproperty!, eltype
+import Base: +, *, -, setindex!, getindex, eachindex, similar, setproperty!, eltype, length
 
 """
     CellField(data, grid)
@@ -91,8 +91,10 @@ FaceField(data::Function, grid) = FaceField(data.(grid.zf), grid)
 # Basic 'Field' functionality
 # 
 
-@inline eachindex(c::CellField) = 1:c.grid.nz # interior indices of c
-@inline eachindex(f::FaceField) = 2:f.grid.nz # interior indices of f
+@inline eachindex(c::CellField) = 1:c.grid.nz   # all indices of c
+@inline eachindex(f::FaceField) = 1:f.grid.nz+1 # all indices of f
+@inline interior(c::CellField) = 2:c.grid.nz-1 # interior indices of CellFields, omitting boundary-adjacent values
+@inline interior(f::FaceField) = 2:f.grid.nz   # interior indices of FaceFields, omitting boundary values
 
 eltype(c::Field{A}) where A = eltype(A)
 
@@ -100,12 +102,16 @@ getindex(c::Field, inds...) = getindex(c.data, inds...)
 setindex!(c::Field, d, inds...) = setindex!(c.data, d, inds...)
 setindex!(c::Field, d::Field, inds...) = setindex!(c.data, d.data, inds...)
 
+@inline length(c::CellField) = cell_length(c.grid)
+@inline length(f::FaceField) = face_length(f.grid)
+
 function setproperty!(sol::AbstractSolution, c::Symbol, data::Union{Number,AbstractArray,Function})
   set!(sol.c, data)
   return nothing
 end
 
-set!(c::Field{A}, data::Union{Number,AbstractArray}) where A = c.data .= convert(A, data)
+set!(c::Field, data::Number) = fill!(c.data, data)
+set!(c::Field{A}, data::AbstractArray) where A = c.data .= convert(A, data)
 set!(c::CellField{A}, data::Function) where A = c.data .= convert(A, data.(c.grid.zc))
 set!(f::FaceField{A}, data::Function) where A = f.data .= convert(A, data.(f.grid.zf))
 set!(c::Field{A,G}, d::Field{A,G}) where {A,G} = c.data .= convert(A, d.data)
@@ -162,15 +168,15 @@ end
 
 ∂z(a) = throw("∂z is not defined for arbitrary fields.")
 
-"Calculate `f = ∂c/∂z` across the whole grid."
+"Calculate `f = ∂c/∂z` in the grid interior."
 function ∂z!(f::FaceField, c::CellField)
-  for i = eachindex(f)
+  for i = interior(f)
     @inbounds f.data[i] = ∂z(c, i)
   end
   return nothing
 end
 
-"Calculate `c = ∂f/∂z` across the whole grid."
+"Calculate `c = ∂f/∂z` in the grid interior."
 function ∂z!(c::CellField, f::FaceField)
   for i = eachindex(c)
     @inbounds c.data[i] = ∂z(f, i)
@@ -191,3 +197,15 @@ function ∂z(f::FaceField)
   ∂z!(c, f)
   return c
 end
+
+# Convenience functions
+top(a) = throw("top(a) Not implemented for typeof(a) = $(typeof(a)).")
+top(a::Number) = a
+top(a::AbstractArray) = a[end]
+top(a::Field) = a.data[end]
+
+bottom(a) = throw("bottom(a) Not implemented for typeof(a) = $(typeof(a)).")
+bottom(a::Number) = a
+bottom(a::AbstractArray) = a[1]
+bottom(a::Field) = a.data[1]
+

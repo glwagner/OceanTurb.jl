@@ -12,17 +12,13 @@ end
 
 struct NullTimestepper <: Timestepper; end
 
-struct ForwardEulerTimestepper{S} <: Timestepper
-  rhs::S
+struct ForwardEulerTimestepper{T} <: Timestepper
+  rhs::T
   function ForwardEulerTimestepper(solution)
-    rhs = similar(solution)
-    return new{typeof(rhs)}(rhs)
+    rhs = deepcopy(solution)
+    for fld in rhs
+      set!(fld, 0)
+    end
+    new{typeof(rhs)}(rhs)
   end
-end
-
-
-function step!(model, stepper::ForwardEulerTimestepper{S}, dt) where S <: Field
-  calc_rhs!(stepper.rhs, equation, model)
-  @. model.solution += dt*stepper.rhs
-  nothing
 end
