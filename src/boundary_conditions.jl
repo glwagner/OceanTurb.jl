@@ -1,23 +1,31 @@
 # Boundary conditions for OceanTurb.jl
 
+abstract type Boundary end
+struct Top <: Boundary end
+struct Bottom <: Boundary end
+
+abstract type BoundaryCondition{B<:Boundary} end
+
 @inline zero_function(args...) = 0
 
 struct FieldBoundaryConditions <: FieldVector{2,BoundaryCondition}
-  top::BoundaryCondition{:top}
-  bottom::BoundaryCondition{:bottom}
+  bottom::BoundaryCondition{Bottom}
+  top::BoundaryCondition{Top}
 end
 
 function FieldBoundaryConditions(;
-       top = FluxBC{:top}(zero_function), 
-    bottom = FluxBC{:bottom}(zero_function)
+    bottom = FluxBC{Bottom}(zero_function),
+       top = FluxBC{Top}(zero_function),
   )
-  FieldBoundaryConditions(top, bottom)
+  FieldBoundaryConditions(bottom, top)
 end
 
-struct FluxBC{side} <: BoundaryCondition{side}
+ZeroFlux() = FieldBoundaryConditions() # the default
+
+struct FluxBC{B<:Boundary} <: BoundaryCondition{B}
   flux::Function
 end
 
-struct ConstBC{side} <: BoundaryCondition{side}
+struct ValueBC{B<:Boundary} <: BoundaryCondition{B}
   value::Function
 end

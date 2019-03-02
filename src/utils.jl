@@ -26,14 +26,15 @@ macro def(name, definition)
   end
 end
 
-macro def_solution_fields(T, names...)
-  solution_fields = [ :($(name)::$(T)) for name in names ]
-  equation_fields = [ :($(name)::Function) for name in names ]
-  bc_fields = [ :($(name)::FieldBoundaryConditions) for name in names ]
-  nfields = length(solution_fields)
+macro specify_solution(T, names...)
+  nfields = length(names)
+  solution_fields = [ :( $(name)::$(T)                    ) for name in names ]
+  equation_fields = [ :( $(name)::Function                ) for name in names ]
+        bc_fields = [ :( $(name)::FieldBoundaryConditions ) for name in names ]
+
   esc(
     quote
-      struct Solution <: AbstractSolution{1,$(T)}
+      struct Solution <: AbstractSolution{$(nfields),$(T)}
         $(solution_fields...)
       end
 
@@ -48,3 +49,11 @@ macro def_solution_fields(T, names...)
   )
 end
 
+@def add_standard_model_fields begin
+  timestepper::TS
+  grid::G
+  solution::Solution
+  equation::Equation
+  bcs::BoundaryConditions
+  clock::Clock{T}
+end

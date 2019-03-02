@@ -1,16 +1,10 @@
 module OceanTurb
 
-export # by this file:
-  Model,
-  Clock,
-  Grid,
-  Field,
-  Constants,
-  AbstractParameters,
-  AbstractSolution,
-  Timestepper,
-  BoundaryCondition,
+export # This file, core functionality:
   AbstractModel,
+  AbstractSolution,
+  AbstractParameters,
+  Clock,
   time,
   iter,
   set!,
@@ -25,12 +19,18 @@ export # by this file:
   Ω,
   pressenter,
   @zeros,
-  @def_solution_fields,
+  @specify_solution,
+  @add_standard_model_fields,
 
   # grids.jl
+  Grid,
   UniformGrid,
 
   # fields.jl
+  FieldLocation,
+  Cell,
+  Face,
+  AbstractField,
   Field,
   CellField,
   FaceField,
@@ -45,32 +45,36 @@ export # by this file:
   bottom,
 
   # timesteppers.jl
-  NullTimestepper,
+  Timestepper,
+  iterate!,
+  unpack,
   ForwardEulerTimestepper,
 
   # boundary_conditions.jl
+  Boundary,
+  Top,
+  Bottom,
+  BoundaryCondition,
   FieldBoundaryConditions,
+  ZeroFlux,
   FluxBC,
-  ConstBC
+  ValueBC
 
 using
   StaticArrays,
   Parameters
 
-import Base: time
+import Base: time, setproperty!
 
 #
-# Abstract types for OceanTurb.jl
+# Preliminary abstract types for OceanTurb.jl
 #
-
-abstract type Grid{T,A} end
-abstract type Field{A,G} end
-abstract type AbstractSolution{N,T<:Field} <: FieldVector{N,T} end
 abstract type AbstractParameters end
-abstract type Constants end
+abstract type Grid{T,A} end
 abstract type Timestepper end
-abstract type BoundaryCondition{side} end
-abstract type AbstractModel{G<:Grid,TS<:Timestepper} end  # Explain: what is a `Model`?
+abstract type AbstractField{A<:AbstractArray,G<:Grid} end
+abstract type AbstractSolution{N,T} <: FieldVector{N,T} end
+abstract type AbstractModel{TS<:Timestepper,G<:Grid,T<:AbstractFloat} end  # Explain: what is a `Model`?
 
 #
 # Core OceanTurb.jl functionality
@@ -91,15 +95,32 @@ Clock() = Clock(0.0, 0)
 time(m::AbstractModel) = model.clock.time
 iter(m::AbstractModel) = model.clock.iter
 
-#=
-# Future functionality!
-function set!(solution::FieldVector; kwargs...)
+#
+# Sugary things for solutions
+# 
+
+"""
+    set!(solution, kwargs...)
+
+Set the fields of a solution. For example, use 
+
+T0 = rand(4)
+S0(z) = exp(-z^2/10)
+set!(solution, T=T0, S=S0)
+
+To set solution.T and solution.S to T0 and S0.
+"""
+function set!(solution::AbstractSolution; kwargs...)
   for (k, v) in kwargs
     setproperty!(solution, k, v)
   end
   return nothing
 end
-=#
+
+function setproperty!(sol::AbstractSolution, c::Symbol, data::Union{Number,AbstractArray,Function})
+  set!(sol.c, data)
+  return nothing
+end
 
 #
 # Ocean Turbulence Models

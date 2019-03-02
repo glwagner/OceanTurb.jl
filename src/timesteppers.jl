@@ -10,11 +10,14 @@ function Timestepper(stepper, args...)
   return eval(Expr(:call, fullsteppername, args...))
 end
 
-struct NullTimestepper <: Timestepper; end
+"""
+    iterate!(model, Δt, nt=1)
 
-function step!(model, Δt, nt)
+Step `model` forward in time by one time-step with step-size `Δt`.
+"""
+function iterate!(model, Δt, nt)
   for step = 1:nt
-    step!(model, Δt)
+    iterate!(model, Δt)
   end
   return nothing
 end
@@ -43,7 +46,7 @@ struct ForwardEulerTimestepper{T} <: Timestepper
 end
 
 # Forward Euler timestepping
-function step!(model, Δt)
+function iterate!(model::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
 
   for i in eachindex(model.solution)
     c, ∂c∂t, rhs, bcs = unpack(model, i)
@@ -58,7 +61,7 @@ function step!(model, Δt)
     rhs.data[1]   = ∂c∂t(model, bcs.bottom)
   end
 
-  # Time step
+  # Update solution
   for i in eachindex(model.solution)
     c, ∂c∂t, rhs, bcs = unpack(model, i)
     @. c.data += Δt*rhs.data

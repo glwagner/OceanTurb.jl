@@ -1,15 +1,16 @@
-# OceanBoundaryLayerModels.jl
+# OceanTurb.jl
 
-`OceanBoundaryLayerModels.jl` implements models for the ocean's boundary layer.
+`OceanTurb.jl` implements models for the ocean's turbulent
+surface boundary layer.
 
 ## Installation
 
 As simple as 
 
 ```
-git clone https://github.com/glwagner/OceanBoundaryLayerModels.jl.git
+git clone https://github.com/glwagner/OceanTurb.jl.git
 ```
 
 ## Authors
 
-[Gregory L. Wagner](https://glwagner.github.io)
+[Gregory L. Wagner](https://glwagner.github.io) and Andre Souza.
