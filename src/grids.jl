@@ -3,17 +3,18 @@
 OceanTurb.jl solves one-dimensional PDEs on a staggered grid.
 The geometry of a grid with nz=3 is 
 
-                                        ^ z 
-                                        |   
+```
+      ▲ z 
+      |   
         
-                j=4   ===       ^              
-         i=3           *        | dzf  (i=3)
-                j=3   ---       v
-         i=2           *    ^            
+                j=4   ===       ▲              
+         i=3           *        | dzf (i=3)
+                j=3   ---       ▼
+         i=2           *    ▲            
                 j=2   ---   | dzc (j=2) 
-         i=1           *    v  
+         i=1           *    ▼  
                 j=1   ===     
-              
+```
 
 where the i's index cells and the j's index faces. 
 The variable dzc gives the separation between

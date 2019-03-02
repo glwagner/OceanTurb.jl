@@ -39,7 +39,7 @@ Vertical turbulent fluxes are typically associated with
 * gravitational instability and convection, and
 * mechanical turbulent mixing associated with currents and wind forcing.
 
-`OceanMixedLayerModels.jl` uses 
+`OceanTurb.jl` uses 
 an implementation of atmospheric and radiative forcings that is shared
 across all models. The models therefore differ mainly in the way they
 parameterize convective and mechanical mixing.
@@ -87,8 +87,33 @@ or even distinct from physical aspects of approximation and modeling.
 
 ## Spatial discretization
 
-`OceanBoundaryLayerModels.jl` uses a finite volume method to discretize the
-oceanic boundary layer in ``z``.
+`OceanTurb.jl` uses a finite-volume method with one-dimensional analog of 
+the staggered Arakawa C-grid to discretize momentum, temperature, salinity,
+and other variables.
+
+An ASCII-art respresentation of an exmaple grid with `nz=3` is
+
+```text
+      ▲ z 
+      |   
+        
+                j=4   ===       ▲              
+         i=3           *        | dzf (i=3)
+                j=3   ---       ▼
+         i=2           *    ▲            
+                j=2   ---   | dzc (j=2) 
+         i=1           *    ▼  
+                j=1   ===     
+```
+
+where the double lines indicate the top and bottom of the domain,
+the single lines indicate "face" boundaries, the
+`i`'s index cell centers and `j`'s index face-located grid points 
+and variables.
+Horizontal momentum and tracer variables are located at cell centers, 
+while fluxes of these quantities (and vertical-velocity-like variables when present)
+are located at cell faces. 
+
 
 ## Time-stepping
 

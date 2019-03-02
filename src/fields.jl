@@ -4,7 +4,7 @@ A `Field` is an abstraction of a variable or function defined on a staggered gri
 Our hope is that it simplifies differential operations on a staggered grid.
 
 OceanTurb.jl solves one-dimensional PDEs on a staggered grid.
-The geometry of a grid with nz=3 is 
+The geometry of a grid with `nz=3` is 
 
 ```
       ▲ z 
@@ -18,7 +18,6 @@ The geometry of a grid with nz=3 is
          i=1           *    ▼  
                 j=1   ===     
 ```
- 
 
 where the i's index cells and the j's index faces. 
 The variable dzc gives the separation between
