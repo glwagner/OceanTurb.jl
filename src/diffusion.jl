@@ -10,22 +10,10 @@ export
   Model,
   step!
 
-@inline zero_function(args...) = 0
+@def_solution_fields CellField c
 
 struct Parameters{T} <: AbstractParameters
   κ::T
-end
-
-struct Solution <: AbstractSolution{1,CellField}
-  c::CellField
-end
-
-struct Equation <: FieldVector{1,Function}
-  c::Function
-end
-
-struct BoundaryConditions <: FieldVector{1,FieldBoundaryConditions}
-  c::FieldBoundaryConditions
 end
 
 function BoundaryConditions(args...)
@@ -33,7 +21,7 @@ function BoundaryConditions(args...)
   return BoundaryConditions(bcs_c)
 end
 
-mutable struct Model{G,TS,T} <: AbstractModel{G,Solution,TS}  
+mutable struct Model{G,TS,T} <: AbstractModel{G,TS}  
   grid::G
   solution::Solution
   equation::Equation
@@ -48,7 +36,7 @@ function Model(;
        Lz = 1.0,
         κ = 0.1,
   stepper = :ForwardEuler,
-  bcs = BoundaryConditions(FluxBC{:top}(zero_function), FluxBC{:bottom}(zero_function))
+  bcs = BoundaryConditions(FieldBoundaryConditions())
 )
 
   grid = UniformGrid(nz, Lz)

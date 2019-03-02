@@ -25,6 +25,7 @@ export # by this file:
   Ω,
   pressenter,
   @zeros,
+  @def_solution_fields,
 
   # grids.jl
   UniformGrid,
@@ -53,7 +54,8 @@ export # by this file:
   ConstBC
 
 using
-  StaticArrays
+  StaticArrays,
+  Parameters
 
 import Base: time
 
@@ -68,7 +70,7 @@ abstract type AbstractParameters end
 abstract type Constants end
 abstract type Timestepper end
 abstract type BoundaryCondition{side} end
-abstract type AbstractModel{G<:Grid,S<:AbstractSolution,TS<:Timestepper} end  # Explain: what is a `Model`?
+abstract type AbstractModel{G<:Grid,TS<:Timestepper} end  # Explain: what is a `Model`?
 
 #
 # Core OceanTurb.jl functionality
