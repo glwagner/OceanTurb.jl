@@ -91,7 +91,7 @@ or even distinct from physical aspects of approximation and modeling.
 the staggered Arakawa C-grid to discretize momentum, temperature, salinity,
 and other variables.
 
-An ASCII-art respresentation of an exmaple grid with `nz=3` is
+An ASCII-art respresentation of an example grid with `nz=3` is
 
 ```text
  ▲ z 

@@ -16,7 +16,7 @@
 
 # The Pacanowski-Philander (1981) model
 
-[Pacanowski and Philander (1981)] propose a simple one-dimensional model
+[Pacanowski and Philander (1981)][PP81] propose a simple one-dimensional model
 for equatorial boundary layers dominated by mechanical turbulent mixing.
 In their model, horizontal velocity, temperature, and salinity are governed by
 
@@ -50,7 +50,7 @@ are ``\alpha = 2 \times 10^{-4} \r{K m^3 / kg}`` and ``\beta = 1``.
 
 ## Eddy diffusivities for momentum, temperature, and salinity
 
-The core of the [PP81] model is to parameterize vertical turbulent fluxes 
+The core of the [PP81][PP81] model is to parameterize vertical turbulent fluxes 
 with an eddy diffusivity/eddy viscosity, such that 
 
 ```math
@@ -78,7 +78,7 @@ This parameterization implies an ``Ri``-dependent turbulent Prandtl number of
 Pr = \frac{\kappa_U}{\kappa_T} \approx \left ( 1 + c Ri \right ) \c
 ```
 
-when ``Ri`` is small. Typical values for the parameters (see [CV12]) are
+when ``Ri`` is small. Typical values for the parameters (see [CV12][CV12]) are
 
 * ``\nu_0 = 10^{-4} \r{cm/s}``,
 * ``\nu_1 = 10^{-2} \r{cm/s}``,
