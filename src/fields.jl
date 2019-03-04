@@ -50,62 +50,81 @@ const CellField = Field{Cell}
 const FaceField = Field{Face}
 
 #
-# Constructors for Cell and Face fields
+# Field Constructors
 #
 
-function CellField(data::Array, grid)
-  A = arraytype(grid)
-  data = convert(A, data)
-  return Field(Cell, data, grid)
-end
-
-function FaceField(data::Array, grid::Grid{T,AG}) where {T,AG} 
-  A = arraytype(grid)
-  data = convert(A, data)
-  return Field(Face, data, grid)
-end
-
-function CellField(data::Number, grid::Grid{T,AG}) where {T,AG}
-  A = arraytype(grid)
-  data = convert(A, fill(data, cell_size(grid)))
-  return Field(Cell, data, grid)
-end
-
-function FaceField(data::Number, grid::Grid{T,AG}) where {T,AG}
-  A = arraytype(grid)
-  data = convert(A, fill(data, face_size(grid)))
-  return Field(Face, data, grid)
-end
-
-FaceField(grid) = FaceField(0, grid)
-CellField(grid) = CellField(0, grid)
 Field(::Type{Face}, grid) = FaceField(grid)
 Field(::Type{Cell}, grid) = CellField(grid)
 
-CellField(data::Function, grid) = CellField(data.(grid.zc), grid)
-FaceField(data::Function, grid) = FaceField(data.(grid.zf), grid)
+"""
+    FaceField(grid)
+
+Return a `Field{Face}` on `grid` with its data initialized to 0.
+"""
+function FaceField(grid)
+  A = arraytype(grid)
+  data = convert(A, fill(0, face_size(grid)))
+  Field(Face, data, grid)
+end
+
+"""
+    CellField(grid)
+
+Return a `Field{Cell}` on `grid` with its data initialized to 0.
+"""
+function CellField(grid)
+  A = arraytype(grid)
+  data = convert(A, fill(0, cell_size(grid)))
+  Field(Cell, data, grid)
+end
+
+"""
+    CellField(data, grid)
+
+Return a `Field{Cell}` with its `data` located on the `grid`.
+if `data` is an array, it must be broadcastable to `c.data`, where
+`c` is a `Field{Cell}`.
+"""
+function CellField(data, grid)
+  c = CellField(grid)
+  set!(c, data)
+  return c 
+end
+
+"""
+    FaceField(data, grid)
+
+Return a `Field{Face}` with its `data` located on the `grid`.
+if `data` is an array, it must be broadcastable to `f.data`, where
+`f` is a `Field{Face}`.
+"""
+function FaceField(data, grid)
+  f = FaceField(grid)
+  set!(f, data)
+  return f
+end
 
 #
 # Basic 'Field' functionality
 # 
 
-@inline zdata(c::CellField) = c.grid.zc
-@inline zdata(f::FaceField) = f.grid.zf
+zdata(c::CellField) = c.grid.zc
+zdata(f::FaceField) = f.grid.zf
 
-@inline length(c::CellField) = cell_length(c.grid)
-@inline length(f::FaceField) = face_length(f.grid)
+length(c::CellField) = cell_length(c.grid)
+length(f::FaceField) = face_length(f.grid)
 
 # All indices
-@inline eachindex(f::AbstractField) = eachindex(f.data)
+eachindex(f::AbstractField) = eachindex(f.data)
 
 # Interior indices, omitting boundary-adjacent values
-@inline interior(c::CellField) = 2:c.grid.nz-1 
-@inline interior(f::FaceField) = 2:f.grid.nz 
+interior(c::CellField) = 2:c.grid.nz-1 
+interior(f::FaceField) = 2:f.grid.nz 
 
 # Sugary sweet: access indices of c.data by indexing into c.
-@inline getindex(c::AbstractField, inds...) = getindex(c.data, inds...)
-@inline setindex!(c::AbstractField, d, inds...) = setindex!(c.data, d, inds...)
-@inline setindex!(c::AbstractField, d::Field, inds...) = setindex!(c.data, d.data, inds...)
+getindex(c::AbstractField, inds...) = getindex(c.data, inds...)
+setindex!(c::AbstractField, d, inds...) = setindex!(c.data, d, inds...)
+setindex!(c::AbstractField, d::Field, inds...) = setindex!(c.data, d.data, inds...)
 
 set!(c::AbstractField, data::Number) = fill!(c.data, data)
 set!(c::AbstractField{A}, data::AbstractArray) where A = c.data .= convert(A, data)
@@ -144,21 +163,29 @@ end
 # 
 
 "Return the cell spacing at index i."
-@inline dzc(c, i) = c.grid.dzc[i]
-@inline dzc(c::AbstractField{A,G}, i) where {A,G<:UniformGrid} = c.grid.dzc
+dzc(c, i_face) = c.grid.dzc[i_face]
+dzc(c::AbstractField{A,G}, i) where {A,G<:UniformGrid} = c.grid.dzc
 
 "Return the face spacing at index i."
-@inline dzf(c, i) = c.grid.dzf[i]
-@inline dzf(c::AbstractField{A,G}, i) where {A,G<:UniformGrid} = c.grid.dzf
+dzf(c, i_cell) = c.grid.dzf[i_cell]
+dzf(c::AbstractField{A,G}, i) where {A,G<:UniformGrid} = c.grid.dzf
 
-@inline ∂z(a, i) = throw("∂z is not defined for arbitrary fields.")
+"""
+    ∂z(a, i)
 
-"Return ∂c/∂z at index i."
-@inline ∂z(c::CellField, i) = (c.data[i] - c.data[i-1]) / dzc(c, i)
-@inline ∂z(c::FaceField, i) = (c.data[i+1] - c.data[i]) / dzc(c, i)
-@inline ∂²z(c::AbstractField, i) = (∂z(c, i+1) - ∂z(c, i)) / dzf(c, i)
+Return the discrete derivative of `a` at grid point `i`.
 
-∂z(a) = throw("∂z is not defined for arbitrary fields.")
+The derivative of a `Field{Cell}` is computed at face points,
+and the derviative of a `Field{Face}` is computed at cell points.
+"""
+∂z(a, i) = throw("∂z is not defined for arbitrary fields.")
+
+"Return ∂c/∂z at face index i."
+∂z(c::CellField, i) = (c.data[i] - c.data[i-1]) / dzc(c, i)
+
+"Return ∂c/∂z at face index i."
+∂z(c::FaceField, i) = (c.data[i+1] - c.data[i]) / dzc(c, i)
+∂²z(c::AbstractField, i) = (∂z(c, i+1) - ∂z(c, i)) / dzf(c, i)
 
 "Calculate `f = ∂c/∂z` in the grid interior."
 function ∂z!(f::FaceField, c::CellField)
@@ -184,6 +211,8 @@ function ∂z(c::CellField)
 end
 
 "Return the `CellField` ∂f/∂z, where `f` is a `FaceField`."
+∂z(a) = throw("∂z is not defined for arbitrary fields.")
+
 function ∂z(f::FaceField)
   c = CellField(f.grid)
   ∂z!(c, f)
