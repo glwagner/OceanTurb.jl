@@ -8,10 +8,11 @@ using
 
 export
   Parameters,
-  SurfaceFluxes,
   Constants,
   Model,
   step!
+
+const nsol = 4
 
 @specify_solution CellField U V T S
 
@@ -23,6 +24,14 @@ struct Parameters{T} <: AbstractParameters
   Cb_T::T  # Effect of surface buoyancy flux on momentum diffusivity
   CRi::T   # Critical Richardson number
   CKE::T   # Unresolved turbulence parameter
+  K0_U::T
+  K0_T::T
+  K0_S::T
+end
+
+function Parameters(T=Float64; Cε=0.1, Cτ_U=1, Cb_U=1, Cτ_T=1, Cb_T=1, CRi=1, CKE=1,
+                    K0_U=1e-5, K0_T=1e-5, K0_S=1e-5)
+  Parameters{T}(Cε, Cτ_U, Cb_U, Cτ_T, Cb_T, CRi, CKE, K0_U, K0_T, K0_S)
 end
 
 struct Constants{T}
@@ -30,13 +39,11 @@ struct Constants{T}
   β::T
   ρ₀::T
   cP::T
-  K0_U::T
-  K0_T::T
-  K0_S::T
   f::T
-  function Constants(α=2e-4, β=8e-5, ρ₀=1033, cP=3993, K0_U=1e-5, K0_T=1e-5, K0_S=1e-5, f=0) 
-    new(α, β, ρ₀, cP, K0_U, K0_T, K0_S, f)
-  end
+end
+
+function Constants(T=Float64; α=2e-4, β=8e-5, ρ₀=1033, cP=3993, f=0) 
+  Constants{T}(α, β, ρ₀, cP, f)
 end
 
 
@@ -49,18 +56,19 @@ end
 function Model(;
               nz = 100, 
               Lz = 1.0,
+              K0 = 1e-5, K0_U = K0, K0_T = K0, K0_S = K0,
          stepper = :ForwardEuler,
-             bcs = BoundaryConditions(ZeroFlux(), ZeroFlux(), ZeroFlux(), ZeroFlux()),
+             bcs = BoundaryConditions((ZeroFlux() for i=1:nsol)...),
        constants = Constants(),
-      parameters = Parameters(1, 1, 1, 1, 1, 1, 1, 1)
+      parameters = Parameters(K0_U=K0_U, K0_T=K0_T, K0_S=K0_S)
 )
 
   grid = UniformGrid(nz, Lz)
-  solution = Solution(CellField(grid))
-  equation = Equation(∂c∂t)
+  solution = Solution((CellField(grid) for i=1:nsol)...)
+  equation = Equation(∂U∂t, ∂V∂t, ∂T∂t, ∂S∂t)
   timestepper = Timestepper(:ForwardEuler, solution)
 
-  return Model(timestepper, grid, solution, equation, bcs, Clock(), parameters)
+  return Model(timestepper, grid, solution, equation, bcs, Clock(), parameters, constants)
 end
 
 #
@@ -121,10 +129,10 @@ const w_scale_S = w_scale_T
 @inline K_KPP(h, w_scale, d, shape_K=shape_K) = max(0, h*w_scale*shape_K(d))
 
 # K_{U,V,T,S} is calculated at face points
-@inline K_U(model, i) = K_KPP(mixing_depth(model), w_scale_U(model, i), face_depth(model, i)) + model.constants.K0_U
-@inline K_V(model, i) = K_KPP(mixing_depth(model), w_scale_V(model, i), face_depth(model, i)) + model.constants.K0_U
-@inline K_T(model, i) = K_KPP(mixing_depth(model), w_scale_T(model, i), face_depth(model, i)) + model.constants.K0_T
-@inline K_S(model, i) = K_KPP(mixing_depth(model), w_scale_S(model, i), face_depth(model, i)) + model.constants.K0_S
+@inline K_U(model, i) = K_KPP(mixing_depth(model), w_scale_U(model, i), face_depth(model, i)) + model.parameters.K0_U
+@inline K_V(model, i) = K_KPP(mixing_depth(model), w_scale_V(model, i), face_depth(model, i)) + model.parameters.K0_U
+@inline K_T(model, i) = K_KPP(mixing_depth(model), w_scale_T(model, i), face_depth(model, i)) + model.parameters.K0_T
+@inline K_S(model, i) = K_KPP(mixing_depth(model), w_scale_S(model, i), face_depth(model, i)) + model.parameters.K0_S
 
 # ∇K∇c for c::CellField
 @inline K∂z(K, c, i) = K*∂z(c, i)

@@ -125,7 +125,7 @@ function set!(solution::AbstractSolution; kwargs...)
 end
 
 function setproperty!(sol::AbstractSolution, c::Symbol, data::Union{Number,AbstractArray,Function})
-  set!(sol.c, data)
+  set!(getproperty(sol, c), data)
   return nothing
 end
 
@@ -134,5 +134,6 @@ end
 #
 
 include("diffusion.jl")
+include("k_profile_parameterization.jl")
 
 end # module
