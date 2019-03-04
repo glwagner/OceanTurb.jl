@@ -52,16 +52,16 @@ end
 κ∂z(κ::AbstractField, c, i) = κ.data[i]*∂z(c, i)
 κ∂z(κ::Function, c, i) = κ(c.grid.zf[i]) * ∂z(c, i) # works for κ(z)
 
-@inline ∇κ∇c(κ, c, i)           = ( κ∂z(κ, c, i+1) -    κ∂z(κ, c, i)      ) /    dzf(c, i)
-@inline ∇κ∇c_top(κ, c, flux)    = (     -flux      - κ∂z(κ, c, length(c)) ) / dzf(c, length(c))
-@inline ∇κ∇c_bottom(κ, c, flux) = (  κ∂z(κ, c, 2)  +        flux          ) /    dzf(c, 1)
+∇κ∇c(κ, c, i)           = ( κ∂z(κ, c, i+1) -    κ∂z(κ, c, i)      ) /    dzf(c, i)
+∇κ∇c_top(κ, c, flux)    = (     -flux      - κ∂z(κ, c, length(c)) ) / dzf(c, length(c))
+∇κ∇c_bottom(κ, c, flux) = (  κ∂z(κ, c, 2)  +        flux          ) /    dzf(c, 1)
 
 # Top and bottom flux estimates for constant (Dirichlet) boundary conditions
-@inline bottom_flux(κ, c, c_bndry, dzf) = -2*bottom(κ)*( bottom(c) - c_bndry ) / bottom(dzf) # -κ*∂c/∂z at the bottom
-@inline top_flux(κ, c, c_bndry, dzf)    = -2*  top(κ) *(  c_bndry  -  top(c) ) /   top(dzf)  # -κ*∂c/∂z at the top
+bottom_flux(κ, c, c_bndry, dzf) = -2*bottom(κ)*( bottom(c) - c_bndry ) / bottom(dzf) # -κ*∂c/∂z at the bottom
+top_flux(κ, c, c_bndry, dzf)    = -2*  top(κ) *(  c_bndry  -  top(c) ) /   top(dzf)  # -κ*∂c/∂z at the top
 
 # Interior diffusion equation
-@inline ∂c∂t(model, i) = ∇κ∇c(model.parameters.κ, model.solution.c, i)
+∂c∂t(model, i) = ∇κ∇c(model.parameters.κ, model.solution.c, i)
 
 # Flux Boundary conditions
 ∂c∂t(model, bc::FluxBC{Top})    = ∇κ∇c_top(   model.parameters.κ, model.solution.c, bc.flux(model))
