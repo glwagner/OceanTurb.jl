@@ -103,7 +103,7 @@ end
 @inline mixing_depth(model) = model.grid.Lz # to be changed
 
 # Vertical velocity scale, calculated at face points (insert ref to notes...)
-@inline w_scale(Cτ, Cb, Cε, FU, FV, Fb, h, d) = (Cτ*(FU^2 + FV^2)^1.5 + Cb*h*min(d*abs(Fb), Cε*Fb))^(1/3)
+@inline w_scale(Cτ, Cb, Cε, FU, FV, Fb, h, d) = (Cτ*sqrt(FU^2 + FV^2)^3 + Cb*h*min(d*abs(Fb), Cε*Fb))^(1/3)
 
 # Constants can depend on whether field in question is momentum or tracer
 @inline w_scale_U(p, m, i) = w_scale(p.Cτ_U, p.Cb_U, p.Cε, FU(m), FV(m),
@@ -161,11 +161,11 @@ const w_scale_S = w_scale_T
 @inline bottom_flux(K, c, c_bndry, dzf) = -2*K*( bottom(c) - c_bndry ) / bottom(dzf) # -K*∂c/∂z at the bottom
 @inline top_flux(K, c, c_bndry, dzf)    = -2*K*(  c_bndry  -  top(c) ) /   top(dzf)  # -K*∂c/∂z at the top
 
-## Flux BCs
-@inline ∂U∂t(model, bc::FluxBC{Top})    = ∇K∇c_top(K_U(model, model.grid.nz), model.solution.U, bc.flux(model))
-@inline ∂V∂t(model, bc::FluxBC{Top})    = ∇K∇c_top(K_V(model, model.grid.nz), model.solution.V, bc.flux(model))
-@inline ∂T∂t(model, bc::FluxBC{Top})    = ∇K∇c_top(K_T(model, model.grid.nz), model.solution.T, bc.flux(model))
-@inline ∂S∂t(model, bc::FluxBC{Top})    = ∇K∇c_top(K_S(model, model.grid.nz), model.solution.S, bc.flux(model))
+## Flux BCs --- these are incorrect and must be fixed.
+@inline ∂U∂t(model, bc::FluxBC{Top}) = 0.0 #∇K∇c_top(K_U(model, model.grid.nz), model.solution.U, bc.flux(model))
+@inline ∂V∂t(model, bc::FluxBC{Top}) = 0.0 #∇K∇c_top(K_V(model, model.grid.nz), model.solution.V, bc.flux(model))
+@inline ∂T∂t(model, bc::FluxBC{Top}) = 0.0 #∇K∇c_top(K_T(model, model.grid.nz), model.solution.T, bc.flux(model))
+@inline ∂S∂t(model, bc::FluxBC{Top}) = 0.0 #∇K∇c_top(K_S(model, model.grid.nz), model.solution.S, bc.flux(model))
 
 @inline ∂U∂t(model, bc::FluxBC{Bottom}) = ∇K∇c_bottom(K_U(model, 2), model.solution.U, bc.flux(model))
 @inline ∂V∂t(model, bc::FluxBC{Bottom}) = ∇K∇c_bottom(K_V(model, 2), model.solution.V, bc.flux(model))
@@ -173,6 +173,7 @@ const w_scale_S = w_scale_T
 @inline ∂S∂t(model, bc::FluxBC{Bottom}) = ∇K∇c_bottom(K_S(model, 2), model.solution.S, bc.flux(model))
 
 ## Value BCs
+# ** note these are incorrect because neither Coriolis terms nor non-local flux are included **
 function ∂U∂t(model, bc::ValueBC{Bottom}) 
   flux = bottom_flux(K_U(model, 1), model.solution.U, bc.value(model), model.grid.dzf)
   return ∇K∇c_bottom(K_U(model, 2), model.solution.U, flux)
