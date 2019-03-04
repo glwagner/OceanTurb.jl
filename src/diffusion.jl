@@ -7,14 +7,14 @@ using
 @reexport using OceanTurb
 
 export
-  Model,
-  step!
+  Parameters,
+  Model
+
+@specify_solution CellField c
 
 struct Parameters{T} <: AbstractParameters
   κ::T
 end
-
-@specify_solution CellField c
 
 mutable struct Model{PT,TS,G,T} <: AbstractModel{TS,G,T}
   @add_standard_model_fields

@@ -9,8 +9,7 @@ using
 export
   Parameters,
   Constants,
-  Model,
-  step!
+  Model
 
 const nsol = 4
 
@@ -45,7 +44,6 @@ end
 function Constants(T=Float64; α=2e-4, β=8e-5, ρ₀=1033, cP=3993, f=0) 
   Constants{T}(α, β, ρ₀, cP, f)
 end
-
 
 mutable struct Model{TS,G,T,TP,TC} <: AbstractModel{TS,G,T}
   @add_standard_model_fields
