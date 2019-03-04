@@ -72,146 +72,158 @@ end
 #
 # Equation specification
 #
+# Note: to increase readability, we use 'm' to refer to 'model' in function
+# definitions below.
+#
 
-@inline α(model) = model.constants.α
-@inline β(model) = model.constants.β
-@inline T₀(model) = model.constants.T₀
-@inline S₀(model) = model.constants.S₀
+ α(m) = m.constants.α
+ β(m) = m.constants.β
+T₀(m) = m.constants.T₀
+S₀(m) = m.constants.S₀
 
 # Aliases for surface fluxes
-@inline FU(model) = model.bcs.U.top.flux(model) 
-@inline FV(model) = model.bcs.V.top.flux(model)
-@inline FT(model) = model.bcs.T.top.flux(model)
-@inline FS(model) = model.bcs.S.top.flux(model)
+FU(m) = m.bcs.U.top.flux(m) 
+FV(m) = m.bcs.V.top.flux(m)
+FT(m) = m.bcs.T.top.flux(m)
+FS(m) = m.bcs.S.top.flux(m)
 
-@inline buoyancy_flux(m) = α(m)*FT(m) + β(m)*FS(m)
+buoyancy_flux(m) = α(m)*FT(m) + β(m)*FS(m)
 
-## Nonlocal flux
+# Shape function. 'd' is a non-dimensional depth coordinate.
+default_shape_N(d) = 1-d
+default_shape_K(d) = d*(1-d)
 
-@inline shape_N(d) = 1-d
-@inline shape_K(d) = d*(1-d)
-@inline nonlocal_flux(flux, d, shape_N=shape_N) = flux*shape_N(d)
+"""
+    nonlocal_flux(flux, d, shape)
 
-@inline ∂NU∂z(model, i) = nonlocal_flux(FU(model), face_depth(model, i))
-@inline ∂NV∂z(model, i) = nonlocal_flux(FV(model), face_depth(model, i))
-@inline ∂NS∂z(model, i) = nonlocal_flux(FS(model), face_depth(model, i))
-@inline ∂NT∂z(model, i) = nonlocal_flux(FT(model), face_depth(model, i))
+Returns the nonlocal flux, N = -flux*shape(d),
+where `flux` is the flux of some quantity out of the surface,
+`shape` is a shape function, and `d` is a non-dimensional depth coordinate 
+that increases from 0 at the surface to 1 at the bottom of the mixing layer.
+
+Because flux is defined as pointing in the positive direction,
+a positive surface flux implies negative surface flux divergence,
+which implies a reduction to the quantity in question. 
+For example, positive heat flux out of the surface implies cooling.
+"""
+nonlocal_flux(flux, d, shape=default_shape_N) = -flux*shape(d) # not minus sign due to flux convention
+
+∂NU∂z(m, i) = nonlocal_flux(FU(m), face_depth(m, i))
+∂NV∂z(m, i) = nonlocal_flux(FV(m), face_depth(m, i))
+∂NS∂z(m, i) = nonlocal_flux(FS(m), face_depth(m, i))
+∂NT∂z(m, i) = nonlocal_flux(FT(m), face_depth(m, i))
 
 ## Diffusivity
 
 # Mixing depth "h"
-@inline mixing_depth(model) = model.grid.Lz # to be changed
+mixing_depth(m) = m.grid.Lz # to be changed
 
 # Vertical velocity scale, calculated at face points (insert ref to notes...)
-@inline w_scale(Cτ, Cb, Cε, FU, FV, Fb, h, d) = (Cτ*sqrt(FU^2 + FV^2)^3 + Cb*h*min(d*abs(Fb), Cε*Fb))^(1/3)
+w_scale(Cτ, Cb, Cε, FU, FV, Fb, h, d) = (Cτ*sqrt(FU^2 + FV^2)^3 + Cb*h*min(d*abs(Fb), Cε*Fb))^(1/3)
 
-# Constants can depend on whether field in question is momentum or tracer
-@inline w_scale_U(p, m, i) = w_scale(p.Cτ_U, p.Cb_U, p.Cε, FU(m), FV(m),
+# Parameters can depend on whether field in question is momentum or tracer
+w_scale_U(p, m, i) = w_scale(p.Cτ_U, p.Cb_U, p.Cε, FU(m), FV(m),
                                      buoyancy_flux(m), mixing_depth(m), face_depth(m, i))
 
-@inline w_scale_T(p, m, i) = w_scale(p.Cτ_T, p.Cb_T, p.Cε, FU(m), FV(m),
+w_scale_T(p, m, i) = w_scale(p.Cτ_T, p.Cb_T, p.Cε, FU(m), FV(m),
                                      buoyancy_flux(m), mixing_depth(m), face_depth(m, i))
 
-@inline w_scale_U(model, i) = w_scale_U(model.parameters, model, i)
-@inline w_scale_T(model, i) = w_scale_T(model.parameters, model, i)
+w_scale_U(m, i) = w_scale_U(m.parameters, m, i)
+w_scale_T(m, i) = w_scale_T(m.parameters, m, i)
 
 const w_scale_V = w_scale_U
 const w_scale_S = w_scale_T
 
 # Non-dimensional depth
-@inline face_depth(model, i) = -model.grid.zf[i] / mixing_depth(model)
-@inline cell_depth(model, i) = -model.grid.zc[i] / mixing_depth(model)
+face_depth(m, i) = -m.grid.zf[i] / mixing_depth(m)
+cell_depth(m, i) = -m.grid.zc[i] / mixing_depth(m)
 
 ## ** The K-Profile-Parameterization! **
 
-@inline K_KPP(h, w_scale, d, shape_K=shape_K) = max(0, h*w_scale*shape_K(d))
+K_KPP(h, w_scale, d, shape=default_shape_K) = max(0, h*w_scale*shape(d))
 
 # K_{U,V,T,S} is calculated at face points
-@inline K_U(model, i) = K_KPP(mixing_depth(model), w_scale_U(model, i), face_depth(model, i)) + model.parameters.K0_U
-@inline K_V(model, i) = K_KPP(mixing_depth(model), w_scale_V(model, i), face_depth(model, i)) + model.parameters.K0_U
-@inline K_T(model, i) = K_KPP(mixing_depth(model), w_scale_T(model, i), face_depth(model, i)) + model.parameters.K0_T
-@inline K_S(model, i) = K_KPP(mixing_depth(model), w_scale_S(model, i), face_depth(model, i)) + model.parameters.K0_S
+K_U(m, i) = K_KPP(mixing_depth(m), w_scale_U(m, i), face_depth(m, i)) + m.parameters.K0_U
+K_V(m, i) = K_KPP(mixing_depth(m), w_scale_V(m, i), face_depth(m, i)) + m.parameters.K0_U
+K_T(m, i) = K_KPP(mixing_depth(m), w_scale_T(m, i), face_depth(m, i)) + m.parameters.K0_T
+K_S(m, i) = K_KPP(mixing_depth(m), w_scale_S(m, i), face_depth(m, i)) + m.parameters.K0_S
 
 # ∇K∇c for c::CellField
-@inline K∂z(K, c, i) = K*∂z(c, i)
-@inline ∇K∇c(Kᵢ₊₁, Kᵢ, c::CellField, i)    = ( K∂z(Kᵢ₊₁, c, i+1) -    K∂z(Kᵢ, c, i)  ) /    dzf(c, i)
-@inline ∇K∇c_top(K, c::CellField, flux)    = (     -flux      - K∂z(K, c, length(c)) ) / dzf(c, length(c))
-@inline ∇K∇c_bottom(K, c::CellField, flux) = (  K∂z(K, c, 2)  +        flux          ) /    dzf(c, 1)
+const CF = CellField
+const FF = FaceField
 
+K∂z(K, c, i) = K*∂z(c, i)
+∇K∇c(Kᵢ₊₁, Kᵢ, c::CF, i)              = ( K∂z(Kᵢ₊₁, c, i+1) -    K∂z(Kᵢ, c, i)      ) /    dzf(c, i)
+∇K∇c_top(Kᵢ, c::CF, top_flux)         = (     -top_flux     - K∂z(Kᵢ, c, length(c)) ) / dzf(c, length(c))
+∇K∇c_bottom(Kᵢ₊₁, c::CF, bottom_flux) = (  K∂z(Kᵢ₊₁, c, 2)  +     bottom_flux       ) /    dzf(c, 1)
 
 #
 # Interior equations
 #
 
-@inline ∂U∂t(m, U, V, f, i) =  f*V.data[i] + ∇K∇c(K_U(m, i+1), K_U(m, i), U, i) + ∂NU∂z(m, i)
-@inline ∂V∂t(m, U, V, f, i) = -f*U.data[i] + ∇K∇c(K_V(m, i+1), K_V(m, i), U, i) + ∂NV∂z(m, i)
-@inline ∂T∂t(m, T, i)       =                ∇K∇c(K_T(m, i+1), K_T(m, i), T, i) + ∂NT∂z(m, i)
-@inline ∂S∂t(m, S, i)       =                ∇K∇c(K_S(m, i+1), K_S(m, i), S, i) + ∂NS∂z(m, i)
+∂U∂t(m, U, V, f, i) =  f*V.data[i] + ∇K∇c(K_U(m, i+1), K_U(m, i), U, i) + ∂NU∂z(m, i)
+∂V∂t(m, U, V, f, i) = -f*U.data[i] + ∇K∇c(K_V(m, i+1), K_V(m, i), U, i) + ∂NV∂z(m, i)
+∂T∂t(m, T, i)       =                ∇K∇c(K_T(m, i+1), K_T(m, i), T, i) + ∂NT∂z(m, i)
+∂S∂t(m, S, i)       =                ∇K∇c(K_S(m, i+1), K_S(m, i), S, i) + ∂NS∂z(m, i)
 
-@inline ∂U∂t(model, i) = ∂U∂t(model, model.solution.U, model.solution.V, model.constants.f, i)
-@inline ∂V∂t(model, i) = ∂V∂t(model, model.solution.U, model.solution.V, model.constants.f, i)
-@inline ∂T∂t(model, i) = ∂T∂t(model, model.solution.T, i)
-@inline ∂S∂t(model, i) = ∂S∂t(model, model.solution.S, i)
+∂U∂t(m, i) = ∂U∂t(m, m.solution.U, m.solution.V, m.constants.f, i)
+∂V∂t(m, i) = ∂V∂t(m, m.solution.U, m.solution.V, m.constants.f, i)
+∂T∂t(m, i) = ∂T∂t(m, m.solution.T, i)
+∂S∂t(m, i) = ∂S∂t(m, m.solution.S, i)
 
 #
-# Boundary Conditions
+# Boundary Conditions specification
 #
 
 ## Top and bottom flux estimates for constant (Dirichlet) boundary conditions
-@inline bottom_flux(K, c, c_bndry, dzf) = -2*K*( bottom(c) - c_bndry ) / bottom(dzf) # -K*∂c/∂z at the bottom
-@inline top_flux(K, c, c_bndry, dzf)    = -2*K*(  c_bndry  -  top(c) ) /   top(dzf)  # -K*∂c/∂z at the top
+bottom_flux(K, c, c_bndry, dzf) = -2*K*( bottom(c) - c_bndry ) / bottom(dzf) # -K*∂c/∂z at the bottom
+top_flux(K, c, c_bndry, dzf)    = -2*K*(  c_bndry  -  top(c) ) /   top(dzf)  # -K*∂c/∂z at the top
 
-## Flux BCs --- these are incorrect and must be fixed.
-@inline ∂U∂t(model, bc::FluxBC{Top}) = 0.0 #∇K∇c_top(K_U(model, model.grid.nz), model.solution.U, bc.flux(model))
-@inline ∂V∂t(model, bc::FluxBC{Top}) = 0.0 #∇K∇c_top(K_V(model, model.grid.nz), model.solution.V, bc.flux(model))
-@inline ∂T∂t(model, bc::FluxBC{Top}) = 0.0 #∇K∇c_top(K_T(model, model.grid.nz), model.solution.T, bc.flux(model))
-@inline ∂S∂t(model, bc::FluxBC{Top}) = 0.0 #∇K∇c_top(K_S(model, model.grid.nz), model.solution.S, bc.flux(model))
+## Flux BCs --- omit diffusive flux at the top for KPP (?)
+∂U∂t(m, U, V, f, ::FluxBC{Top}) =  f*top(V) + ∂NU∂z(m, length(U))
+∂V∂t(m, U, V, f, ::FluxBC{Top}) = -f*top(U) + ∂NV∂z(m, length(V))
+∂T∂t(m, T, ::FluxBC{Top})       =             ∂NT∂z(m, length(T))
+∂S∂t(m, S, ::FluxBC{Top})       =             ∂NS∂z(m, length(S))
 
-@inline ∂U∂t(model, bc::FluxBC{Bottom}) = ∇K∇c_bottom(K_U(model, 2), model.solution.U, bc.flux(model))
-@inline ∂V∂t(model, bc::FluxBC{Bottom}) = ∇K∇c_bottom(K_V(model, 2), model.solution.V, bc.flux(model))
-@inline ∂T∂t(model, bc::FluxBC{Bottom}) = ∇K∇c_bottom(K_T(model, 2), model.solution.T, bc.flux(model))
-@inline ∂S∂t(model, bc::FluxBC{Bottom}) = ∇K∇c_bottom(K_S(model, 2), model.solution.S, bc.flux(model))
+∂U∂t(m, U, V, f, bc::FluxBC{Bottom}) =  f*bottom(V) + ∇K∇c_bottom(K_U(m, 2), U, bc.flux(m)) + ∂NU∂z(m, 1)
+∂V∂t(m, U, V, f, bc::FluxBC{Bottom}) = -f*bottom(U) + ∇K∇c_bottom(K_V(m, 2), V, bc.flux(m)) + ∂NV∂z(m, 1)
+∂T∂t(m, T, bc::FluxBC{Bottom})       =                ∇K∇c_bottom(K_T(m, 2), T, bc.flux(m)) + ∂NT∂z(m, 1)
+∂S∂t(m, S, bc::FluxBC{Bottom})       =                ∇K∇c_bottom(K_S(m, 2), S, bc.flux(m)) + ∂NS∂z(m, 1)
 
-## Value BCs
-# ** note these are incorrect because neither Coriolis terms nor non-local flux are included **
-function ∂U∂t(model, bc::ValueBC{Bottom}) 
-  flux = bottom_flux(K_U(model, 1), model.solution.U, bc.value(model), model.grid.dzf)
-  return ∇K∇c_bottom(K_U(model, 2), model.solution.U, flux)
+∂U∂t(m, bc::FluxBC{Bottom}) = ∂U∂t(m, m.solution.U, m.solution.V, m.constants.f, bc)
+∂V∂t(m, bc::FluxBC{Bottom}) = ∂V∂t(m, m.solution.U, m.solution.V, m.constants.f, bc)
+∂T∂t(m, bc::FluxBC{Bottom}) = ∂T∂t(m, m.solution.T, bc)
+∂S∂t(m, bc::FluxBC{Bottom}) = ∂S∂t(m, m.solution.S, bc)
+
+## Value BCs -- implemented at the bottom only.
+∂U∂t(m, bc::ValueBC{Top}) = throw("A top ValueBC cannot be defined in KPP.")
+∂V∂t(m, bc::ValueBC{Top}) = throw("A top ValueBC cannot be defined in KPP.")
+∂T∂t(m, bc::ValueBC{Top}) = throw("A top ValueBC cannot be defined in KPP.")
+∂S∂t(m, bc::ValueBC{Top}) = throw("A top ValueBC cannot be defined in KPP.")
+
+∂U∂t(V, f, ∇K∇U, ∂N∂z, bc::ValueBC{Bottom}) = -f*V + ∇K∇U + ∂N∂z
+∂V∂t(U, f, ∇K∇V, ∂N∂z, bc::ValueBC{Bottom}) =  f*U + ∇K∇V + ∂N∂z
+∂T∂t(      ∇K∇T, ∂N∂z, bc::ValueBC{Bottom}) = ∇K∇T + ∂N∂z
+∂S∂t(      ∇K∇S, ∂N∂z, bc::ValueBC{Bottom}) = ∇K∇S + ∂N∂z
+
+function ∂U∂t(m, bc::ValueBC{Bottom})
+  flux = bottom_flux(K_U(m, 1), U, bc.value(m), m.grid.dzf)
+  return ∂U∂t(bottom(m.solution.V), m.constants.f, ∇K∇c_bottom(K_U(m, 2), U, flux), ∂NU∂z(m, 1))
 end
 
-function ∂V∂t(model, bc::ValueBC{Bottom}) 
-  flux = bottom_flux(K_V(model, 1), model.solution.V, bc.value(model), model.grid.dzf)
-  return ∇K∇c_bottom(K_V(model, 2), model.solution.V, flux)
+function ∂V∂t(m, bc::ValueBC{Bottom}) 
+  flux = bottom_flux(K_V(m, 1), U, bc.value(m), m.grid.dzf)
+  return ∂V∂t(bottom(m.solution.U), m.constants.f, ∇K∇c_bottom(K_V(m, 2), V, flux), ∂NV∂z(m, 1))
 end
 
-function ∂T∂t(model, bc::ValueBC{Bottom}) 
-  flux = bottom_flux(K_T(model, 1), model.solution.T, bc.value(model), model.grid.dzf)
-  return ∇K∇c_bottom(K_T(model, 2), model.solution.T, flux)
+function ∂T∂t(m, bc::ValueBC{Bottom}) 
+  flux = bottom_flux(K_T(m, 1), T, bc.value(m), m.grid.dzf)
+  return ∂T∂t(∇K∇c_bottom(K_T(m, 2), T, flux), ∂NT∂z(m, 1))
 end
 
-function ∂S∂t(model, bc::ValueBC{Bottom}) 
-  flux = bottom_flux(K_S(model, 1), model.solution.S, bc.value(model), model.grid.dzf)
-  return ∇K∇c_bottom(K_S(model, 2), model.solution.S, flux)
-end
-
-function ∂U∂t(model, bc::ValueBC{Top}) 
-  flux = top_flux(K_U(model, model.grid.nz+1), model.solution.U, bc.value(model), model.grid.dzf)
-  return ∇K∇c_top(K_U(model, model.grid.nz  ), model.solution.U, flux)
-end
-
-function ∂V∂t(model, bc::ValueBC{Top}) 
-  flux = top_flux(K_V(model, model.grid.nz+1), model.solution.V, bc.value(model), model.grid.dzf)
-  return ∇K∇c_top(K_V(model, model.grid.nz  ), model.solution.V, flux)
-end
-
-function ∂T∂t(model, bc::ValueBC{Top}) 
-  flux = top_flux(K_T(model, model.grid.nz+1), model.solution.T, bc.value(model), model.grid.dzf)
-  return ∇K∇c_top(K_T(model, model.grid.nz  ), model.solution.T, flux)
-end
-
-function ∂S∂t(model, bc::ValueBC{Top}) 
-  flux = top_flux(K_S(model, model.grid.nz+1), model.solution.S, bc.value(model), model.grid.dzf)
-  return ∇K∇c_top(K_S(model, model.grid.nz  ), model.solution.S, flux)
+function ∂S∂t(m, bc::ValueBC{Bottom}) 
+  flux = bottom_flux(K_S(m, 1), S, bc.value(m), m.grid.dzf)
+  return ∂S∂t(∇K∇c_bottom(K_S(m, 2), S, flux), ∂NS∂z(m, 1))
 end
 
 end # module
