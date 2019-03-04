@@ -16,10 +16,24 @@ mutable struct FieldBoundaryConditions <: FieldVector{2,BoundaryCondition}
   top::BoundaryCondition{Top}
 end
 
+"""
+    FluxBC(boundary, flux)
+
+Constuct a flux boundary condition that specifies the flux
+of some field on a boundary. If `flux` is a function,
+its arguments must be synced with the expection of `Model`.
+"""
 struct FluxBC{B<:Boundary} <: BoundaryCondition{B}
   flux::Function
 end
 
+"""
+    ValueBC(boundary, value)
+
+Constuct a 'value' boundary condition, which specifies the value
+of some field on a boundary. If `value` is a function,
+its arguments must be synced with the expection of `Model`.
+"""
 struct ValueBC{B<:Boundary} <: BoundaryCondition{B}
   value::Function
 end
@@ -41,17 +55,17 @@ function ValueBC(boundary, value::Number)
   return ValueBC{boundary}(value_function)
 end
 
-FluxBC(boundary, value) = FluxBC{boundary}(value)
-ValueBC(boundary, value) = ValueBC{boundary}(value)
-FluxBC(flux) = FluxBC(Unset, flux)
-ValueBC(value) = ValueBC(Unset, value)
+@inline FluxBC(boundary, value) = FluxBC{boundary}(value)
+@inline ValueBC(boundary, value) = ValueBC{boundary}(value)
+@inline FluxBC(flux) = FluxBC(Unset, flux)
+@inline ValueBC(value) = ValueBC(Unset, value)
 
 #
 # Boundary condition API
 #
 
 """
-    FieldboundaryConditions(; top=TopBC, bottom=BottomBC)
+    FieldBoundaryConditions(; top=TopBC, bottom=BottomBC)
 
 Create an instance of `FieldBoundaryConditions` with `top` and `bottom` 
 boundary conditions.

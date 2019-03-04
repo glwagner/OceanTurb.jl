@@ -25,8 +25,8 @@ cell centers, and dzf gives the separation between faces.
 
 There are two types of fields:
 
-  1. `CellFields` defined at cell centers with dimension `nz`, 
-  2. `FaceFields` defined at cell faces with dimension `nz+1`.
+  1. Fields defined at cell centers with dimension `nz`: `Field{Cell}`
+  2. Fields defined at cell faces with dimension `nz+1`: `Field{Face}`
 
 From the standpoint of designing new turbulence closures, 
 the most important function that we output is `∂z`.
@@ -45,28 +45,6 @@ struct Field{L,A,G} <: AbstractField{A,G}
     new{Location,typeof(data),typeof(grid)}(data, grid)
   end
 end
-
-#=
-"""
-    CellField(data, grid)
-
-Return a `CellField` with `data` at the cell points `grid.zc`.
-"""
-struct CellField{A,G} <: AbstractField{A,G} 
-  data::A
-  grid::G
-end
-
-"""
-    FaceField(data, grid)
-
-Return a `FaceField` with `data` at the face points `grid.zf`.
-"""
-struct FaceField{A,G} <: AbstractField{A,G}
-  data::A
-  grid::G
-end
-=#
 
 const CellField = Field{Cell}
 const FaceField = Field{Face}

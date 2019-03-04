@@ -15,40 +15,35 @@ export
 
 @specify_solution CellField U V T S
 
-struct Parameters <: AbstractParameters
-  const_ε::Float64    # Surface layer fraction
-  const_U_u::Float64  # Effect of surface momentum flux on momentum diffusivity
-  const_U_b::Float64  # Effect of surface buoyancy flux on momentum diffusivity
-  const_C_u::Float64  # Effect of surface momentum flux on scalar diffusivity
-  const_C_b::Float64  # Effect of surface buoyancy flux on scalar diffusivity
-  const_C_Ri::Float64 # Critical Richardson number
-  const_C_KE::Float64 # Unresolved turbulence parameter
+struct Parameters{T} <: AbstractParameters
+  Cε::T    # Surface layer fraction
+  Cτ_U::T  # Effect of surface momentum flux on momentum diffusivity
+  Cb_U::T  # Effect of surface buoyancy flux on momentum diffusivity
+  Cτ_T::T  # Effect of surface momentum flux on momentum diffusivity
+  Cb_T::T  # Effect of surface buoyancy flux on momentum diffusivity
+  CRi::T   # Critical Richardson number
+  CKE::T   # Unresolved turbulence parameter
 end
 
-struct SurfaceFluxes{TT,TS,TU}
-  FT::TT
-  FS::TS
-  FU::TU
-  FV::TU
-end
-
-struct Constants
-  α::Float64
-  β::Float64
-  ρ₀::Float64
-  cP::Float64
-  K0::Float64
-  function Constants(α=2e-4, β=8e-5, ρ₀=1033, cP=3993, K0=1e-5) 
-    new(α, β, ρ₀, cP, K0)
+struct Constants{T}
+  α::T
+  β::T
+  ρ₀::T
+  cP::T
+  K0_U::T
+  K0_T::T
+  K0_S::T
+  f::T
+  function Constants(α=2e-4, β=8e-5, ρ₀=1033, cP=3993, K0_U=1e-5, K0_T=1e-5, K0_S=1e-5, f=0) 
+    new(α, β, ρ₀, cP, K0_U, K0_T, K0_S, f)
   end
 end
 
 
-mutable struct Model{FT,FS,FU,TS,G,T} <: AbstractModel{TS,G,T}
+mutable struct Model{TS,G,T,TP,TC} <: AbstractModel{TS,G,T}
   @add_standard_model_fields
-  parameters::Parameters
-  surface_fluxes::SurfaceFluxes{FT,FS,FU}
-  constants::Constants
+  parameters::Parameters{TP}
+  constants::Constants{TC}
 end
 
 function Model(;
@@ -56,7 +51,6 @@ function Model(;
               Lz = 1.0,
          stepper = :ForwardEuler,
              bcs = BoundaryConditions(ZeroFlux(), ZeroFlux(), ZeroFlux(), ZeroFlux()),
-  surface_fluxes = SurfaceFluxes(0, 0, 0, 0),
        constants = Constants(),
       parameters = Parameters(1, 1, 1, 1, 1, 1, 1, 1)
 )
@@ -72,78 +66,86 @@ end
 #
 # Equation specification
 #
+
 @inline α(model) = model.constants.α
 @inline β(model) = model.constants.β
 @inline T₀(model) = model.constants.T₀
 @inline S₀(model) = model.constants.S₀
-@inline FU(model) = model.surface_fluxes.FU(model)
-@inline FV(model) = model.surface_fluxes.FV(model)
-@inline FT(model) = model.surface_fluxes.FT(model)
-@inline FS(model) = model.surface_fluxes.FS(model)
 
-@inline buoyancy_flux(model) = α(model)*FT(model) + β(model)*FS(model)
+# Aliases for surface fluxes
+@inline FU(model) = model.bcs.U.top.flux(model) 
+@inline FV(model) = model.bcs.V.top.flux(model)
+@inline FT(model) = model.bcs.T.top.flux(model)
+@inline FS(model) = model.bcs.S.top.flux(model)
+
+@inline buoyancy_flux(m) = α(m)*FT(m) + β(m)*FS(m)
 
 ## Nonlocal flux
 
-@inline nonlocal_flux(const_N, flux, d) = const_N*flux*(1-d)
-@inline nonlocal_flux(flux, d) = const_N*flux*(1-d)
+@inline shape_N(d) = 1-d
+@inline shape_K(d) = d*(1-d)
+@inline nonlocal_flux(flux, d, shape_N=shape_N) = flux*shape_N(d)
 
-@inline ∂NU∂z(model, i) = nonlocal_flux(model.surface_fluxes.FU(model), face_depth(model, i))
-@inline ∂NV∂z(model, i) = nonlocal_flux(model.surface_fluxes.FV(model), face_depth(model, i))
-@inline ∂NS∂z(model, i) = nonlocal_flux(model.surface_fluxes.FS(model), face_depth(model, i))
-@inline ∂NT∂z(model, i) = nonlocal_flux(model.surface_fluxes.FT(model), face_depth(model, i))
+@inline ∂NU∂z(model, i) = nonlocal_flux(FU(model), face_depth(model, i))
+@inline ∂NV∂z(model, i) = nonlocal_flux(FV(model), face_depth(model, i))
+@inline ∂NS∂z(model, i) = nonlocal_flux(FS(model), face_depth(model, i))
+@inline ∂NT∂z(model, i) = nonlocal_flux(FT(model), face_depth(model, i))
 
-## Diffusivity: depth and vertical velocity scale
+## Diffusivity
 
-mixing_depth(model) = model.grid.Lz # to be changed
+# Mixing depth "h"
+@inline mixing_depth(model) = model.grid.Lz # to be changed
 
+# Vertical velocity scale, calculated at face points (insert ref to notes...)
+@inline w_scale(Cτ, Cb, Cε, FU, FV, Fb, h, d) = (Cτ*(FU^2 + FV^2)^1.5 + Cb*h*min(d*abs(Fb), Cε*Fb))^(1/3)
+
+# Constants can depend on whether field in question is momentum or tracer
+@inline w_scale_U(p, m, i) = w_scale(p.Cτ_U, p.Cb_U, p.Cε, FU(m), FV(m),
+                                     buoyancy_flux(m), mixing_depth(m), face_depth(m, i))
+
+@inline w_scale_T(p, m, i) = w_scale(p.Cτ_T, p.Cb_T, p.Cε, FU(m), FV(m),
+                                     buoyancy_flux(m), mixing_depth(m), face_depth(m, i))
+
+@inline w_scale_U(model, i) = w_scale_U(model.parameters, model, i)
+@inline w_scale_T(model, i) = w_scale_T(model.parameters, model, i)
+
+const w_scale_V = w_scale_U
+const w_scale_S = w_scale_T
+
+# Non-dimensional depth
 @inline face_depth(model, i) = -model.grid.zf[i] / mixing_depth(model)
 @inline cell_depth(model, i) = -model.grid.zc[i] / mixing_depth(model)
 
-@inline function w_scale(const_u, const_b, const_ε, abs_momentum_flux, buoyancy_flux, h, d)
-  (   const_u * sqrt(abs_momentum_flux)^3 
-    + const_b * h * min(d*abs(buoyancy_flux), const_ε*buoyancy_flux) )^(1/3)
-end
+## ** The K-Profile-Parameterization! **
 
-@inline function w_scale_U(model, i)
-  w_scale(model.parameters.const_U_u, model.parameters.const_U_b, model.parameters.const_ε, 
-          sqrt(FU(model)^2 + FV(model)^2), buoyancy_flux(model), mixing_depth(model), face_depth(model, i))
-end
+@inline K_KPP(h, w_scale, d, shape_K=shape_K) = max(0, h*w_scale*shape_K(d))
 
-@inline function w_scale_T(model, i)
-  w_scale(model.parameters.const_C_u, model.parameters.const_C_b, model.parameters.const_ε, 
-          sqrt(FU(model)^2 + FV(model)^2), buoyancy_flux(model), mixing_depth(model), face_depth(model, i))
-end
+# K_{U,V,T,S} is calculated at face points
+@inline K_U(model, i) = K_KPP(mixing_depth(model), w_scale_U(model, i), face_depth(model, i)) + model.constants.K0_U
+@inline K_V(model, i) = K_KPP(mixing_depth(model), w_scale_V(model, i), face_depth(model, i)) + model.constants.K0_U
+@inline K_T(model, i) = K_KPP(mixing_depth(model), w_scale_T(model, i), face_depth(model, i)) + model.constants.K0_T
+@inline K_S(model, i) = K_KPP(mixing_depth(model), w_scale_S(model, i), face_depth(model, i)) + model.constants.K0_S
 
-@inline w_scale_V(model, i) = w_scale_U(model, i)
-@inline w_scale_S(model, i) = w_scale_T(model, i)
-
-# ** KPP! **
-@inline K_KPP(h, w_scale, d) = max(0, h * w_scale * d * (1 - d)^2)
-
-@inline K_U(model, i) = K_KPP(mixing_depth(model), w_scale_U(model, i), face_depth(model, i)) + model.constants.K0
-@inline K_V(model, i) = K_KPP(mixing_depth(model), w_scale_V(model, i), face_depth(model, i)) + model.constants.K0
-@inline K_T(model, i) = K_KPP(mixing_depth(model), w_scale_T(model, i), face_depth(model, i)) + model.constants.K0
-@inline K_S(model, i) = K_KPP(mixing_depth(model), w_scale_S(model, i), face_depth(model, i)) + model.constants.K0
-
-K∂z(K::Number, c, i) = K*∂z(c, i)
-K∂z(K::AbstractField, c, i) = K.data[i]*∂z(c, i)
-K∂z(K::Function, c, i) = K(c.grid.zf[i]) * ∂z(c, i) # works for K(z)
-
-@inline ∇K∇c(Kᵢ₊₁, Kᵢ, c, i)    = ( K∂z(Kᵢ₊₁, c, i+1) -    K∂z(Kᵢ, c, i)  ) /    dzf(c, i)
-@inline ∇K∇c_top(K, c, flux)    = (     -flux      - K∂z(K, c, length(c)) ) / dzf(c, length(c))
-@inline ∇K∇c_bottom(K, c, flux) = (  K∂z(K, c, 2)  +        flux          ) /    dzf(c, 1)
+# ∇K∇c for c::CellField
+@inline K∂z(K, c, i) = K*∂z(c, i)
+@inline ∇K∇c(Kᵢ₊₁, Kᵢ, c::CellField, i)    = ( K∂z(Kᵢ₊₁, c, i+1) -    K∂z(Kᵢ, c, i)  ) /    dzf(c, i)
+@inline ∇K∇c_top(K, c::CellField, flux)    = (     -flux      - K∂z(K, c, length(c)) ) / dzf(c, length(c))
+@inline ∇K∇c_bottom(K, c::CellField, flux) = (  K∂z(K, c, 2)  +        flux          ) /    dzf(c, 1)
 
 
 #
 # Interior equations
 #
 
-@inline ∂U∂t(model, i) = ∇K∇c(K_U(model, i+1), K_U(model, i), model.solution.U, i) + ∂NU∂z(model, i)
-@inline ∂V∂t(model, i) = ∇K∇c(K_V(model, i+1), K_V(model, i), model.solution.V, i) + ∂NV∂z(model, i)
-@inline ∂T∂t(model, i) = ∇K∇c(K_T(model, i+1), K_T(model, i), model.solution.S, i) + ∂NT∂z(model, i)
-@inline ∂S∂t(model, i) = ∇K∇c(K_S(model, i+1), K_S(model, i), model.solution.T, i) + ∂NS∂z(model, i)
- 
+@inline ∂U∂t(m, U, V, f, i) =  f*V.data[i] + ∇K∇c(K_U(m, i+1), K_U(m, i), U, i) + ∂NU∂z(m, i)
+@inline ∂V∂t(m, U, V, f, i) = -f*U.data[i] + ∇K∇c(K_V(m, i+1), K_V(m, i), U, i) + ∂NV∂z(m, i)
+@inline ∂T∂t(m, T, i)       =                ∇K∇c(K_T(m, i+1), K_T(m, i), T, i) + ∂NT∂z(m, i)
+@inline ∂S∂t(m, S, i)       =                ∇K∇c(K_S(m, i+1), K_S(m, i), S, i) + ∂NS∂z(m, i)
+
+@inline ∂U∂t(model, i) = ∂U∂t(model, model.solution.U, model.solution.V, model.constants.f, i)
+@inline ∂V∂t(model, i) = ∂V∂t(model, model.solution.U, model.solution.V, model.constants.f, i)
+@inline ∂T∂t(model, i) = ∂T∂t(model, model.solution.T, i)
+@inline ∂S∂t(model, i) = ∂S∂t(model, model.solution.S, i)
 
 #
 # Boundary Conditions
