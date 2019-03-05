@@ -48,8 +48,8 @@ end
 # Forward Euler timestepping
 function iterate!(model::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
 
-  for i in eachindex(model.solution)
-    c, ∂c∂t, rhs, bcs = unpack(model, i)
+  for j in eachindex(model.solution)
+    c, ∂c∂t, rhs, bcs = unpack(model, j)
 
     # Interior step
     for i in interior(c)
@@ -62,8 +62,8 @@ function iterate!(model::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimeste
   end
 
   # Update solution
-  for i in eachindex(model.solution)
-    c, ∂c∂t, rhs, bcs = unpack(model, i)
+  for j in eachindex(model.solution)
+    c, ∂c∂t, rhs, bcs = unpack(model, j)
     @. c.data += Δt*rhs.data
   end
 
