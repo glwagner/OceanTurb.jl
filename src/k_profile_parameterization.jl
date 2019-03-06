@@ -13,7 +13,7 @@ export
 
 const nsol = 4
 
-@specify_solution CellField U V T S
+@specify_solution CellField{A, G} U V T S
 
 struct Parameters{T} <: AbstractParameters
   Cε::T    # Surface layer fraction
@@ -37,18 +37,20 @@ struct Constants{T}
   α::T
   β::T
   ρ₀::T
+  g::T
   cP::T
   f::T
 end
 
-function Constants(T=Float64; α=2e-4, β=8e-5, ρ₀=1033, cP=3993, f=0) 
+function Constants(T=Float64; α=2e-4, β=8e-5, ρ₀=1033, cP=3993, f=0, g=9.81) 
   Constants{T}(α, β, ρ₀, cP, f)
 end
 
-mutable struct Model{TS,G,T,TP,TC} <: AbstractModel{TS,G,T}
+mutable struct Model{TS, G, T, TP, TC, A} <: AbstractModel{TS, G, T}
   @add_standard_model_fields
   parameters::Parameters{TP}
   constants::Constants{TC}
+  δRi::FaceField{A, G}
 end
 
 function Model(;
@@ -65,8 +67,9 @@ function Model(;
   solution = Solution((CellField(grid) for i=1:nsol)...)
   equation = Equation(∂U∂t, ∂V∂t, ∂T∂t, ∂S∂t)
   timestepper = Timestepper(:ForwardEuler, solution)
+  δRi = FaceField(grid)
 
-  return Model(timestepper, grid, solution, equation, bcs, Clock(), parameters, constants)
+  return Model(timestepper, grid, solution, equation, bcs, Clock(), parameters, constants, δRi)
 end
 
 #
@@ -80,14 +83,18 @@ end
  β(m) = m.constants.β
 T₀(m) = m.constants.T₀
 S₀(m) = m.constants.S₀
+ρ₀(m) = m.constants.ρ₀
+ g(m) = m.constants.g
 
 # Aliases for surface fluxes
 FU(m) = m.bcs.U.top.flux(m) 
 FV(m) = m.bcs.V.top.flux(m)
 FT(m) = m.bcs.T.top.flux(m)
 FS(m) = m.bcs.S.top.flux(m)
+Fb(m) = g(m)/ρ₀(m) * (α(m)*FT(m) - β(m)*FS(m))
 
-buoyancy_flux(m) = α(m)*FT(m) + β(m)*FS(m)
+const buoyancy_flux = Fb
+Bz(α, β, T, S, i) = α*∂z(T, i) - β*∂z(S, i)
 
 # Shape function. 'd' is a non-dimensional depth coordinate.
 default_shape_N(d) = 1-d
@@ -116,7 +123,73 @@ nonlocal_flux(flux, d, shape=default_shape_N) = -flux*shape(d) # not minus sign 
 ## Diffusivity
 
 # Mixing depth "h"
-mixing_depth(m) = m.grid.Lz # to be changed
+
+"Returns the surface_layer_average for mixing depth h=- zf[i]."
+function surface_layer_average(Cε, c, i)
+  iε = 1 + Cε * (length(c) + 1 - i) # (fractional) "index" of the surface layer
+  iface = ceil(Int, iε) # lowest face entirely in surface layer
+  frac = iface - iε # fractional cell area below lowest face
+
+  # Contribution of fractional cell to total integral
+  surface_layer_integral = frac * dzf(c, face-1) * c.data[face-1] 
+
+  # Add cells above face, if there are any.
+  for j = face:length(c)
+    @inbounds surface_layer_integral += dzf(c, j) * c.data[j]
+  end
+
+  h = -c.grid.zf[i] # depth
+  return surface_layer_integral / (Cε*h)
+end
+
+"""
+Return Δc(hᵢ), the difference between the surface-layer average of c and its value at depth hᵢ, where
+i is a face index.
+"""
+Delta(Cε, c, i) = surface_layer_average(Cε, c, i) - avz(c, i)
+
+"Returns the parameterization for unresolved KE at face point i."
+function unresolved_KE(CKE, Fb, α, β, T, S, i) 
+  h = -T.grid.zf[i]
+  return CKE * h^(4/3) * sqrt(Bz(α, β, T, S, i)) * max(0, Fb^(1/3))
+end
+
+"""
+    Richardson(model, i)
+
+Returns the Richardson number of `model`, including an estimate 
+for unresolved kinetic energy, at face point i.
+"""
+function Richardson(CKE, Cε, Fb, α, β, g, ρ₀, U, V, T, S, i)
+  h = -T.grid.zf[i]
+   ΔB = g/ρ₀ * (α*Delta(Cε, T, i) - β*Delta(Cε, S, i))
+  ΔU² = Delta(Cε, U, i)^2 + Delta(Cε, V, i)^2
+  return h*ΔB / (ΔU² + unresolved_KE(CKE, Fb, α, β, T, S, i))
+end
+
+Richardson(m, i) = Richardson(m.parameters.CKE, m.parameters.Cε, buoyancy_flux(m),
+                              α(m), β(m), g(m), ρ₀(m), m.solution.U, m.solution.V,
+                              m.solution.T, m.solution.S, i)
+
+"""
+    mixing_depth(model)
+
+Calculate 'h', the mixing depth, for the current state of `model`.
+This function calculates δRi.
+"""
+function mixing_depth(m)
+  # Calculate deviation of Ri from critical value at each face point
+  for i = eachindex(m.δRi)
+    m.δRi.data[i] = m.parameters.CRi - Richardson(m, i)
+  end
+  # Linearly interpolate to find where δRi = 0.
+  ih₂ = searchsortedfirst(m.δRi.data, 0)
+  ih₁ = max(1, ih₂ - 1) # don't let ih₁ < 1.
+  Δz = m.grid.zf[ih₂] - m.grid.zf[ih₁]
+  ΔδRi = m.δRi.data[ih₂] - m.δRi.data[ih₁] # Delta of Ri deviation
+  z★ = m.grid.zf[ih₂] - m.δRi.data[ih₂] * Δz / ΔδRi
+  return -z★
+end
 
 # Vertical velocity scale, calculated at face points (insert ref to notes...)
 w_scale(Cτ, Cb, Cε, FU, FV, Fb, h, d) = (Cτ*sqrt(FU^2 + FV^2)^3 + Cb*h*min(d*abs(Fb), Cε*Fb))^(1/3)
