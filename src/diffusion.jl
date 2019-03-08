@@ -1,6 +1,6 @@
 module Diffusion
 
-using 
+using
   Reexport,
   StaticArrays
 
@@ -21,8 +21,10 @@ mutable struct Model{PT,TS,G,T} <: AbstractModel{TS,G,T}
   parameters::Parameters{PT}
 end
 
+kappa(model) = model.parameters.κ
+
 function Model(;
-       nz = 100, 
+       nz = 100,
        Lz = 1.0,
         κ = 0.1,
   stepper = :ForwardEuler,
@@ -68,12 +70,12 @@ top_flux(κ, c, c_bndry, dzf)    = -2*  top(κ) *(  c_bndry  -  top(c) ) /   top
 ∂c∂t(model, bc::FluxBC{Bottom}) = ∇κ∇c_bottom(model.parameters.κ, model.solution.c, bc.flux(model))
 
 # Constant Boundary conditions
-function ∂c∂t(model, bc::ValueBC{Bottom}) 
+function ∂c∂t(model, bc::ValueBC{Bottom})
   flux = bottom_flux(model.parameters.κ, model.solution.c, bc.value(model), model.grid.dzf)
   return ∇κ∇c_bottom(model.parameters.κ, model.solution.c, flux)
 end
 
-function ∂c∂t(model, bc::ValueBC{Top}) 
+function ∂c∂t(model, bc::ValueBC{Top})
   flux = top_flux(model.parameters.κ, model.solution.c, bc.value(model), model.grid.dzf)
   return ∇κ∇c_top(model.parameters.κ, model.solution.c, flux)
 end

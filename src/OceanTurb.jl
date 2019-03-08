@@ -8,6 +8,7 @@ export # This file, core functionality:
   time,
   iter,
   set!,
+  reset!,
 
   # utils.jl
   second,
@@ -25,6 +26,9 @@ export # This file, core functionality:
   # grids.jl
   Grid,
   UniformGrid,
+  height,
+  length,
+  size,
 
   # fields.jl
   FieldLocation,
@@ -102,14 +106,20 @@ Clock() = Clock(0.0, 0)
 time(m::AbstractModel) = model.clock.time
 iter(m::AbstractModel) = model.clock.iter
 
+function reset!(clock)
+  clock.time = 0
+  clock.iter = 0
+  return nothing
+end
+
 #
 # Sugary things for solutions
-# 
+#
 
 """
     set!(solution, kwargs...)
 
-Set the fields of a solution. For example, use 
+Set the fields of a solution. For example, use
 
 T0 = rand(4)
 S0(z) = exp(-z^2/10)

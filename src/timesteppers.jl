@@ -45,6 +45,12 @@ struct ForwardEulerTimestepper{T} <: Timestepper
   end
 end
 
+function update!(clock, Δt)
+  clock.time += Δt
+  clock.iter += 1
+  return nothing
+end
+
 # Forward Euler timestepping
 function iterate!(model::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
 
@@ -66,6 +72,8 @@ function iterate!(model::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimeste
     c, ∂c∂t, rhs, bcs = unpack(model, j)
     @. c.data += Δt*rhs.data
   end
+
+  update!(model.clock, Δt)
 
   return nothing
 end

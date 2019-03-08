@@ -38,7 +38,7 @@ struct ValueBC{B<:Boundary} <: BoundaryCondition{B}
   value::Function
 end
 
-# 
+#
 # Sugary goodness
 #
 
@@ -67,7 +67,7 @@ end
 """
     FieldBoundaryConditions(; top=TopBC, bottom=BottomBC)
 
-Create an instance of `FieldBoundaryConditions` with `top` and `bottom` 
+Create an instance of `FieldBoundaryConditions` with `top` and `bottom`
 boundary conditions.
 """
 function FieldBoundaryConditions(;
@@ -81,14 +81,14 @@ end
 ZeroFlux() = FieldBoundaryConditions() # the default
 
 "Set the bottom boundary condition for `fld` in `model`."
-function set_bottom_bc!(model, fld, bc) 
+function set_bottom_bc!(model, fld, bc)
   field_bcs = getproperty(model.bcs, fld)
   field_bcs.bottom = bc
   return nothing
 end
 
 "Set the top boundary condition for `fld` in `model`."
-function set_top_bc!(model, fld, bc) 
+function set_top_bc!(model, fld, bc)
   field_bcs = getproperty(model.bcs, fld)
   field_bcs.top = bc
   return nothing
@@ -105,7 +105,7 @@ is applied to the top or bottom accordingly.
 set_bc!(model, fld, bc::BoundaryCondition{B}) where B <: Bottom = set_bottom_bc!(model, fld, bc)
 set_bc!(model, fld, bc::BoundaryCondition{B}) where B <: Top = set_top_bc!(model, fld, bc)
 
-function set_bc!(model, fld, bc::BoundaryCondition{B}) where B <: Unset 
+function set_bc!(model, fld, bc::BoundaryCondition{B}) where B <: Unset
   throw("The boundary on which to apply the boundary condition must be specified!")
 end
 
