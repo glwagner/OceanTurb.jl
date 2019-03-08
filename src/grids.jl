@@ -1,44 +1,44 @@
 #= Grid types for OceanTurb.jl.
 
 OceanTurb.jl solves one-dimensional PDEs on a staggered grid.
-The geometry of a grid with nz=3 is
+The geometry of a grid with N=3 is
 
 ```
       ▲ z
       |
 
                 j=4   ===       ▲
-         i=3           *        | dzf[3]
+         i=3           *        | Δf[3]
                 j=3   ---       ▼
          i=2           *    ▲
-                j=2   ---   | dzc[2]
+                j=2   ---   | Δc[2]
          i=1           *    ▼
                 j=1   ===
 ```
 
 where the i's index cells and the j's index faces.
-The variable dzc gives the separation between
-cell centers, and dzf gives the separation between faces.
+The variable Δc gives the separation between
+cell centers, and Δf gives the separation between faces.
 
-Accordingly, variables located in cells (`CellFields`) have dimension nz,
-and variables located at cell faces (`FaceFields`) have dimension dimension nz+1.
+Accordingly, variables located in cells (`CellFields`) have dimension N,
+and variables located at cell faces (`FaceFields`) have dimension dimension N+1.
 =#
 
 import Base: eltype, length, size
 
 # Staggered grid lengths and sizes for fields
-cell_length(nz) = nz
-face_length(nz) = nz+1
-  cell_size(nz) = (nz,)
-  face_size(nz) = (nz+1,)
+cell_length(N) = N
+face_length(N) = N+1
+  cell_size(N) = (N,)
+  face_size(N) = (N+1,)
 
-     height(g::Grid) = g.Lz
-     length(g::Grid) = g.nz
-       size(g::Grid) = (g.nz,)
-cell_length(g::Grid) = cell_length(g.nz)
-face_length(g::Grid) = face_length(g.nz)
-  cell_size(g::Grid) = cell_size(g.nz)
-  face_size(g::Grid) = face_size(g.nz)
+     height(g::Grid) = g.L
+     length(g::Grid) = g.N
+       size(g::Grid) = (g.N,)
+cell_length(g::Grid) = cell_length(g.N)
+face_length(g::Grid) = face_length(g.N)
+  cell_size(g::Grid) = cell_size(g.N)
+  face_size(g::Grid) = face_size(g.N)
 
 height(m::AbstractModel) = height(m.grid)
 length(m::AbstractModel) = length(m.grid)
@@ -57,33 +57,33 @@ implement new array types.
 arraytype(grid::Grid{T}) where T = Array{T,1} # default array type
 
 """
-    UniformGrid([A, T], Lz, nz)
+    UniformGrid([A, T], L, N)
 
 Construct a 1D finite-volume grid with type `T` and array type `A`,
-with `nz` cells on the domain `z = [0, Lz]`.
+with `N` cells on the domain `z = [0, L]`.
 A `Grid` has two type parameters: an element type `T`,
 and and an array type `A`. `T` and `A` default to `Float64` and `Array{T,1}`,
 respectively.
 """
-struct UniformGrid{T,A} <: Grid{T,A}
-  nz::Int
-  Lz::T
-  dzc::T
-  dzf::T
-  zc::A
-  zf::A
+struct UniformGrid{T, A} <: Grid{T, A}
+  N  :: Int
+  L  :: T
+  Δc :: T
+  Δf :: T
+  zc :: A
+  zf :: A
 end
 
-function UniformGrid(T, nz, Lz)
-  dz = convert(T, Lz/nz)
-  Lz = convert(T, Lz)
-  half_dz = convert(T, 0.5dz)
+function UniformGrid(T, N, L)
+  Δ = convert(T, L/N)
+  L = convert(T, L)
+  half_Δ = convert(T, 0.5Δ)
 
-  zc = range(-Lz+half_dz; length=cell_length(nz), stop=-half_dz)
-  zf = range(-Lz; length=face_length(nz), stop=zero(T))
+  zc = range(-L+half_Δ; length=cell_length(N), stop=-half_Δ)
+  zf = range(-L; length=face_length(N), stop=zero(T))
 
-  UniformGrid(nz, Lz, dz, dz, zc, zf)
+  UniformGrid(N, L, Δ, Δ, zc, zf)
 end
 
 # Defaults
-UniformGrid(nz=1, Lz=1.0) = UniformGrid(Float64, nz, Lz)
+UniformGrid(N=3, L=1) = UniformGrid(Float64, N, L)

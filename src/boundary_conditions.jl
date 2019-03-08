@@ -42,8 +42,8 @@ end
 # Sugary goodness
 #
 
-convert(::Type{FluxBC{B}}, flux_bc::FluxBC{C}) where {B,C} = FluxBC{B}(flux_bc.flux)
-convert(::Type{ValueBC{B}}, value_bc::ValueBC{C}) where {B,C} = ValueBC{B}(value_bc.value)
+convert(::Type{FluxBC{B}}, flux_bc::FluxBC{C}) where {B, C} = FluxBC{B}(flux_bc.flux)
+convert(::Type{ValueBC{B}}, value_bc::ValueBC{C}) where {B, C} = ValueBC{B}(value_bc.value)
 
 function FluxBC(boundary, flux::Number)
   @inline flux_function(args...) = flux

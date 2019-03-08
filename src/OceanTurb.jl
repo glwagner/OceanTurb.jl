@@ -38,12 +38,12 @@ export # This file, core functionality:
   Field,
   CellField,
   FaceField,
-  dzc,
-  dzf,
+  Δc,
+  Δf,
   ∂z,
   ∂²z,
   ∂z!,
-  zdata,
+  nodes,
   set!,
   interior,
   top,
@@ -81,11 +81,11 @@ import Base: time, setproperty!
 #
 
 abstract type AbstractParameters end
-abstract type Grid{T,A} end
+abstract type Grid{T, A<:AbstractArray} end
 abstract type Timestepper end
-abstract type AbstractField{A<:AbstractArray,G<:Grid} end
-abstract type AbstractSolution{N,T} <: FieldVector{N,T} end
-abstract type AbstractModel{TS<:Timestepper,G<:Grid,T<:AbstractFloat} end  # Explain: what is a `Model`?
+abstract type AbstractField{A<:AbstractArray, G<:Grid} end
+abstract type AbstractSolution{N, T} <: FieldVector{N, T} end
+abstract type AbstractModel{TS<:Timestepper, G<:Grid, T<:AbstractFloat} end  # Explain: what is a `Model`?
 
 #
 # Core OceanTurb.jl functionality
@@ -98,8 +98,8 @@ include("boundary_conditions.jl")
 include("timesteppers.jl")
 
 mutable struct Clock{T}
-  time::T
-  iter::Int
+  time :: T
+  iter :: Int
 end
 
 Clock() = Clock(0.0, 0)
@@ -134,7 +134,7 @@ function set!(solution::AbstractSolution; kwargs...)
   return nothing
 end
 
-function setproperty!(sol::AbstractSolution, c::Symbol, data::Union{Number,AbstractArray,Function})
+function setproperty!(sol::AbstractSolution, c::Symbol, data::Union{Number, AbstractArray, Function})
   set!(getproperty(sol, c), data)
   return nothing
 end

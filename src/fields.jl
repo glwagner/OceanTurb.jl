@@ -4,31 +4,31 @@ A `Field` is an abstraction of a variable or function defined on a staggered gri
 Our hope is that it simplifies differential operations on a staggered grid.
 
 OceanTurb.jl solves one-dimensional PDEs on a staggered grid.
-The geometry of a grid with `nz=3` is 
+The geometry of a grid with `N=3` is
 
 ```
-      ▲ z 
-      |   
-        
-                j=4   ===       ▲              
-         i=3           *        | dzf (i=3)
+      ▲ z
+      |
+
+                j=4   ===       ▲
+         i=3           *        | Δf (i=3)
                 j=3   ---       ▼
-         i=2           *    ▲            
-                j=2   ---   | dzc (j=2) 
-         i=1           *    ▼  
-                j=1   ===     
+         i=2           *    ▲
+                j=2   ---   | Δc (j=2)
+         i=1           *    ▼
+                j=1   ===
 ```
 
-where the i's index cells and the j's index faces. 
-The variable dzc gives the separation between
-cell centers, and dzf gives the separation between faces.
+where the i's index cells and the j's index faces.
+The variable Δc gives the separation between
+cell centers, and Δf gives the separation between faces.
 
 There are two types of fields:
 
-  1. Fields defined at cell centers with dimension `nz`: `Field{Cell}`
-  2. Fields defined at cell faces with dimension `nz+1`: `Field{Face}`
+  1. Fields defined at cell centers with dimension `N`: `Field{Cell}`
+  2. Fields defined at cell faces with dimension `N+1`: `Field{Face}`
 
-From the standpoint of designing new turbulence closures, 
+From the standpoint of designing new turbulence closures,
 the most important function that we output is `∂z`.
 =#
 
@@ -38,7 +38,7 @@ abstract type FieldLocation end
 struct Cell <: FieldLocation end
 struct Face <: FieldLocation end
 
-struct Field{L,A,G} <: AbstractField{A,G}
+struct Field{L, A, G} <: AbstractField{A, G}
   data::A
   grid::G
   function Field(Location, data, grid)
@@ -61,8 +61,7 @@ Field(::Type{Cell}, grid) = CellField(grid)
 
 Return a `Field{Face}` on `grid` with its data initialized to 0.
 """
-function FaceField(grid)
-  A = arraytype(grid)
+function FaceField(A::DataType, grid)
   data = convert(A, fill(0, face_size(grid)))
   Field(Face, data, grid)
 end
@@ -72,11 +71,13 @@ end
 
 Return a `Field{Cell}` on `grid` with its data initialized to 0.
 """
-function CellField(grid)
-  A = arraytype(grid)
+function CellField(A::DataType, grid)
   data = convert(A, fill(0, cell_size(grid)))
   Field(Cell, data, grid)
 end
+
+CellField(grid) = CellField(arraytype(grid), grid)
+FaceField(grid) = FaceField(arraytype(grid), grid)
 
 """
     CellField(data, grid)
@@ -88,7 +89,7 @@ if `data` is an array, it must be broadcastable to `c.data`, where
 function CellField(data, grid)
   c = CellField(grid)
   set!(c, data)
-  return c 
+  return c
 end
 
 """
@@ -106,10 +107,10 @@ end
 
 #
 # Basic 'Field' functionality
-# 
+#
 
-zdata(c::CellField) = c.grid.zc
-zdata(f::FaceField) = f.grid.zf
+nodes(c::CellField) = c.grid.zc
+nodes(f::FaceField) = f.grid.zf
 
 length(c::CellField) = cell_length(c.grid)
 length(f::FaceField) = face_length(f.grid)
@@ -118,8 +119,8 @@ length(f::FaceField) = face_length(f.grid)
 eachindex(f::AbstractField) = eachindex(f.data)
 
 # Interior indices, omitting boundary-adjacent values
-interior(c::CellField) = 2:c.grid.nz-1 
-interior(f::FaceField) = 2:f.grid.nz 
+interior(c::CellField) = 2:c.grid.N-1
+interior(f::FaceField) = 2:f.grid.N
 
 # Sugary sweet: access indices of c.data by indexing into c.
 getindex(c::AbstractField, inds...) = getindex(c.data, inds...)
@@ -128,23 +129,23 @@ setindex!(c::AbstractField, d::Field, inds...) = setindex!(c.data, d.data, inds.
 
 set!(c::AbstractField, data::Number) = fill!(c.data, data)
 set!(c::AbstractField{A}, data::AbstractArray) where A = c.data .= convert(A, data)
-set!(c::AbstractField{A}, data::Function) where A = c.data .= convert(A, data.(zdata(c)))
+set!(c::AbstractField{A}, data::Function) where A = c.data .= convert(A, data.(nodes(c)))
 set!(c::AbstractField{Ac,G}, d::AbstractField{Ad,G}) where {Ac,Ad,G} = c.data .= convert(Ac, d.data)
 
 similar(c::CellField) = CellField(c.grid)
 similar(f::FaceField) = FaceField(f.grid)
 
 # Define +, -, and * on fields as element-wise calculations on their data. This
-# is only true for fields of the same type. So far, we haven't found use for 
+# is only true for fields of the same type. So far, we haven't found use for
 # these sweets because we tend to write element-wise kernels for operations.
-for op in (:+, :-, :*) 
+for op in (:+, :-, :*)
   @eval begin
       # +, -, * a Field by a Number on the left
       function $op(num::Number, f::AbstractField)
           ff = similar(f)
           @. ff.data = $op(num, f.data)
-          ff  
-      end 
+          ff
+      end
 
       # +, -, * a Field by a Number on the right.
       $op(f::AbstractField, num::Number) = $op(num, f)
@@ -153,22 +154,22 @@ for op in (:+, :-, :*)
       function $op(f1::Field{L}, f2::Field{L}) where L
           f3 = similar(f1)
           @. f3.data = $op(f1.data, f2.data)
-          f3  
-      end 
-  end 
-end 
+          f3
+      end
+  end
+end
 
 #
 # Differential operators and such for fields
-# 
+#
 
 "Return the cell spacing at index i."
-dzc(c, i_face) = c.grid.dzc[i_face]
-dzc(c::AbstractField{A,G}, i) where {A,G<:UniformGrid} = c.grid.dzc
+Δc(c, i_face) = c.grid.Δc[i_face]
+Δc(c::AbstractField{A,G}, i) where {A,G<:UniformGrid} = c.grid.Δc
 
 "Return the face spacing at index i."
-dzf(c, i_cell) = c.grid.dzf[i_cell]
-dzf(c::AbstractField{A,G}, i) where {A,G<:UniformGrid} = c.grid.dzf
+Δf(c, i_cell) = c.grid.Δf[i_cell]
+Δf(c::AbstractField{A,G}, i) where {A,G<:UniformGrid} = c.grid.Δf
 
 """
     ∂z(a, i)
@@ -181,11 +182,11 @@ and the derviative of a `Field{Face}` is computed at cell points.
 ∂z(a, i) = throw("∂z is not defined for arbitrary fields.")
 
 "Return ∂c/∂z at face index i."
-∂z(c::CellField, i) = (c.data[i] - c.data[i-1]) / dzc(c, i)
+∂z(c::CellField, i) = (c.data[i] - c.data[i-1]) / Δc(c, i)
 
 "Return ∂c/∂z at face index i."
-∂z(c::FaceField, i) = (c.data[i+1] - c.data[i]) / dzc(c, i)
-∂²z(c::AbstractField, i) = (∂z(c, i+1) - ∂z(c, i)) / dzf(c, i)
+∂z(c::FaceField, i) = (c.data[i+1] - c.data[i]) / Δc(c, i)
+∂²z(c::AbstractField, i) = (∂z(c, i+1) - ∂z(c, i)) / Δf(c, i)
 
 "Calculate `f = ∂c/∂z` in the grid interior."
 function ∂z!(f::FaceField, c::CellField)
@@ -240,7 +241,7 @@ The average of a `Field{Face}` is computed at cell points.
 avz(a, i) = throw("avz not defined for arbitrary fields.")
 avz(f::FaceField, i) = 0.5*(f.data[i+1] + f.data[i])
 
-function avz(c::CellField, i) 
+function avz(c::CellField, i)
   if i > 1
     return 0.5*(c.data[i] + c.data[i-1])
   else

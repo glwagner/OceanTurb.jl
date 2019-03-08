@@ -2,16 +2,16 @@
 # Define tests
 # --
 
-function test_cell_field_construction(T, nz, Lz)
-  grid = UniformGrid(T, nz, Lz)
+function test_cell_field_construction(T, N, L)
+  grid = UniformGrid(T, N, L)
   c = CellField(grid)
-  length(c.data) == OceanTurb.cell_length(nz) && size(c.data) == OceanTurb.cell_size(nz)
+  length(c.data) == OceanTurb.cell_length(N) && size(c.data) == OceanTurb.cell_size(N)
 end
 
-function test_face_field_construction(T, nz, Lz)
-  grid = UniformGrid(T, nz, Lz)
+function test_face_field_construction(T, N, L)
+  grid = UniformGrid(T, N, L)
   f = FaceField(grid)
-  length(f.data) == OceanTurb.face_length(nz) && size(f.data) == OceanTurb.face_size(nz)
+  length(f.data) == OceanTurb.face_length(N) && size(f.data) == OceanTurb.face_size(N)
 end
 
 function test_field_indexing()
@@ -96,7 +96,7 @@ function test_set_function_field(loc, T)
   grid = UniformGrid(T, 2, 2.0)
   f = Field(loc, grid)
   fcn(z) = z^2
-  data_ans = fcn.(zdata(f))
+  data_ans = fcn.(nodes(f))
   set!(f, fcn)
   f.data == data_ans
 end
