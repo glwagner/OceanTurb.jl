@@ -15,35 +15,53 @@ const nsol = 4
 
 @specify_solution CellField U V T S
 
+"""
+    Parameters(; kwargs...)
+
+Construct KPP parameters.
+
+    Args
+    ====
+    Cε : Surface layer fraction
+    etc.
+"""
 struct Parameters{T} <: AbstractParameters
-  Cε::T    # Surface layer fraction
-  Cτ_U::T  # Effect of surface momentum flux on momentum diffusivity
-  Cb_U::T  # Effect of surface buoyancy flux on momentum diffusivity
-  Cτ_T::T  # Effect of surface momentum flux on momentum diffusivity
-  Cb_T::T  # Effect of surface buoyancy flux on momentum diffusivity
-  CRi::T   # Critical Richardson number
-  CKE::T   # Unresolved turbulence parameter
-  K0_U::T
-  K0_T::T
-  K0_S::T
+  Cε   :: T  # Surface layer fraction
+  Cτ_U :: T  # Effect of surface momentum flux on momentum diffusivity
+  Cb_U :: T  # Effect of surface buoyancy flux on momentum diffusivity
+  Cτ_T :: T  # Effect of surface momentum flux on momentum diffusivity
+  Cb_T :: T  # Effect of surface buoyancy flux on momentum diffusivity
+  CRi  :: T  # Critical Richardson number
+  CKE  :: T  # Unresolved turbulence parameter
+  K0_U :: T
+  K0_T :: T
+  K0_S :: T
 end
 
-function Parameters(T=Float64; Cε=0.1, Cτ_U=1, Cb_U=1, Cτ_T=1, Cb_T=1, CRi=1, CKE=1,
-                    K0_U=1e-5, K0_T=1e-5, K0_S=1e-5)
+function Parameters(T=Float64; 
+      Cε = 0.1, 
+    Cτ_U = 1, 
+    Cτ_T = 1, 
+    Cb_U = 1, 
+    Cb_T = 1, 
+     CRi = 0.65, 
+     CKE = 1, 
+      K0 = 0.0, K0_U=K0, K0_T=K0, K0_S=K0)
+                    
   Parameters{T}(Cε, Cτ_U, Cb_U, Cτ_T, Cb_T, CRi, CKE, K0_U, K0_T, K0_S)
 end
 
 struct Constants{T}
-  α::T
-  β::T
-  ρ₀::T
-  g::T
-  cP::T
-  f::T
+  g  :: T # Gravitiational acceleration
+  cP :: T # Heat capacity of water
+  ρ₀ :: T # Reference density
+  α  :: T # Thermal expansion coefficient
+  β  :: T # Haline expansion coefficient
+  f  :: T # Coriolis parameter
 end
 
 function Constants(T=Float64; α=2e-4, β=8e-5, ρ₀=1033, cP=3993, f=0, g=9.81)
-  Constants{T}(α, β, ρ₀, cP, f)
+  Constants{T}(g, cP, ρ₀, α, β, f)
 end
 
 mutable struct Model{TS, G, T, TP, TC, A} <: AbstractModel{TS, G, T}
@@ -54,16 +72,15 @@ mutable struct Model{TS, G, T, TP, TC, A} <: AbstractModel{TS, G, T}
 end
 
 function Model(;
-              nz = 100,
-              Lz = 1.0,
-              K0 = 1e-5, K0_U = K0, K0_T = K0, K0_S = K0,
+               N = 100,
+               L = 1.0,
          stepper = :ForwardEuler,
              bcs = BoundaryConditions((ZeroFlux() for i=1:nsol)...),
        constants = Constants(),
-      parameters = Parameters(K0_U=K0_U, K0_T=K0_T, K0_S=K0_S)
+      parameters = Parameters()
 )
 
-  grid = UniformGrid(nz, Lz)
+  grid = UniformGrid(N, L)
   solution = Solution((CellField(grid) for i=1:nsol)...)
   equation = Equation(∂U∂t, ∂V∂t, ∂T∂t, ∂S∂t)
   timestepper = Timestepper(:ForwardEuler, solution)
@@ -124,20 +141,36 @@ nonlocal_flux(flux, d, shape=default_shape_N) = flux*shape(d) # not minus sign d
 
 # Mixing depth "h"
 
-"Returns the surface_layer_average for mixing depth h=- zf[i]."
+"Returns the surface_layer_average for mixing depth h = -zf[i]."
 function surface_layer_average(Cε, c, i)
-  iε = 1 + Cε * (length(c) + 1 - i) # (fractional) "index" of the surface layer
+    iε = length(c)+1 - Cε*(length(c)+1 - i) # (fractional) face "index" of the surface layer
+    face = ceil(Int, iε)  # the next cell face above the fractional depth
+    frac = face - iε      # the fraction of the lowest cell in the surface layer.
 
-  # Contribution of fractional cell to total integral
-  surface_layer_integral = frac * dzf(c, face-1) * c.data[face-1]
+    # Example 1:
 
-  # Add cells above face, if there are any.
-  for j = face:length(c)
-    @inbounds surface_layer_integral += dzf(c, j) * c.data[j]
-  end
+    #   length(c) = 9 (face_length = 10)
+    #          Cε = 0.1
+    #           i = 9
+    #   => iε = 10 - 0.1*(1) = 9.9, face = 10, frac = 0.1.
 
-  h = -c.grid.zf[i] # depth
-  return surface_layer_integral / (Cε*h)
+    # Example 2:
+
+    # length(c) = 99 (face_length = 100)
+    #        Cε = 0.1
+    #         i = 18
+    #       => iε = 100 - 0.1*82 = 91.8, face = 92, frac = 0.2.
+
+    # Contribution of fractional cell to total integral
+    surface_layer_integral = frac * Δf(c, face-1) * c.data[face-1]
+
+    # Add cells above face, if there are any.
+    for j = face:length(c)
+      @inbounds surface_layer_integral += Δf(c, j) * c.data[j]
+    end
+
+    h = -c.grid.zf[i] # depth
+    return surface_layer_integral / (Cε*h)
 end
 
 """
@@ -177,7 +210,7 @@ This function calculates δRi.
 """
 function mixing_depth(m)
   # Calculate deviation of Ri from critical value at each face point
-  for i = eachindex(m.δRi)
+  for i = interior(m.δRi)
     m.δRi.data[i] = m.parameters.CRi - Richardson(m, i)
   end
   # Linearly interpolate to find where δRi = 0.
@@ -224,9 +257,9 @@ const CF = CellField
 const FF = FaceField
 
 K∂z(K, c, i) = K*∂z(c, i)
-∇K∇c(Kᵢ₊₁, Kᵢ, c::CF, i)              = ( K∂z(Kᵢ₊₁, c, i+1) -    K∂z(Kᵢ, c, i)      ) /    dzf(c, i)
-∇K∇c_top(Kᵢ, c::CF, top_flux)         = (     -top_flux     - K∂z(Kᵢ, c, length(c)) ) / dzf(c, length(c))
-∇K∇c_bottom(Kᵢ₊₁, c::CF, bottom_flux) = (  K∂z(Kᵢ₊₁, c, 2)  +     bottom_flux       ) /    dzf(c, 1)
+∇K∇c(Kᵢ₊₁, Kᵢ, c::CF, i)              = ( K∂z(Kᵢ₊₁, c, i+1) -    K∂z(Kᵢ, c, i)      ) /    Δf(c, i)
+∇K∇c_top(Kᵢ, c::CF, top_flux)         = (     -top_flux     - K∂z(Kᵢ, c, length(c)) ) / Δf(c, length(c))
+∇K∇c_bottom(Kᵢ₊₁, c::CF, bottom_flux) = (  K∂z(Kᵢ₊₁, c, 2)  +     bottom_flux       ) /    Δf(c, 1)
 
 #
 # Interior equations
@@ -247,8 +280,8 @@ K∂z(K, c, i) = K*∂z(c, i)
 #
 
 ## Top and bottom flux estimates for constant (Dirichlet) boundary conditions
-bottom_flux(K, c, c_bndry, dzf) = -2*K*( bottom(c) - c_bndry ) / bottom(dzf) # -K*∂c/∂z at the bottom
-top_flux(K, c, c_bndry, dzf)    = -2*K*(  c_bndry  -  top(c) ) /   top(dzf)  # -K*∂c/∂z at the top
+bottom_flux(K, c, c_bndry, Δf) = -2*K*( bottom(c) - c_bndry ) / bottom(Δf) # -K*∂c/∂z at the bottom
+top_flux(K, c, c_bndry, Δf)    = -2*K*(  c_bndry  -  top(c) ) /   top(Δf)  # -K*∂c/∂z at the top
 
 ## Flux BCs --- omit diffusive flux at the top for KPP (?)
 ∂U∂t(m, U, V, f, ::FluxBC{Top}) =  f*top(V) - ∂NU∂z(m, length(U))
@@ -278,22 +311,22 @@ top_flux(K, c, c_bndry, dzf)    = -2*K*(  c_bndry  -  top(c) ) /   top(dzf)  # -
 ∂S∂t(      ∇K∇S, ∂N∂z, bc::ValueBC{Bottom}) = ∇K∇S + ∂N∂z
 
 function ∂U∂t(m, bc::ValueBC{Bottom})
-  flux = bottom_flux(K_U(m, 1), U, bc.value(m), m.grid.dzf)
+  flux = bottom_flux(K_U(m, 1), U, bc.value(m), m.grid.Δf)
   return ∂U∂t(bottom(m.solution.V), m.constants.f, ∇K∇c_bottom(K_U(m, 2), U, flux), ∂NU∂z(m, 1))
 end
 
 function ∂V∂t(m, bc::ValueBC{Bottom})
-  flux = bottom_flux(K_V(m, 1), U, bc.value(m), m.grid.dzf)
+  flux = bottom_flux(K_V(m, 1), U, bc.value(m), m.grid.Δf)
   return ∂V∂t(bottom(m.solution.U), m.constants.f, ∇K∇c_bottom(K_V(m, 2), V, flux), ∂NV∂z(m, 1))
 end
 
 function ∂T∂t(m, bc::ValueBC{Bottom})
-  flux = bottom_flux(K_T(m, 1), T, bc.value(m), m.grid.dzf)
+  flux = bottom_flux(K_T(m, 1), T, bc.value(m), m.grid.Δf)
   return ∂T∂t(∇K∇c_bottom(K_T(m, 2), T, flux), ∂NT∂z(m, 1))
 end
 
 function ∂S∂t(m, bc::ValueBC{Bottom})
-  flux = bottom_flux(K_S(m, 1), S, bc.value(m), m.grid.dzf)
+  flux = bottom_flux(K_S(m, 1), S, bc.value(m), m.grid.Δf)
   return ∂S∂t(∇K∇c_bottom(K_S(m, 2), S, flux), ∂NS∂z(m, 1))
 end
 

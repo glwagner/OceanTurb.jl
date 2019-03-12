@@ -40,6 +40,7 @@ export # This file, core functionality:
   FaceField,
   Δc,
   Δf,
+  avz,
   ∂z,
   ∂²z,
   ∂z!,
