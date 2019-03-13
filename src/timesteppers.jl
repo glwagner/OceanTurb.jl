@@ -23,11 +23,11 @@ function iterate!(model, Δt, nt)
 end
 
 function unpack(model, i)
-  c = model.solution[i]
-  ∂c∂t = model.equation[i]
+  ϕ = model.solution[i]
+  ∂ϕ∂t = model.equation[i]
   rhs = model.timestepper.rhs[i]
   bcs = model.bcs[i]
-  return c, ∂c∂t, rhs, bcs
+  return ϕ, ∂ϕ∂t, rhs, bcs
 end
 
 #
@@ -55,22 +55,22 @@ end
 function iterate!(model::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
 
   for j in eachindex(model.solution)
-    c, ∂c∂t, rhs, bcs = unpack(model, j)
+    ϕ, ∂ϕ∂t, rhs, bcs = unpack(model, j)
 
     # Interior step
-    for i in interior(c)
-      @inbounds rhs.data[i] = ∂c∂t(model, i)
+    for i in interior(ϕ)
+      @inbounds rhs.data[i] = ∂ϕ∂t(model, i)
     end
 
     # Boundary conditions
-    rhs.data[end] = ∂c∂t(model, bcs.top)
-    rhs.data[1]   = ∂c∂t(model, bcs.bottom)
+    rhs.data[end] = ∂ϕ∂t(model, bcs.top)
+    rhs.data[1]   = ∂ϕ∂t(model, bcs.bottom)
   end
 
   # Update solution
   for j in eachindex(model.solution)
-    c, ∂c∂t, rhs, bcs = unpack(model, j)
-    @. c.data += Δt*rhs.data
+    ϕ, ∂ϕ∂t, rhs, bcs = unpack(model, j)
+    @. ϕ.data += Δt*rhs.data
   end
 
   update!(model.clock, Δt)
