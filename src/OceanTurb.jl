@@ -50,6 +50,9 @@ export # This file, core functionality:
   top,
   bottom,
 
+  # equations.jl
+  Equation,
+
   # timesteppers.jl
   Timestepper,
   iterate!,
@@ -57,23 +60,24 @@ export # This file, core functionality:
   ForwardEulerTimestepper,
 
   # boundary_conditions.jl
-  Boundary,
-  Top,
-  Bottom,
+  Flux,
+  Value,
   BoundaryCondition,
   FieldBoundaryConditions,
   ZeroFlux,
   FluxBC,
   ValueBC,
-  set_bc!,
-  set_bcs!,
-  set_flux_bc!,
-  set_value_bc!,
+  set_top_bc!,
+  set_bottom_bc!,
+  set_top_flux_bc!,
+  set_bottom_flux_bc!,
   set_flux_bcs!,
-  set_value_bcs!
+  set_bcs!,
+  get_bc
 
 using
-  StaticArrays
+  StaticArrays,
+  LinearAlgebra
 
 import Base: time, setproperty!
 
@@ -82,11 +86,12 @@ import Base: time, setproperty!
 #
 
 abstract type AbstractParameters end
+abstract type AbstractEquation end
 abstract type Grid{T, A<:AbstractArray} end
 abstract type Timestepper end
 abstract type AbstractField{A<:AbstractArray, G<:Grid} end
 abstract type AbstractSolution{N, T} <: FieldVector{N, T} end
-abstract type AbstractModel{TS<:Timestepper, G<:Grid, T<:AbstractFloat} end  # Explain: what is a `Model`?
+abstract type AbstractModel{TS<:Timestepper, G<:Grid, E<:AbstractEquation, T<:AbstractFloat} end  # Explain: what is a `Model`?
 
 #
 # Core OceanTurb.jl functionality
@@ -96,6 +101,7 @@ include("utils.jl")
 include("grids.jl")
 include("fields.jl")
 include("boundary_conditions.jl")
+include("equations.jl")
 include("timesteppers.jl")
 
 mutable struct Clock{T}
@@ -114,7 +120,7 @@ function reset!(clock)
 end
 
 #
-# Sugary things for solutions
+# Sugary things for solutions and models
 #
 
 """

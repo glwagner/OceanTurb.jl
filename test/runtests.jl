@@ -6,7 +6,7 @@ using
 import OceanTurb: Diffusion
 import OceanTurb: KPP
 
-# 
+#
 # Run tests
 #
 
@@ -52,12 +52,18 @@ end
     include("diffusiontests.jl")
     @test test_diffusion_basic()
     @test test_diffusion_set_c()
-    @test test_diffusion_timestepping()
+    @test test_diffusion_cosine()
 end
 
 @testset "KPP" begin
     include("kpptests.jl")
     @test test_constants(g=9.81, α=2.1e-4, ρ₀=1028.1, β=0.99, cP=3904.1, f=1e-4)
     @test test_model_init()
-    @test test_mixing_depth()
+    @test test_Bz()
+    @test test_unresolved_KE()
+    @test test_surface_layer_average_simple()
+    @test test_surface_layer_average_linear()
+    @test test_surface_layer_average_steps()
+    @test test_Richardson()
+    #@test test_mixing_depth()
 end

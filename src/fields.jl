@@ -39,12 +39,15 @@ struct Cell <: FieldLocation end
 struct Face <: FieldLocation end
 
 struct Field{L, A, G} <: AbstractField{A, G}
-  data::A
-  grid::G
-  function Field(Location, data, grid)
-    new{Location,typeof(data),typeof(grid)}(data, grid)
-  end
+    data::A
+    grid::G
+    function Field(Location, data, grid)
+        new{Location,typeof(data),typeof(grid)}(data, grid)
+    end
 end
+
+arraytype(::Field{L, A}) where {L, A} = A
+eltype(::Field{L, A}) where {L, A} = eltype(A)
 
 const CellField = Field{Cell}
 const FaceField = Field{Face}
@@ -62,8 +65,8 @@ Field(::Type{Cell}, grid) = CellField(grid)
 Return a `Field{Face}` on `grid` with its data initialized to 0.
 """
 function FaceField(A::DataType, grid)
-  data = convert(A, fill(0, face_size(grid)))
-  Field(Face, data, grid)
+    data = convert(A, fill(0, face_size(grid)))
+    Field(Face, data, grid)
 end
 
 """
@@ -87,9 +90,9 @@ if `data` is an array, it must be broadcastable to `c.data`, where
 `c` is a `Field{Cell}`.
 """
 function CellField(data, grid)
-  c = CellField(grid)
-  set!(c, data)
-  return c
+    c = CellField(grid)
+    set!(c, data)
+    return c
 end
 
 """
@@ -100,9 +103,9 @@ if `data` is an array, it must be broadcastable to `f.data`, where
 `f` is a `Field{Face}`.
 """
 function FaceField(data, grid)
-  f = FaceField(grid)
-  set!(f, data)
-  return f
+    f = FaceField(grid)
+    set!(f, data)
+    return f
 end
 
 #
@@ -130,7 +133,7 @@ setindex!(c::AbstractField, d::Field, inds...) = setindex!(c.data, d.data, inds.
 set!(c::AbstractField, data::Number) = fill!(c.data, data)
 set!(c::AbstractField{A}, data::AbstractArray) where A = c.data .= convert(A, data)
 set!(c::AbstractField{A}, data::Function) where A = c.data .= convert(A, data.(nodes(c)))
-set!(c::AbstractField{Ac,G}, d::AbstractField{Ad,G}) where {Ac,Ad,G} = c.data .= convert(Ac, d.data)
+set!(c::AbstractField{Ac, G}, d::AbstractField{Ad, G}) where {Ac, Ad, G} = c.data .= convert(Ac, d.data)
 
 similar(c::CellField) = CellField(c.grid)
 similar(f::FaceField) = FaceField(f.grid)
@@ -139,37 +142,32 @@ similar(f::FaceField) = FaceField(f.grid)
 # is only true for fields of the same type. So far, we haven't found use for
 # these sweets because we tend to write element-wise kernels for operations.
 for op in (:+, :-, :*)
-  @eval begin
-      # +, -, * a Field by a Number on the left
-      function $op(num::Number, f::AbstractField)
-          ff = similar(f)
-          @. ff.data = $op(num, f.data)
-          ff
-      end
+    @eval begin
+        # +, -, * a Field by a Number on the left
+        function $op(num::Number, f::AbstractField)
+            ff = similar(f)
+            @. ff.data = $op(num, f.data)
+            ff
+        end
 
-      # +, -, * a Field by a Number on the right.
-      $op(f::AbstractField, num::Number) = $op(num, f)
+        # +, -, * a Field by a Number on the right.
+        $op(f::AbstractField, num::Number) = $op(num, f)
 
-      # Binary two-field operations
-      function $op(f1::Field{L}, f2::Field{L}) where L
-          f3 = similar(f1)
-          @. f3.data = $op(f1.data, f2.data)
-          f3
-      end
-  end
+        # Binary two-field operations
+        function $op(f1::Field{L}, f2::Field{L}) where L
+            f3 = similar(f1)
+            @. f3.data = $op(f1.data, f2.data)
+            f3
+        end
+    end
 end
 
 #
 # Differential operators and such for fields
 #
 
-"Return the cell spacing at index i."
-Δc(c, i_face) = c.grid.Δc[i_face]
-Δc(c::AbstractField{A,G}, i) where {A,G<:UniformGrid} = c.grid.Δc
-
-"Return the face spacing at index i."
-Δf(c, i_cell) = c.grid.Δf[i_cell]
-Δf(c::AbstractField{A,G}, i) where {A,G<:UniformGrid} = c.grid.Δf
+Δc(c::AbstractField, i_face) = Δc(c.grid, i_face)
+Δf(c::AbstractField, i_cell) = Δf(c.grid, i_cell)
 
 """
     ∂z(a, i)
@@ -190,34 +188,34 @@ and the derviative of a `Field{Face}` is computed at cell points.
 
 "Calculate `f = ∂c/∂z` in the grid interior."
 function ∂z!(f::FaceField, c::CellField)
-  for i = interior(f)
-    @inbounds f.data[i] = ∂z(c, i)
-  end
-  return nothing
+    for i = interior(f)
+        @inbounds f.data[i] = ∂z(c, i)
+    end
+    return nothing
 end
 
 "Calculate `c = ∂f/∂z` in the grid interior."
 function ∂z!(c::CellField, f::FaceField)
-  for i = eachindex(c)
-    @inbounds c.data[i] = ∂z(f, i)
-  end
-  return nothing
+    for i = eachindex(c)
+        @inbounds c.data[i] = ∂z(f, i)
+    end
+    return nothing
 end
 
 "Return the `FaceField` ∂c/∂z, where `c` is a `CellField`."
 function ∂z(c::CellField)
-  f = FaceField(c.grid)
-  ∂z!(f, c)
-  return f
+    f = FaceField(c.grid)
+    ∂z!(f, c)
+    return f
 end
 
 "Return the `CellField` ∂f/∂z, where `f` is a `FaceField`."
 ∂z(a) = throw("∂z is not defined for arbitrary fields.")
 
 function ∂z(f::FaceField)
-  c = CellField(f.grid)
-  ∂z!(c, f)
-  return c
+    c = CellField(f.grid)
+    ∂z!(c, f)
+    return c
 end
 
 # Convenience functions

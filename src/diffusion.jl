@@ -1,27 +1,24 @@
 module Diffusion
 
 using
-  Reexport,
-  StaticArrays
-
-@reexport using OceanTurb
+    StaticArrays,
+    OceanTurb
 
 export
-  Parameters,
-  Model
+    Parameters,
+    Model
 
+# Just one field: "c"
 @specify_solution CellField c
 
 struct Parameters{T} <: AbstractParameters
-  κ::T
+    κ::T
 end
 
-mutable struct Model{PT,TS,G,T} <: AbstractModel{TS,G,T}
-  @add_standard_model_fields
-  parameters::Parameters{PT}
+struct Model{PT, TS, G, E, T} <: AbstractModel{TS, G, E, T}
+    @add_standard_model_fields
+    parameters::Parameters{PT}
 end
-
-kappa(model) = model.parameters.κ
 
 function Model(;
         N = 100,
@@ -34,15 +31,10 @@ function Model(;
   grid = UniformGrid(N, L)
   parameters = Parameters(κ)
   solution = Solution(CellField(grid))
-  equation = Equation(∂c∂t)
+  equation = Equation(calc_rhs!)
   timestepper = Timestepper(:ForwardEuler, solution)
 
-  return Model(timestepper, grid, solution, equation, bcs, Clock(), parameters)
-end
-
-function set_kappa!(model, κ)
-  model.parameters = Parameters(κ)
-  return nothing
+  return Model(timestepper, grid, equation, solution, bcs, Clock(), parameters)
 end
 
 #
@@ -58,26 +50,35 @@ end
 ∇κ∇c_top(κ, c, flux)    = (     -flux      - κ∂z(κ, c, length(c)) ) / Δf(c, length(c))
 ∇κ∇c_bottom(κ, c, flux) = (  κ∂z(κ, c, 2)  +        flux          ) /    Δf(c, 1)
 
+# Boundary conditions...
+const BC = BoundaryCondition
+
 # Top and bottom flux estimates for constant (Dirichlet) boundary conditions
 bottom_flux(κ, c, c_bndry, Δf) = -2*bottom(κ)*( bottom(c) - c_bndry ) / bottom(Δf) # -κ*∂c/∂z at the bottom
 top_flux(κ, c, c_bndry, Δf)    = -2*  top(κ) *(  c_bndry  -  top(c) ) /   top(Δf)  # -κ*∂c/∂z at the top
 
-# Interior diffusion equation
-∂c∂t(model, i) = ∇κ∇c(model.parameters.κ, model.solution.c, i)
+∇κ∇c_bottom(m, bc::BC{<:Flux}) = ∇κ∇c_bottom(m.parameters.κ, m.solution.c, get_bc(m, bc))
+∇κ∇c_top(m, bc::BC{<:Flux}) = ∇κ∇c_top(m.parameters.κ, m.solution.c, get_bc(m, bc))
 
-# Flux Boundary conditions
-∂c∂t(model, bc::FluxBC{Top})    = ∇κ∇c_top(   model.parameters.κ, model.solution.c, bc.flux(model))
-∂c∂t(model, bc::FluxBC{Bottom}) = ∇κ∇c_bottom(model.parameters.κ, model.solution.c, bc.flux(model))
-
-# Constant Boundary conditions
-function ∂c∂t(model, bc::ValueBC{Bottom})
-  flux = bottom_flux(model.parameters.κ, model.solution.c, bc.value(model), model.grid.Δf)
-  return ∇κ∇c_bottom(model.parameters.κ, model.solution.c, flux)
+function ∇κ∇c_bottom(model, bc::BC{<:Value})
+    flux = bottom_flux(model.parameters.κ, model.solution.c, get_bc(model, bc), model.grid.Δf)
+    return ∇κ∇c_bottom(model.parameters.κ, model.solution.c, flux)
 end
 
-function ∂c∂t(model, bc::ValueBC{Top})
-  flux = top_flux(model.parameters.κ, model.solution.c, bc.value(model), model.grid.Δf)
-  return ∇κ∇c_top(model.parameters.κ, model.solution.c, flux)
+function ∇κ∇c_top(model, bc::BC{<:Value})
+    flux = top_flux(model.parameters.κ, model.solution.c, get_bc(model, bc), model.grid.Δf)
+    return ∇κ∇c_top(model.parameters.κ, model.solution.c, flux)
+end
+
+function calc_rhs!(rhs, model)
+    for i in interior(model.solution.c)
+        @inbounds rhs.c.data[i] = ∇κ∇c(model.parameters.κ, model.solution.c, i)
+    end
+
+    rhs.c.data[end] = ∇κ∇c_top(model, model.bcs.c.top)
+    rhs.c.data[1] = ∇κ∇c_bottom(model, model.bcs.c.bottom)
+
+    return nothing
 end
 
 end # module

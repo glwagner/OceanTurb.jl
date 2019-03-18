@@ -14,14 +14,7 @@ function test_diffusion_set_c()
     model.solution.c.data[1:model.grid.N] == c0
 end
 
-function c_err(model, dt, nt=1)
-    model.solution.c = c_init
-    reset!(model.clock)
-    iterate!(model, dt, nt)
-    norm(c_ans.(z, model.clock.time) .- model.solution.c.data)
-end
-
-function test_diffusion_timestepping()
+function test_diffusion_cosine()
     model = Diffusion.Model(N=100, L=π/2, κ=1)
     z = model.grid.zc
 
