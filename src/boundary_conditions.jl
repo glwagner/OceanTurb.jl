@@ -19,26 +19,17 @@ const BC = BoundaryCondition
 
 BoundaryCondition(C, bc) = BoundaryCondition{C, typeof(bc)}(bc)
 
-get_bc(model, bc::BC{C, <:Function}) where C = bc.condition(model)
-get_bc(model, bc::BC{C, <:Number}) where C = bc.condition
+getbc(model, bc::BC{C, <:Function}) where C = bc.condition(model)
+getbc(model, bc::BC{C, <:Number}) where C = bc.condition
 
 """
-    FluxBC(boundary, flux)
+    FluxBoundaryCondition(boundary, flux)
 
 Constuct a flux boundary condition that specifies the flux
 of some field on a boundary. If `flux` is a function,
 its arguments must be synced with the expection of `Model`.
 """
-FluxBC(bc) = BoundaryCondition(Flux, bc)
-
-"""
-    ValueBC(boundary, value)
-
-Constuct a 'value' boundary condition, which specifies the value
-of some field on a boundary. If `value` is a function,
-its arguments must be synced with the expection of `Model`.
-"""
-ValueBC(bc) = BoundaryCondition(Value, bc)
+FluxBoundaryCondition(bc) = BoundaryCondition(Flux, bc)
 
 mutable struct FieldBoundaryConditions
     bottom::BoundaryCondition
@@ -56,14 +47,14 @@ Create an instance of `FieldBoundaryConditions` with `top` and `bottom`
 boundary conditions.
 """
 function FieldBoundaryConditions(;
-    bottom = FluxBC(zero_function),
-    top = FluxBC(zero_function),
+    bottom = FluxBoundaryCondition(0),
+    top = FluxBoundaryCondition(0),
     )
     FieldBoundaryConditions(bottom, top)
 end
 
 "Returns `FieldBoundaryConditions` with zero flux at `top` and `bottom`."
-ZeroFlux() = FieldBoundaryConditions() # the default
+ZeroFluxBoundaryConditions() = FieldBoundaryConditions() # the default
 
 "Set the bottom boundary condition for `fld` in `model`."
 function set_bottom_bc!(model, fld, bc)
@@ -86,12 +77,12 @@ function set_bc!(model, fld, bcs::FieldBoundaryConditions)
 end
 
 function set_top_flux_bc!(model, fld, bc)
-    set_top_bc!(model, fld, FluxBC(bc))
+    set_top_bc!(model, fld, FluxBoundaryCondition(bc))
     return nothing
 end
 
 function set_bottom_flux_bc!(model, fld, bc)
-    set_bottom_bc!(model, fld, FluxBC(bc))
+    set_bottom_bc!(model, fld, FluxBoundaryCondition(bc))
     return nothing
 end
 

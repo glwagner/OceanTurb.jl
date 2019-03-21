@@ -59,11 +59,34 @@ end
     include("kpptests.jl")
     @test test_constants(g=9.81, α=2.1e-4, ρ₀=1028.1, β=0.99, cP=3904.1, f=1e-4)
     @test test_model_init()
-    @test test_Bz()
+    @test test_buoyancy_gradient()
     @test test_unresolved_KE()
     @test test_surface_layer_average_simple()
     @test test_surface_layer_average_linear()
     @test test_surface_layer_average_steps()
-    @test test_Richardson()
-    #@test test_mixing_depth()
+    @test test_surface_layer_average_epsilon()
+    @test test_update_state()
+    @test test_Δ0()
+    @test test_Δ1()
+
+    N = 10
+    @test test_Δ2(N=N, i=N-2)
+    @test test_Δ2(N=N, i=N-1)
+    @test test_Δ2(N=N, i=N)
+    @test test_Δ3()
+
+    @test test_buoyancy_gradient()
+    @test test_unresolved_KE()
+    @test test_bulk_richardson_number()
+
+    @test test_mixing_depth_convection()
+    @test test_mixing_depth_shear()
+
+    @test test_unstable()
+    @test test_zero_turbulent_velocity()
+    @test test_friction_velocity()
+    @test test_convective_velocity()
+
+    @test test_turb_velocity_pure_convection()
+    @test test_turb_velocity_pure_wind()
 end

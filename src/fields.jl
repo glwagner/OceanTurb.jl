@@ -238,11 +238,7 @@ The average of a `Field{Face}` is computed at cell points.
 """
 avz(a, i) = throw("avz not defined for arbitrary fields.")
 avz(f::FaceField, i) = 0.5*(f.data[i+1] + f.data[i])
+avz(c::CellField, i) = 0.5*(c.data[i] + c.data[i-1])
 
-function avz(c::CellField, i)
-  if i > 1
-    return 0.5*(c.data[i] + c.data[i-1])
-  else
-    return c.data[1]
-  end
-end
+oncell(f::FaceField, i) = 0.5*(f.data[i+1] + f.data[i])
+onface(c::CellField, i) = 0.5*(c.data[i] + c.data[i-1])

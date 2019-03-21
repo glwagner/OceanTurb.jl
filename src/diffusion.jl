@@ -20,21 +20,19 @@ struct Model{PT, TS, G, E, T} <: AbstractModel{TS, G, E, T}
     parameters::Parameters{PT}
 end
 
-function Model(;
-        N = 100,
-        L = 1.0,
-        κ = 0.1,
-  stepper = :ForwardEuler,
-      bcs = BoundaryConditions(ZeroFlux())
-)
+function Model(; N=10, L=1.0, κ=0.1,
+    grid = UniformGrid(N, L),
+    parameters = Parameters(κ),
+    stepper = :ForwardEuler,
+    bcs = BoundaryConditions(ZeroFluxBoundaryConditions())
+    )
 
-  grid = UniformGrid(N, L)
-  parameters = Parameters(κ)
-  solution = Solution(CellField(grid))
-  equation = Equation(calc_rhs!)
-  timestepper = Timestepper(:ForwardEuler, solution)
 
-  return Model(timestepper, grid, equation, solution, bcs, Clock(), parameters)
+    solution = Solution(CellField(grid))
+    equation = Equation(calc_rhs!)
+    timestepper = Timestepper(:ForwardEuler, solution)
+
+    return Model(timestepper, grid, equation, solution, bcs, Clock(), parameters)
 end
 
 #
@@ -57,16 +55,16 @@ const BC = BoundaryCondition
 bottom_flux(κ, c, c_bndry, Δf) = -2*bottom(κ)*( bottom(c) - c_bndry ) / bottom(Δf) # -κ*∂c/∂z at the bottom
 top_flux(κ, c, c_bndry, Δf)    = -2*  top(κ) *(  c_bndry  -  top(c) ) /   top(Δf)  # -κ*∂c/∂z at the top
 
-∇κ∇c_bottom(m, bc::BC{<:Flux}) = ∇κ∇c_bottom(m.parameters.κ, m.solution.c, get_bc(m, bc))
-∇κ∇c_top(m, bc::BC{<:Flux}) = ∇κ∇c_top(m.parameters.κ, m.solution.c, get_bc(m, bc))
+∇κ∇c_bottom(m, bc::BC{<:Flux}) = ∇κ∇c_bottom(m.parameters.κ, m.solution.c, getbc(m, bc))
+∇κ∇c_top(m, bc::BC{<:Flux}) = ∇κ∇c_top(m.parameters.κ, m.solution.c, getbc(m, bc))
 
 function ∇κ∇c_bottom(model, bc::BC{<:Value})
-    flux = bottom_flux(model.parameters.κ, model.solution.c, get_bc(model, bc), model.grid.Δf)
+    flux = bottom_flux(model.parameters.κ, model.solution.c, getbc(model, bc), model.grid.Δf)
     return ∇κ∇c_bottom(model.parameters.κ, model.solution.c, flux)
 end
 
 function ∇κ∇c_top(model, bc::BC{<:Value})
-    flux = top_flux(model.parameters.κ, model.solution.c, get_bc(model, bc), model.grid.Δf)
+    flux = top_flux(model.parameters.κ, model.solution.c, getbc(model, bc), model.grid.Δf)
     return ∇κ∇c_top(model.parameters.κ, model.solution.c, flux)
 end
 
