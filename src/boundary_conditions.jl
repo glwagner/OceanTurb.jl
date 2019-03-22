@@ -31,6 +31,15 @@ its arguments must be synced with the expection of `Model`.
 """
 FluxBoundaryCondition(bc) = BoundaryCondition(Flux, bc)
 
+"""
+    ValueBoundaryCondition(boundary, flux)
+
+Constuct a flux boundary condition that specifies the flux
+of some field on a boundary. If `flux` is a function,
+its arguments must be synced with the expection of `Model`.
+"""
+ValueBoundaryCondition(bc) = BoundaryCondition(Value, bc)
+
 mutable struct FieldBoundaryConditions
     bottom::BoundaryCondition
     top::BoundaryCondition

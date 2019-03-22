@@ -67,6 +67,7 @@ export # This file, core functionality:
     FieldBoundaryConditions,
     FluxBoundaryCondition,
     ZeroFluxBoundaryConditions,
+    ValueBoundaryCondition,
     set_top_bc!,
     set_bottom_bc!,
     set_top_flux_bc!,
