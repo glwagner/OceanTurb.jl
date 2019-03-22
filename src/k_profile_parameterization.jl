@@ -140,15 +140,13 @@ end
 ## ** The K-Profile-Parameterization! **
 K_KPP(h, w_scale, d, shape=default_shape_K) = max(0, h * w_scale * shape(d))
 
-d(m, i) = -m.grid.zf[i] / m.state.h
+d(m, i) = m.state.h > 0 ? -m.grid.zf[i] / m.state.h : 0
 
 # K_{U,V,T,S} is calculated at face points
-K_U(m, i) = K_KPP(h, w_scale_U(m, i), d(m, i)) + m.parameters.K0_U
-K_T(m, i) = K_KPP(h, w_scale_T(m, i), d(m, i)) + m.parameters.K0_T
-
+K_U(m, i) = K_KPP(m.state.h, w_scale_U(m, i), d(m, i)) + m.parameters.KU₀
+K_T(m, i) = K_KPP(m.state.h, w_scale_T(m, i), d(m, i)) + m.parameters.KT₀
+K_S(m, i) = K_KPP(m.state.h, w_scale_S(m, i), d(m, i)) + m.parameters.KS₀
 const K_V = K_U
-const K_S = K_T
-
 
 "Return the buoyancy gradient at face point i."
 ∂B∂z(T, S, g, α, β, i) = g * (α*∂z(T, i) - β*∂z(S, i))
@@ -262,6 +260,7 @@ end
 
 "Return true if the boundary layer is unstable and convecting."
 isunstable(model) = model.state.Fb > 0
+isforced(model) = ωτ(model) > 0 || ωb(model) > 0
 
 "Return the turbuent velocity scale associated with wind stress."
 ωτ(Fu, Fv) = (Fu^2 + Fv^2)^(1/4)
@@ -291,23 +290,31 @@ const nT = 1/2
 
 "Return the vertical velocity scale for momentum at face point i."
 function w_scale_U(m, i)
-    if isunstable(m)
-        return w_scale_unstable(m.parameters.Cd_U, m.parameters.Cκ, m.parameters.Cunst,
-                                m.parameters.Cb_U, m.parameters.Cτ_U,
-                                ωτ(m), ωb(m), min(m.parameters.Cε, d(m, i)), nU)
+    if !isforced(m)
+        return 0
     else
-        return w_scale_stable(m.parameters.Cκ, m.parameters.Cstab, ωτ(m), ωb(m), d(m, i))
+        if isunstable(m)
+            return w_scale_unstable(m.parameters.Cd_U, m.parameters.Cκ, m.parameters.Cunst,
+                                    m.parameters.Cb_U, m.parameters.Cτ_U,
+                                    ωτ(m), ωb(m), min(m.parameters.Cε, d(m, i)), nU)
+        else
+            return w_scale_stable(m.parameters.Cκ, m.parameters.Cstab, ωτ(m), ωb(m), d(m, i))
+        end
     end
 end
 
 "Return the vertical velocity scale for tracers at face point i."
 function w_scale_T(m, i)
-    if isunstable(m)
-        return w_scale_unstable(m.parameters.Cd_T, m.parameters.Cκ, m.parameters.Cunst,
-                                m.parameters.Cb_T, m.parameters.Cτ_T,
-                                ωτ(m), ωb(m), min(m.parameters.Cε, d(m, i)), nT)
+    if !isforced(m)
+        return 0
     else
-        return w_scale_stable(m.parameters.Cκ, m.parameters.Cstab, ωτ(m), ωb(m), d(m, i))
+        if isunstable(m)
+            return w_scale_unstable(m.parameters.Cd_T, m.parameters.Cκ, m.parameters.Cunst,
+                                    m.parameters.Cb_T, m.parameters.Cτ_T,
+                                    ωτ(m), ωb(m), min(m.parameters.Cε, d(m, i)), nT)
+        else
+            return w_scale_stable(m.parameters.Cκ, m.parameters.Cstab, ωτ(m), ωb(m), d(m, i))
+        end
     end
 end
 
@@ -354,40 +361,41 @@ K∂z(K, c, i) = K*∂z(c, i)
 bottom_flux(K, c, c_bndry, Δf) = -2K*( bottom(c) - c_bndry ) / bottom(Δf) # -K*∂c/∂z at the bottom
 top_flux(K, c, c_bndry, Δf)    = -2K*(  c_bndry  -  top(c) ) /   top(Δf)  # -K*∂c/∂z at the top
 
-#∇K∇c_top(Kᵢ, c, bc::BC{<:Flux}, model)      = ∇K∇c_top(Kᵢ, c, get_bc(bc, model))
+∇K∇c_top(Kᵢ, c, bc::BC{<:Flux}, model)      = ∇K∇c_top(Kᵢ, c, get_bc(bc, model))
 ∇K∇c_bottom(Kᵢ₊₁, c, bc::BC{<:Flux}, model) = ∇K∇c_bottom(Kᵢ₊₁, c, getbc(model, bc))
 
 #
 # Equation entry
 #
 
-function calc_rhs_explicit!(rhs, model)
+function calc_rhs_explicit!(∂t, m)
 
     # Preliminaries
-    U, V, T, S = model.solution
-    update_state!(model)
+    U, V, T, S = m.solution
+    update_state!(m)
 
     for i in interior(U)
         @inbounds begin
-            rhs.U[i] =  f*V[i] + ∇K∇c(K_U(m, i+1), K_U(m, i), U, i)
-            rhs.V[i] = -f*U[i] + ∇K∇c(K_V(m, i+1), K_V(m, i), V, i)
-            rhs.T[i] =           ∇K∇c(K_T(m, i+1), K_T(m, i), T, i) - ∂NT∂z(m, i)
-            rhs.S[i] =           ∇K∇c(K_S(m, i+1), K_S(m, i), S, i) - ∂NS∂z(m, i)
+            ∂t.U[i] = ∇K∇c(K_U(m, i+1), K_U(m, i), U, i) + m.constants.f*V[i]
+            ∂t.V[i] = ∇K∇c(K_V(m, i+1), K_V(m, i), V, i) - m.constants.f*U[i]
+            ∂t.T[i] = ∇K∇c(K_T(m, i+1), K_T(m, i), T, i) - ∂NT∂z(m, i)
+            ∂t.S[i] = ∇K∇c(K_S(m, i+1), K_S(m, i), S, i) - ∂NS∂z(m, i)
         end
     end
 
     # Flux into the top (the only boundary condition allowed)
-    rhs.U[m.grid.N] =  f*V[m.grid.N] * ∇K∇c_top(K_U(m, m.grid.N), U, model.state.Fu)
-    rhs.V[m.grid.N] = -f*U[m.grid.N] * ∇K∇c_top(K_V(m, m.grid.N), V, model.state.Fv)
-    rhs.T[m.grid.N] =                  ∇K∇c_top(K_T(m, m.grid.N), T, model.state.Fθ) - ∂NT∂z(m, m.grid.N)
-    rhs.S[m.grid.N] =                  ∇K∇c_top(K_S(m, m.grid.N), S, model.state.Fs) - ∂NS∂z(m, m.grid.N)
+    i = m.grid.N
+    ∂t.U[i] = ∇K∇c_top(K_U(m, i), U, m.state.Fu) + m.constants.f*V[i]
+    ∂t.V[i] = ∇K∇c_top(K_V(m, i), V, m.state.Fv) - m.constants.f*U[i]
+    ∂t.T[i] = ∇K∇c_top(K_T(m, i), T, m.state.Fθ) - ∂NT∂z(m, i)
+    ∂t.S[i] = ∇K∇c_top(K_S(m, i), S, m.state.Fs) - ∂NS∂z(m, i)
 
     # Bottom
-    rhs.U[1] =  f*V[1] * ∇K∇c_bottom(K_U(m, 2), U, model.bcs.U.bottom, model)
-    rhs.V[1] = -f*U[1] * ∇K∇c_bottom(K_V(m, 2), V, model.bcs.V.bottom, model)
-    rhs.T[1] =           ∇K∇c_bottom(K_T(m, 2), T, model.bcs.T.bottom, model) - ∂NT∂z(m, 1)
-    rhs.S[1] =           ∇K∇c_bottom(K_S(m, 2), S, model.bcs.S.bottom, model) - ∂NS∂z(m, 1)
-
+    i = 1
+    ∂t.U[i] = ∇K∇c_bottom(K_U(m, i+1), U, m.bcs.U.bottom, m) + m.constants.f*V[i]
+    ∂t.V[i] = ∇K∇c_bottom(K_V(m, i+1), V, m.bcs.V.bottom, m) - m.constants.f*U[i]
+    ∂t.T[i] = ∇K∇c_bottom(K_T(m, i+1), T, m.bcs.T.bottom, m) - ∂NT∂z(m, i)
+    ∂t.S[i] = ∇K∇c_bottom(K_S(m, i+1), S, m.bcs.S.bottom, m) - ∂NS∂z(m, i)
 
     return nothing
 end

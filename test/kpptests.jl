@@ -488,3 +488,50 @@ function test_conv_velocity_wind(; CKE=0, Cε=0.5, Cκ=0.7, N=20, L=20, CRi=1,
      KPP.w_scale_T(model, id2) ≈ w_scale_T2 &&
      KPP.w_scale_S(model, id2) ≈ w_scale_T2 )
 end
+
+function test_diffusivity_plain(; K₀=1.1)
+    parameters = KPP.Parameters(K₀=K₀)
+    model = KPP.Model(parameters=parameters)
+    KPP.update_state!(model)
+
+    m = model
+    K_U = FaceField(model.grid)
+    K_V = FaceField(model.grid)
+    K_T = FaceField(model.grid)
+    K_S = FaceField(model.grid)
+    for i = 1:model.grid.N+1
+        K_U[i] = KPP.K_U(model, i)
+        K_V[i] = KPP.K_V(model, i)
+        K_T[i] = KPP.K_T(model, i)
+        K_S[i] = KPP.K_S(model, i)
+    end
+
+    (!any(@. K_U.data != K₀) &&
+     !any(@. K_V.data != K₀) &&
+     !any(@. K_T.data != K₀) &&
+     !any(@. K_S.data != K₀) )
+end
+
+
+function test_kpp_diffusion_cosine()
+    parameters = KPP.Parameters(K₀=1)
+    model = KPP.Model(N=100, L=π/2, parameters=parameters)
+    z = model.grid.zc
+
+    c_init(z) = cos(2z)
+    c_ans(z, t) = exp(-4t) * c_init(z)
+
+    model.solution.T = c_init
+    model.solution.S = c_init
+
+    KPP.update_state!(model)
+    U, V, T, S = model.solution
+
+    m = model
+    i = 3
+    dt = 1e-3
+    iterate!(model, dt)
+
+    # The error tolerance is a bit arbitrary.
+    norm(c_ans.(z, time(model)) .- model.solution.T.data) < model.grid.N*1e-6
+end

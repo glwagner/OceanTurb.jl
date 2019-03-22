@@ -117,10 +117,10 @@ end
 Clock() = Clock(0.0, 0)
 
 "Get the current simulation time of the model."
-time(m::AbstractModel) = model.clock.time
+time(m::AbstractModel) = m.clock.time
 
 "Get the current iteration of the model."
-iter(m::AbstractModel) = model.clock.iter
+iter(m::AbstractModel) = m.clock.iter
 
 function reset!(clock)
   clock.time = 0

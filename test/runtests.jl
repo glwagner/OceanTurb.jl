@@ -3,9 +3,6 @@ using
     LinearAlgebra,
     Test
 
-import OceanTurb: Diffusion
-import OceanTurb: KPP
-
 #
 # Run tests
 #
@@ -92,4 +89,8 @@ end
     @test test_turb_velocity_wind_stab()
     @test test_turb_velocity_wind_unstab()
     @test test_conv_velocity_wind()
+
+    @test test_diffusivity_plain()
+
+    @test test_kpp_diffusion_cosine()
 end
