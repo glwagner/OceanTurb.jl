@@ -73,7 +73,11 @@ export # This file, core functionality:
     set_bottom_flux_bc!,
     set_flux_bcs!,
     set_bcs!,
-    getbc
+    getbc,
+
+    # Ocean turbulence models
+    Diffusion,
+    KPP
 
 using
   StaticArrays,
@@ -110,7 +114,11 @@ mutable struct Clock{T}
 end
 
 Clock() = Clock(0.0, 0)
+
+"Get the current simulation time of the model."
 time(m::AbstractModel) = model.clock.time
+
+"Get the current iteration of the model."
 iter(m::AbstractModel) = model.clock.iter
 
 function reset!(clock)
