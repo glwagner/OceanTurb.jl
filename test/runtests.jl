@@ -89,4 +89,7 @@ end
 
     @test test_turb_velocity_pure_convection()
     @test test_turb_velocity_pure_wind()
+    @test test_turb_velocity_wind_stab()
+    @test test_turb_velocity_wind_unstab()
+    @test test_conv_velocity_wind()
 end

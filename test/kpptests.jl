@@ -288,7 +288,7 @@ end
 function test_friction_velocity()
     model = KPP.Model()
     model.bcs.U.top = FluxBoundaryCondition(sqrt(8))
-    model.bcs.V.top = FluxBoundaryCondition(sqrt(8))
+    model.bcs.V.top = FluxBoundaryCondition(-sqrt(8))
     KPP.update_state!(model)
     KPP.ωτ(model) ≈ 2
 end
@@ -361,4 +361,130 @@ function test_turb_velocity_pure_wind(; Cε=0.5, Cκ=0.7, N=20, L=20, CRi=1)
      KPP.w_scale_V(model, 3) == w_scale &&
      KPP.w_scale_T(model, 3) == w_scale &&
      KPP.w_scale_S(model, 3) == w_scale )
+end
+
+
+function test_turb_velocity_wind_stab(; Cε=0.5, Cκ=0.7, N=20, L=20, CRi=1, Cstab=0.3)
+    T₀ = 1
+    U₀ = 3
+    parameters = KPP.Parameters(CRi=CRi, Cκ=Cκ, Cε=Cε, Cstab=Cstab)
+    constants = KPP.Constants(g=1, α=1)
+    model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
+    U, V, T, S = model.solution
+
+    h = CRi * U₀^2 / T₀
+    ih = Int(N*(1 - h/L) + 1) # 12
+    @views T.data[ih:N] .= T₀
+    @views U.data[ih:N] .= U₀
+
+    @views T.data[1:ih-1] .= -T₀
+    @views U.data[1:ih-1] .= -U₀
+
+    Fu = 2.1
+    model.bcs.U.top = FluxBoundaryCondition(Fu)
+    Fθ = -1.3
+    model.bcs.T.top = FluxBoundaryCondition(Fθ)
+    KPP.update_state!(model)
+
+    rb = abs(h*Fθ) / Fu^(3/2)
+
+    id = 16 # d=5/9
+    d = 5/9
+    w_scale = Cκ * sqrt(Fu) / (1 + Cstab * rb * d)
+
+    (KPP.w_scale_U(model, id) ≈ w_scale &&
+     KPP.w_scale_V(model, id) ≈ w_scale &&
+     KPP.w_scale_T(model, id) ≈ w_scale &&
+     KPP.w_scale_S(model, id) ≈ w_scale )
+end
+
+function test_turb_velocity_wind_unstab(; CKE=0, Cε=0.5, Cκ=0.7, N=20, L=20, CRi=1, Cunst=0.3)
+    T₀ = 1
+    U₀ = 3
+    parameters = KPP.Parameters(CRi=CRi, Cκ=Cκ, CKE=CKE, Cε=Cε, Cunst=Cunst, Cd_U=Inf, Cd_T=Inf)
+    constants = KPP.Constants(g=1, α=1)
+    model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
+    U, V, T, S = model.solution
+
+    h = CRi * U₀^2 / T₀
+    ih = Int(N*(1 - h/L) + 1) # 12
+    @views T.data[ih:N] .= T₀
+    @views U.data[ih:N] .= U₀
+
+    @views T.data[1:ih-1] .= -T₀
+    @views U.data[1:ih-1] .= -U₀
+
+    Fu = 2.1
+    model.bcs.U.top = FluxBoundaryCondition(Fu)
+    Fθ = 1.1
+    model.bcs.T.top = FluxBoundaryCondition(Fθ)
+    KPP.update_state!(model)
+
+    rb = abs(h*Fθ) / (Fu)^(3/2)
+    id1 = 16 # d=5/9
+    id2 = 18 # d=3/9
+    d1 = 5/9
+    d2 = 3/9
+
+    w_scale_U1 = Cκ * sqrt(Fu) * (1 + Cunst * rb * Cε)^(1/4)
+    w_scale_T1 = Cκ * sqrt(Fu) * (1 + Cunst * rb * Cε)^(1/2)
+
+    w_scale_U2 = Cκ * sqrt(Fu) * (1 + Cunst * rb * d2)^(1/4)
+    w_scale_T2 = Cκ * sqrt(Fu) * (1 + Cunst * rb * d2)^(1/2)
+
+    (KPP.w_scale_U(model, id1) ≈ w_scale_U1 &&
+     KPP.w_scale_V(model, id1) ≈ w_scale_U1 &&
+     KPP.w_scale_T(model, id1) ≈ w_scale_T1 &&
+     KPP.w_scale_S(model, id1) ≈ w_scale_T1 &&
+     KPP.w_scale_U(model, id2) ≈ w_scale_U2 &&
+     KPP.w_scale_V(model, id2) ≈ w_scale_U2 &&
+     KPP.w_scale_T(model, id2) ≈ w_scale_T2 &&
+     KPP.w_scale_S(model, id2) ≈ w_scale_T2 )
+end
+
+function test_conv_velocity_wind(; CKE=0, Cε=0.5, Cκ=0.7, N=20, L=20, CRi=1,
+                                 Cb_U=1.1, Cb_T=0.1, Cτ_U=1.3, Cτ_T=1.7)
+    T₀ = 1
+    U₀ = 3
+    parameters = KPP.Parameters(CRi=CRi, Cκ=Cκ, CKE=CKE, Cε=Cε, Cd_U=0, Cd_T=0,
+                                Cb_U=1.1, Cb_T=0.1, Cτ_U=1.3, Cτ_T=1.7)
+    constants = KPP.Constants(g=1, α=1)
+    model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
+    U, V, T, S = model.solution
+
+    h = CRi * U₀^2 / T₀
+    ih = Int(N*(1 - h/L) + 1) # 12
+    @views T.data[ih:N] .= T₀
+    @views U.data[ih:N] .= U₀
+
+    @views T.data[1:ih-1] .= -T₀
+    @views U.data[1:ih-1] .= -U₀
+
+    Fu = -2.1
+    model.bcs.U.top = FluxBoundaryCondition(Fu)
+    Fθ = 0.5
+    model.bcs.T.top = FluxBoundaryCondition(Fθ)
+    KPP.update_state!(model)
+
+    rb = abs(h*Fθ) / abs(Fu)^(3/2)
+    rτ = 1/rb
+    id1 = 16 # d=5/9
+    id2 = 18 # d=3/9
+    d1 = 5/9
+    d2 = 3/9
+
+    w_scale_U1 = Cb_U * abs(h*Fθ)^(1/3) * (Cε + Cτ_U * rτ)^(1/3)
+    w_scale_T1 = Cb_T * abs(h*Fθ)^(1/3) * (Cε + Cτ_T * rτ)^(1/3)
+
+    w_scale_U2 = Cb_U * abs(h*Fθ)^(1/3) * (d2 + Cτ_U * rτ)^(1/3)
+    w_scale_T2 = Cb_T * abs(h*Fθ)^(1/3) * (d2 + Cτ_T * rτ)^(1/3)
+
+    (KPP.w_scale_U(model, id1) ≈ w_scale_U1 &&
+     KPP.w_scale_V(model, id1) ≈ w_scale_U1 &&
+     KPP.w_scale_T(model, id1) ≈ w_scale_T1 &&
+     KPP.w_scale_S(model, id1) ≈ w_scale_T1 &&
+     KPP.w_scale_U(model, id2) ≈ w_scale_U2 &&
+     KPP.w_scale_V(model, id2) ≈ w_scale_U2 &&
+     KPP.w_scale_T(model, id2) ≈ w_scale_T2 &&
+     KPP.w_scale_S(model, id2) ≈ w_scale_T2 )
 end

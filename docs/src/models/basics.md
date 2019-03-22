@@ -39,8 +39,9 @@ Vertical turbulent fluxes are typically associated with
 
 `OceanTurb.jl` uses
 an implementation of atmospheric and radiative forcings that is shared
-across all models. The models therefore differ mainly in the way they
-parameterize convective and mechanical mixing.
+across all models.
+The models therefore differ in the way they
+parameterize convective and wind-driven mechanical mixing.
 
 ## Coordinate system
 
@@ -49,25 +50,6 @@ toward the ground or bottom of the ocean. The vertical coordinate ``z``
 thus *increases upwards*. We locate the surface at ``z=0``. This means that if
 the boundary layer has depth ``h``, the bottom of the boundary layer is
 located at ``z=-h``.
-
-## Surface fluxes
-
-Turbulence in the ocean surface boundary layer is driven by fluxes from
-the atmosphere above.
-A surface flux of some variable ``\phi`` is denoted ``F_\phi``.
-Surface fluxes include
-
-1. Momentum fluxes due to wind, denoted ``F_u \b{x} + F_v \b{y} = -\rho_0 \b{\tau}`` for wind stress ``\b{\tau}``;
-2. Temperature flux ``F_\theta = - Q / \rho_0 c_P`` associated with 'heating' ``Q``;
-3. Salinity flux ``F_s = (E-P)S`` associated evaporation ``E`` and precipitation ``P``.
-
-We use the ordinary convention in which positive flux corresponds to the
-movement of a quantity in the positive ``z``-direction; for example
-a positive vertical velocity ``w`` gives rise to a positive advective flux
-``w \phi``.
-This also implies that a positive temperature flux at the ocean surface ---
-corresponding to heat fluxing upwards, out of the ocean, into the atmosphere ---
-implies a cooling of the ocean surface boundary layer.
 
 ## Governing equations
 
@@ -91,3 +73,23 @@ three-dimensional perturbations from horizontal velocity, salinity, and
 temperature, respectively.
 In \eqref{xmomentum}--\eqref{temperature}, internal forcing of
 temperature due to solar radiation is denoted ``I_\Phi``.
+
+## Surface fluxes
+
+Turbulence in the ocean surface boundary layer is driven by fluxes from
+the atmosphere above.
+A surface flux of some variable ``\phi`` is denoted ``F_\phi``.
+Surface fluxes include
+
+1. Momentum fluxes due to wind, denoted ``F_u \b{x} + F_v \b{y} = -\rho_0 \b{\tau}`` for wind stress ``\b{\tau}``;
+2. Temperature flux ``F_\theta = - Q / \rho_0 c_P`` associated with 'heating' ``Q``;
+3. Salinity flux ``F_s = (E-P)S`` associated evaporation ``E`` and precipitation ``P``.
+
+We use the traditional convention ordinary to physics, but not always
+ordinary to oceanography, in which a  positive flux corresponds to the
+movement of a quantity in the positive ``z``-direction.
+This means, for example, that a positive vertical velocity ``w`` gives rise
+to a positive advective flux ``w \phi``.
+This convention also implies that a positive temperature flux at the ocean surface ---
+corresponding to heat fluxing upwards, out of the ocean, into the atmosphere ---
+implies a cooling of the ocean surface boundary layer.

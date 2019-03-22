@@ -29,6 +29,9 @@
 
 # The K-Profile-Parameterization (KPP)
 
+The K-Profile-Parameterization, or "KPP", was proposed by
+[Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
+as a model for convection- and wind-driven mixing in the upper ocean.
 In KPP, vertical turbulent fluxes of a quantity ``\phi`` are parameterized as
 
 ```math
@@ -159,11 +162,11 @@ the turbulent velocity scale is
 
 ```math
 \beq
-\F{w}{\Phi} = \C{\kappa}{} \omega_\tau \left ( 1 + \C{\mathrm{conv}}{} r_b \min \left [ \C{\ep}{}, d \right ] \right )^{n_\Phi} \c
+\F{w}{\Phi} = \C{\kappa}{} \omega_\tau \left ( 1 + \C{\mathrm{unst}}{} r_b \min \left [ \C{\ep}{}, d \right ] \right )^{n_\Phi} \c
 \eeq
 ```
 
-where ``n_U = 1/4`` for velocities, ``n_T = 1/2`` for tracers, ``\C{\mathrm{conv}}{} = 6.4``, the
+where ``n_U = 1/4`` for velocities, ``n_T = 1/2`` for tracers, ``\C{\mathrm{unst}}{} = 6.4``, the
 transition parameter for velocities is ``\C{d}{U} = 0.5``, and the transition parameter
 for tracers is ``\C{d}{T} = 2.5``.
 
@@ -270,14 +273,14 @@ with ``g=\alpha=1``,
 ```
 Setting ``h = 9``, ``\C{\Ri}{}=1``, ``T_0 = 1``, and ``U_0=3`` yields a consistent solution.
 
-### Turbulent velocity scales
+### Limiting cases for turbulent velocity scales
 
 Under zero momentum forcing, the turbulent vertical velocity scale is
 
 ```math
 \beq
-\F{w}{\Phi} = \C{b}{\Phi} \left ( \C{\ep}{} \right )^(1/3) | h F_b |^{1/3} \p
-\eqref{buoyscaletest}
+\F{w}{\Phi} = \C{b}{\Phi} \left ( \C{\ep}{} \right )^{1/3} | h F_b |^{1/3} \p
+\label{buoyscaletest}
 \eeq
 ```
 
@@ -288,8 +291,9 @@ Under zero buoyancy forcing, the turbulent velocity scale is
 ```math
 \beq
 \F{w}{\Phi} = \C{\kappa}{} \omega_\tau \p
-\eqref{windscaletest}
+\label{windscaletest}
 \eeq
+```
 
 
 # Table of model parameters
@@ -299,3 +303,10 @@ The model parameters in KPP are
 |   Parameter   | Value | Reference              |
 |   :-------:   | :---: | ---------              |
 | ``\C{\ep}{}`` | 0.1   | pretty much everywhere |
+
+
+# References
+
+* [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
+* [CVMix documentation](https://github.com/CVMix/CVMix-description/raw/master/cvmix.pdf)
+* [Van Roekel et al (2018)](https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2018MS001336)
