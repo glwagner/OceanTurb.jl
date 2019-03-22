@@ -1,3 +1,5 @@
+# The K-Profile-Parameterization (KPP)
+
 ```math
 \newcommand{\c}         {\, ,}
 \newcommand{\p}         {\, .}
@@ -26,8 +28,6 @@
 \newcommand{\uwind}     {\varpi_{\tau}}
 \newcommand{\ubuoy}     {\varpi_b}
 ```
-
-# The K-Profile-Parameterization (KPP)
 
 The K-Profile-Parameterization, or "KPP", was proposed by
 [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)

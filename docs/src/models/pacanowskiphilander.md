@@ -1,3 +1,5 @@
+# Pacanowski-Philander
+
 ```math
 \newcommand{\c}{\, ,}
 \newcommand{\p}{\, .}
@@ -13,8 +15,6 @@
 \newcommand{\beqs}{\begin{gather}}
 \newcommand{\eeqs}{\end{gather}}
 ```
-
-# Pacanowski-Philander
 
 [Pacanowski and Philander (1981)](https://journals.ametsoc.org/doi/abs/10.1175/1520-0485(1981)011%3C1443:POVMIN%3E2.0.CO;2)
 propose a simple one-dimensional model

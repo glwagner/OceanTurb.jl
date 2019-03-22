@@ -1,3 +1,5 @@
+# An idealized forcing example
+
 ```math
 \newcommand{\c}{\, ,}
 
@@ -13,7 +15,5 @@
 \newcommand{\beqs}{\begin{gather}}
 \newcommand{\eeqs}{\end{gather}}
 ```
-
-# An idealized forcing example
 
 Examples of idealized forcing are useful for model validation and testing.

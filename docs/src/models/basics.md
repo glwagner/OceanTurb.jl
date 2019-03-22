@@ -1,3 +1,5 @@
+# Primer on boundary layer modeling
+
 ```math
 \newcommand{\c}{\, ,}
 \newcommand{\p}{\, .}
@@ -14,8 +16,6 @@
 \newcommand{\beqs}{\begin{gather}}
 \newcommand{\eeqs}{\end{gather}}
 ```
-
-# Primer on boundary layer modeling
 
 Models for the ocean surface boundary layer are partial
 differential equations that approximate the effects of
