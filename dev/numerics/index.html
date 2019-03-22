@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Numerical methods · OceanTurb.jl</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link href="../assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><h1>OceanTurb.jl</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="../search/"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li><a class="toctext" href="../">Home</a></li><li class="current"><a class="toctext" href>Numerical methods</a><ul class="internal"><li><a class="toctext" href="#Spatial-discretization-1">Spatial discretization</a></li><li class="toplevel"><a class="toctext" href="#Time-stepping-1">Time-stepping</a></li></ul></li><li><span class="toctext">Boundary layer models</span><ul><li><a class="toctext" href="../models/basics/">Primer on boundary layer modeling</a></li><li><a class="toctext" href="../models/kpp/">The K-Profile-Parameterization (KPP)</a></li><li><a class="toctext" href="../models/pacanowskiphilander/">Pacanowski-Philander</a></li></ul></li><li><span class="toctext">DocStrings</span><ul><li><a class="toctext" href="../man/types/">Private types</a></li><li><a class="toctext" href="../man/functions/">Functions</a></li></ul></li></ul></nav><article id="docs"><header><nav><ul><li><a href>Numerical methods</a></li></ul><a class="edit-page" href="https://github.com/glwagner/OceanTurb.jl/blob/master/docs/src/numerics.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Numerical methods</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="Numerical-methods-1" href="#Numerical-methods-1">Numerical methods</a></h1><div>\[\newcommand{\c}{\, ,}
+\newcommand{\p}{\, .}
+\newcommand{\d}{\partial}
+
+\newcommand{\r}[1]{\mathrm{#1}}
+
+\newcommand{\ee}{\mathrm{e}}
+
+\newcommand{\beq}{\begin{equation}}
+\newcommand{\eeq}{\end{equation}}
+
+\newcommand{\beqs}{\begin{gather}}
+\newcommand{\eeqs}{\end{gather}}\]</div><h2><a class="nav-anchor" id="Spatial-discretization-1" href="#Spatial-discretization-1">Spatial discretization</a></h2><p><code>OceanTurb.jl</code> uses a one-dimensional finite-volume method to discretize momentum, temperature, salinity, and other variables.</p><p>An ASCII-art respresentation of an example grid with <code>nz=3</code> is</p><pre><code class="language-text"> ▲ z
+ |              j=4   ===  Top   ▲              
+         i=3           *         | dzf (i=3)
+                j=3   ---        ▼
+         i=2           *             ▲            
+                j=2   ---            | dzc (j=2)
+         i=1           *             ▼  
+                j=1   ===  Bottom</code></pre><p>where the double lines indicate the top and bottom of the domain, the single lines indicate &quot;face&quot; boundaries, the <code>i</code>&#39;s index cell centers (nodes) and <code>j</code>&#39;s index the <span>$z$</span>-location of cell interfaces (faces). Horizontal momentum and tracer variables are located at cell centers, while fluxes of these quantities (and vertical-velocity-like variables when present) are located at cell faces.</p><h3><a class="nav-anchor" id="Derivatives-and-diffusive-fluxes-1" href="#Derivatives-and-diffusive-fluxes-1">Derivatives and diffusive fluxes</a></h3><p>The derivative of a quantity <span>$\phi$</span> at face <span>$i$</span> is</p><div>\[\beq
+\left( \d_z \phi \right )_i = \frac{\phi_i - \phi_{i-1}}{\Delta c_i} \c
+\eeq\]</div><p>where <span>$\phi_i$</span> denotes the value of <span>$\phi$</span> at cell <span>$i$</span>, and <span>$\Delta c_i = z_{c, i} - z_{c, i-1}$</span> is the vertical separation between node <span>$i$</span> and cell point <span>$i-1$</span>.</p><p>With diffusivity given on cell interfaces, the diffusive flux at face <span>$i$</span> is just <span>$K_i \left ( \d_z \phi \right )_i$</span>. The divergence of the diffusive flux at node <span>$i$</span> is therefore</p><div>\[\newcommand{\Kdz}[1]{K_{#1} \left ( \d_z \phi \right )_{#1} }
+\begin{align}
+\left ( \d_z K \d_z \phi \right )_i &amp;= \frac{ \Kdz{i+1} - \Kdz{i} }{\Delta f_i} \c \\
+&amp;= \frac{
+          \tfrac{K_{i+1}}{\Delta c_{i+1}} \phi_{i+1}
+        - \left ( \tfrac{K_{i+1}}{\Delta c_{i+1}} + \tfrac{K_i}{\Delta c_i} \right ) \phi_i
+         + \tfrac{K_i}{\Delta c_i} \phi_{i-1}}{\Delta f_i}
+\end{align}\]</div><h1><a class="nav-anchor" id="Time-stepping-1" href="#Time-stepping-1">Time-stepping</a></h1><p>To integrate ocean surface boundary layer models forward in time, we implement explicit time-stepping schemes for partial differential equations of the form</p><div>\[\beq
+\d_t \Phi = R(\Phi) \c
+\label{explicitform}
+\eeq\]</div><p>where <span>$\Phi$</span> is a variable like velocity, temperature, or salinity and <span>$R$</span> is an arbitrary function representing any number of processes, including turbulent diffusion and internal forcing.</p><p>In the future, we will implement implicit-explicit schemes for partial differential equations of the form</p><div>\[\beq \label{implicitdiffusion}
+\d_t \Phi - \d_z K \d_z \phi = R(\Phi) \c
+\eeq\]</div><p>where <span>$K$</span> is a diffusivity. These implicit-explicit schemes will treat diffusive terms on the left of \eqref{implicitdiffusion} implicitly.</p><h3><a class="nav-anchor" id="Forward-Euler-method-1" href="#Forward-Euler-method-1">Forward-Euler method</a></h3><p>An explicit forward Euler time integration scheme uses the temporal discretization \eqref{explicitform}:</p><div>\[\beq
+\Phi^{n+1} = \Phi^{n} + \Delta t R \left ( \Phi^n \right )
+\eeq\]</div><p>where the superscripts <span>$n$</span> and <span>$n+1$</span> denote the solution at time-step <span>$n$</span> and <span>$n+1$</span>, respectively.</p><footer><hr/><a class="previous" href="../"><span class="direction">Previous</span><span class="title">Home</span></a><a class="next" href="../models/basics/"><span class="direction">Next</span><span class="title">Primer on boundary layer modeling</span></a></footer></article></body></html>
