@@ -17,9 +17,15 @@ version = "0.7.0"
 
 [[Documenter]]
 deps = ["Base64", "DocStringExtensions", "InteractiveUtils", "LibGit2", "Logging", "Markdown", "Pkg", "REPL", "Random", "Test", "Unicode"]
-git-tree-sha1 = "9f2135e0e7ecb63f9c3ef73ea15a31d8cdb79bb7"
+git-tree-sha1 = "a8c41ba3d0861240dbec942ee1d0f86c57c37c1c"
 uuid = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-version = "0.20.0"
+version = "0.21.5"
+
+[[DocumenterTools]]
+deps = ["Base64", "DocStringExtensions", "LibGit2", "Pkg", "Test"]
+git-tree-sha1 = "f5803a9c2c23ff226e8eab2df7ac4c75e77a0d53"
+uuid = "35a29f4d-8980-5a13-9543-d66fff28ecb8"
+version = "0.1.0"
 
 [[InteractiveUtils]]
 deps = ["LinearAlgebra", "Markdown"]
