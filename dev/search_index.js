@@ -285,7 +285,15 @@ var documenterSearchIndex = {"docs": [
     "page": "Functions",
     "title": "OceanTurb.FluxBoundaryCondition",
     "category": "method",
-    "text": "FluxBoundaryCondition(boundary, flux)\n\nConstuct a flux boundary condition that specifies the flux of some field on a boundary. If flux is a function, its arguments must be synced with the expection of Model.\n\n\n\n\n\n"
+    "text": "FluxBoundaryCondition(boundary, flux)\n\nConstuct a boundary condition that specifies the flux of some field on a boundary. If flux is a function, its arguments must be synced with the expection of Model.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.GradientBoundaryCondition-Tuple{Any}",
+    "page": "Functions",
+    "title": "OceanTurb.GradientBoundaryCondition",
+    "category": "method",
+    "text": "GradientBoundaryCondition(boundary, flux)\n\nConstuct a boundary condition that specifies the gradient of some field on a boundary. If flux is a function, its arguments must be synced with the expection of Model.\n\n\n\n\n\n"
 },
 
 {
@@ -293,7 +301,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Functions",
     "title": "OceanTurb.ValueBoundaryCondition",
     "category": "method",
-    "text": "ValueBoundaryCondition(boundary, flux)\n\nConstuct a flux boundary condition that specifies the flux of some field on a boundary. If flux is a function, its arguments must be synced with the expection of Model.\n\n\n\n\n\n"
+    "text": "ValueBoundaryCondition(boundary, flux)\n\nConstuct a boundary condition that specifies the value of some field on a boundary. If flux is a function, its arguments must be synced with the expection of Model.\n\n\n\n\n\n"
 },
 
 {
