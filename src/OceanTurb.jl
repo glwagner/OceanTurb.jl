@@ -62,12 +62,14 @@ export # This file, core functionality:
 
     # boundary_conditions.jl
     Flux,
+    Gradient,
     Value,
     BoundaryCondition,
     FieldBoundaryConditions,
     FluxBoundaryCondition,
     ZeroFluxBoundaryConditions,
     ValueBoundaryCondition,
+    GradientBoundaryCondition,
     set_top_bc!,
     set_bottom_bc!,
     set_top_flux_bc!,

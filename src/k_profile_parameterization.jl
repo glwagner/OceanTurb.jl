@@ -138,9 +138,15 @@ end
 #
 
 ## ** The K-Profile-Parameterization! **
-K_KPP(h, w_scale, d, shape=default_shape_K) = max(0, h * w_scale * shape(d))
+function K_KPP(h, w_scale, d, shape=default_shape_K)
+    if 0 < d < 1
+        return max(0, h * w_scale * shape(d))
+    else
+        return 0.0
+    end
+end
 
-d(m, i) = m.state.h > 0 ? -m.grid.zf[i] / m.state.h : 0
+d(m, i) = -m.grid.zf[i] / m.state.h
 
 # K_{U,V,T,S} is calculated at face points
 K_U(m, i) = K_KPP(m.state.h, w_scale_U(m, i), d(m, i)) + m.parameters.KU₀
@@ -246,9 +252,13 @@ function mixing_depth(m)
         z★ = m.grid.zf[1]         # mixing depth extends to bottom of grid.
 
     else                                             # We have descended below critical Ri:
-        ΔRi = bulk_richardson_number(m, ih₁+1) - Ri₁ # linearly interpolate to find h.
-        # x = x₀ + Δx * (y-y₀) / Δy
-        z★ = m.grid.zf[ih₁] + Δf(m.grid, ih₁) * (m.parameters.CRi - Ri₁) / ΔRi
+        if ih₁ == m.grid.N
+            z★ = m.grid.zf[m.grid.N]
+        else
+            ΔRi = bulk_richardson_number(m, ih₁+1) - Ri₁ # linearly interpolate to find h.
+            # x = x₀ + Δx * (y-y₀) / Δy
+            z★ = m.grid.zf[ih₁] + Δf(m.grid, ih₁) * (m.parameters.CRi - Ri₁) / ΔRi
+        end
     end
 
     return -z★ # "depth" is negative height.
@@ -277,11 +287,11 @@ dϵ(m::Model, d) = min(m.parameters.Cε, d)
 w_scale_stable(Cκ, Cstab, ωτ, ωb, d) = Cκ * ωτ / (1 + Cstab * d * (ωb/ωτ)^3)
 
 "Return the vertical velocity scale at scaled depth dϵ for an unstable boundary layer."
-function w_scale_unstable(Cd, Cκ, Cunst, Cb, Cτ, ωτ, ωb, dϵ, nϕ)
+function w_scale_unstable(Cd, Cκ, Cunst, Cb, Cτ, ωτ, ωb, dϵ, n)
     if dϵ < Cd * (ωτ/ωb)^3
-        return Cκ * ωτ * (1 + Cunst * (ωb/ωτ)^3 * dϵ)^nϕ
+        return Cκ * ωτ * ( 1 + Cunst * dϵ * (ωb/ωτ)^3 )^n
     else
-        return Cb * ωb * (dϵ + Cτ * (ωτ/ωb)^3)^(1/3)
+        return Cb * ωb * ( dϵ + Cτ * (ωτ/ωb)^3 )^(1/3)
     end
 end
 
@@ -338,7 +348,13 @@ a positive surface flux implies negative surface flux divergence,
 which implies a reduction to the quantity in question.
 For example, positive heat flux out of the surface implies cooling.
 """
-nonlocal_flux(flux, d, shape=default_shape_N) = flux*shape(d) # not minus sign due to flux convention
+function nonlocal_flux(flux, d, shape=default_shape_N)
+    if 0 < d < 1
+        return flux*shape(d) # not minus sign due to flux convention
+    else
+        return 0
+    end
+end
 
 const N = nonlocal_flux
 
@@ -361,8 +377,14 @@ K∂z(K, c, i) = K*∂z(c, i)
 bottom_flux(K, c, c_bndry, Δf) = -2K*( bottom(c) - c_bndry ) / bottom(Δf) # -K*∂c/∂z at the bottom
 top_flux(K, c, c_bndry, Δf)    = -2K*(  c_bndry  -  top(c) ) /   top(Δf)  # -K*∂c/∂z at the top
 
-∇K∇c_top(Kᵢ, c, bc::BC{<:Flux}, model)      = ∇K∇c_top(Kᵢ, c, get_bc(bc, model))
-∇K∇c_bottom(Kᵢ₊₁, c, bc::BC{<:Flux}, model) = ∇K∇c_bottom(Kᵢ₊₁, c, getbc(model, bc))
+∇K∇c_top(Kᵢ, c, bc::BC{<:Flux}, model) = ∇K∇c_top(Kᵢ, c, get_bc(bc, model))
+∇K∇c_bottom(Kᵢ₊₁, Kᵢ, c, bc::BC{<:Flux}, model) = ∇K∇c_bottom(Kᵢ₊₁, c, getbc(model, bc))
+∇K∇c_bottom(Kᵢ₊₁, Kᵢ, c, bc::BC{<:Gradient}, model) = ∇K∇c_bottom(Kᵢ₊₁, c, -Kᵢ*getbc(model, bc))
+
+function ∇K∇c_bottom(Kᵢ₊₁, Kᵢ, c, bc::BC{<:Value}, model)
+    flux = bottom_flux(Kᵢ, c, getbc(model, bc), Δf(model.grid, 1))
+    return ∇K∇c_bottom(Kᵢ₊₁, c, flux)
+end
 
 #
 # Equation entry
@@ -392,10 +414,10 @@ function calc_rhs_explicit!(∂t, m)
 
     # Bottom
     i = 1
-    ∂t.U[i] = ∇K∇c_bottom(K_U(m, i+1), U, m.bcs.U.bottom, m) + m.constants.f*V[i]
-    ∂t.V[i] = ∇K∇c_bottom(K_V(m, i+1), V, m.bcs.V.bottom, m) - m.constants.f*U[i]
-    ∂t.T[i] = ∇K∇c_bottom(K_T(m, i+1), T, m.bcs.T.bottom, m) - ∂NT∂z(m, i)
-    ∂t.S[i] = ∇K∇c_bottom(K_S(m, i+1), S, m.bcs.S.bottom, m) - ∂NS∂z(m, i)
+    ∂t.U[i] = ∇K∇c_bottom(K_U(m, i+1), K_U(m, i), U, m.bcs.U.bottom, m) + m.constants.f*V[i]
+    ∂t.V[i] = ∇K∇c_bottom(K_V(m, i+1), K_V(m, i), V, m.bcs.V.bottom, m) - m.constants.f*U[i]
+    ∂t.T[i] = ∇K∇c_bottom(K_T(m, i+1), K_T(m, i), T, m.bcs.T.bottom, m) - ∂NT∂z(m, i)
+    ∂t.S[i] = ∇K∇c_bottom(K_S(m, i+1), K_S(m, i), S, m.bcs.S.bottom, m) - ∂NS∂z(m, i)
 
     return nothing
 end

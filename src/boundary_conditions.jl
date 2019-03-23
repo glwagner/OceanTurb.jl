@@ -25,7 +25,7 @@ getbc(model, bc::BC{C, <:Number}) where C = bc.condition
 """
     FluxBoundaryCondition(boundary, flux)
 
-Constuct a flux boundary condition that specifies the flux
+Constuct a boundary condition that specifies the flux
 of some field on a boundary. If `flux` is a function,
 its arguments must be synced with the expection of `Model`.
 """
@@ -34,11 +34,21 @@ FluxBoundaryCondition(bc) = BoundaryCondition(Flux, bc)
 """
     ValueBoundaryCondition(boundary, flux)
 
-Constuct a flux boundary condition that specifies the flux
+Constuct a boundary condition that specifies the value
 of some field on a boundary. If `flux` is a function,
 its arguments must be synced with the expection of `Model`.
 """
 ValueBoundaryCondition(bc) = BoundaryCondition(Value, bc)
+
+"""
+    GradientBoundaryCondition(boundary, flux)
+
+Constuct a boundary condition that specifies the gradient
+of some field on a boundary. If `flux` is a function,
+its arguments must be synced with the expection of `Model`.
+"""
+GradientBoundaryCondition(bc) = BoundaryCondition(Gradient, bc)
+
 
 mutable struct FieldBoundaryConditions
     bottom::BoundaryCondition
