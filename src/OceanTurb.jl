@@ -161,6 +161,23 @@ function setproperty!(sol::AbstractSolution, c::Symbol, data::Union{Number, Abst
 end
 
 #
+# Physical oceanic constants
+#
+
+struct Constants{T}
+    g  :: T # Gravitiational acceleration
+    cP :: T # Heat capacity of water
+    ρ₀ :: T # Reference density
+    α  :: T # Thermal expansion coefficient
+    β  :: T # Haline expansion coefficient
+    f  :: T # Coriolis parameter
+end
+
+function Constants(T=Float64; α=2.5e-4, β=8e-5, ρ₀=1035, cP=3992, f=0, g=9.81)
+    Constants{T}(g, cP, ρ₀, α, β, f)
+end
+
+#
 # Ocean Turbulence Models
 #
 

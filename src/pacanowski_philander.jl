@@ -8,9 +8,9 @@ export
     Parameters,
     Model
 
-import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top
+import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top, Constants
 
-import .KPP: Constants, ∂B∂z
+import .KPP: ∂B∂z
 
 const nsol = 4
 

@@ -5,7 +5,7 @@ using
     StaticArrays,
     LinearAlgebra
 
-import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top
+import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top, Constants
 
 const nU = 1/4 # exponent for momentum turbulent velocity scale
 const nT = 1/2 # exponent for tracer turbulent velocity scale
@@ -73,19 +73,6 @@ end
 # 'd' is a non-dimensional depth coordinate.
 default_shape_N(d) = d*(1-d)^2
 default_shape_K(d) = d*(1-d)^2
-
-struct Constants{T}
-    g  :: T # Gravitiational acceleration
-    cP :: T # Heat capacity of water
-    ρ₀ :: T # Reference density
-    α  :: T # Thermal expansion coefficient
-    β  :: T # Haline expansion coefficient
-    f  :: T # Coriolis parameter
-end
-
-function Constants(T=Float64; α=2.5e-4, β=8e-5, ρ₀=1035, cP=3992, f=0, g=9.81)
-    Constants{T}(g, cP, ρ₀, α, β, f)
-end
 
 mutable struct State{T} <: FieldVector{6, T}
     Fu :: T
