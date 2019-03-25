@@ -31,4 +31,4 @@ Currently we have solvers for
 
 # Authors
 
-[Gregory Wagner](glwagner.github.io) and Andre Souza.
+[Gregory Wagner](glwagner.github.io).
