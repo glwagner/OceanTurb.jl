@@ -29,18 +29,18 @@
 \newcommand{\ubuoy}     {\varpi_b}
 ```
 
-The K-Profile-Parameterization, or "KPP", was proposed by
+The K-Profile-Parameterization, or "KPP", is proposed by
 [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
 as a model for convection- and wind-driven mixing in the upper ocean.
 In KPP, vertical turbulent fluxes of a quantity ``\phi`` are parameterized as
 
 ```math
 \beq
-\overline{w \phi} = - K_\phi \d_z \Phi + N_\phi \c
+\overline{w \phi} = - K_\Phi \d_z \Phi + N_\phi \c
 \eeq
 ```
 
-where ``\Phi`` is the resolved or horizontally-averaged quantity, ``K_\phi`` is a
+where ``\Phi`` is the resolved or horizontally-averaged quantity, ``K_\Phi`` is a
 turbulent diffusivity, and ``N_\phi`` is a 'non-local' flux.
 
 The non-local flux and turbulent diffusivity are defined to vanish at the surface, and at the bottom of the 'mixing layer' ``h``, which roughly
@@ -61,7 +61,7 @@ B & \equiv - \frac{g \rho'}{\rho_0} \\
 \end{align}
 ```
 
-where ``g = 9.81 \, \mathrm{m \, s^{-2}}, \alpha = 2 \times 10^{-4} \, \mathrm{K^{-1}}``, and ``\beta = 8 \times 10^{-5} \mathrm{K^{-1}}``,
+where ``g = 9.81 \, \mathrm{m \, s^{-2}}, \alpha = 2 \times 10^{-4} \, \mathrm{K^{-1}}``, and ``\beta = 8 \times 10^{-5}``,
 are gravitational acceleration, the thermal expansion coefficient, and the
 haline contraction coefficient, respectively.
 Buoyancy forcing is equivalently
@@ -143,7 +143,7 @@ The KPP diffusivity is defined
 
 ```math
 \beq
-K_\phi = h \F{w}{\Phi} d ( 1 - d )^2 \c
+K_\Phi = h \F{w}{\Phi} d ( 1 - d )^2 \c
 \eeq
 ```
 where ``\F{w}{\Phi}`` is the turbulent velocity scale.
