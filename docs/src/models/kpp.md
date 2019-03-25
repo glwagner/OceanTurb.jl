@@ -69,8 +69,7 @@ Buoyancy forcing is equivalently
 ```math
 \beq
 F_b = g \left ( \alpha F_\theta - \beta F_s \right ) \p
-\eeq
-```
+\ee
 
 The turbulent velocity scales associated with buoyancy and wind forcing are
 
@@ -99,7 +98,7 @@ The boundary layer depth ``h`` is defined implicitly via the bulk Richardson num
 
 ```math
 \beq \label{bulk_ri}
-\C{\Ri}{} = \frac{h \Delta B(-h)}{| \Delta \b{U}(-h)|^2 + \F{\K}{}(-h)} \p
+\C{\Ri}{} = \frac{h \left ( 1 - \tfrac{1}{2} \C{\ep}{} \right ) \Delta B(-h)}{| \Delta \b{U}(-h)|^2 + \F{\K}{}(-h)} \p
 \eeq
 ```
 
