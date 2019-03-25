@@ -22,10 +22,12 @@ Coming soon.
 # The Boundary Layer Models
 
 This code aims to provide solvers for as many oceanic boundary layer
-models as possible. The models currently on our horizon are
+models as possible.
+Currently we have solvers for
 
-* K-Profile-Parameterization
-* Mellor-Yamada 2.5
+* the diffusion equation
+* the [K-Profile-Parameterization](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
+* [Pacanowski-Philander](https://journals.ametsoc.org/doi/abs/10.1175/1520-0485(1981)011%3C1443:POVMIN%3E2.0.CO;2)
 
 # Authors
 
