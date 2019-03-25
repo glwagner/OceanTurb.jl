@@ -10,6 +10,7 @@ The geometry of a grid with `N=3` is
       ▲ z
       |
 
+         i=4           *
                 j=4   ===       ▲
          i=3           *        | Δf (i=3)
                 j=3   ---       ▼
@@ -17,6 +18,7 @@ The geometry of a grid with `N=3` is
                 j=2   ---   | Δc (j=2)
          i=1           *    ▼
                 j=1   ===
+         i=0           *
 ```
 
 where the i's index cells and the j's index faces.
@@ -31,6 +33,7 @@ There are two types of fields:
 From the standpoint of designing new turbulence closures,
 the most important function that we output is `∂z`.
 =#
+using OffsetArrays
 
 import Base: +, *, -, setindex!, getindex, eachindex, lastindex, similar, eltype, length
 
@@ -76,7 +79,8 @@ Return a `Field{Cell}` on `grid` with its data initialized to 0.
 """
 function CellField(A::DataType, grid)
     data = convert(A, fill(0, cell_size(grid)))
-    Field(Cell, data, grid)
+    offset_data = OffsetArray(data, 0:grid.N+1)
+    Field(Cell, offset_data, grid)
 end
 
 CellField(grid) = CellField(arraytype(grid), grid)
@@ -112,22 +116,24 @@ end
 # Basic 'Field' functionality
 #
 
-data(c::Field) = c.data
+data(c::FaceField) = c.data
+data(c::CellField) = view(c.data, 1:c.grid.N)
 
 nodes(c::CellField) = c.grid.zc
 nodes(f::FaceField) = f.grid.zf
 
-length(c::CellField) = cell_length(c.grid)
-length(f::FaceField) = face_length(f.grid)
+length(c::CellField) = c.grid.N
+length(f::FaceField) = f.grid.N + 1
 
 # All indices
-eachindex(f::AbstractField) = eachindex(f.data)
+eachindex(c::CellField) = 1:c.grid.N
+eachindex(f::FaceField) = 1:f.grid.N + 1
 
 lastindex(c::CellField) = c.grid.N
 lastindex(f::FaceField) = f.grid.N + 1
 
 # Interior indices, omitting boundary-adjacent values
-interior(c::CellField) = 2:c.grid.N-1
+interior(c::CellField) = 2:c.grid.N - 1
 interior(f::FaceField) = 2:f.grid.N
 
 # Sugary sweet: access indices of c.data by indexing into c.
@@ -136,9 +142,49 @@ setindex!(c::AbstractField, d, inds...) = setindex!(c.data, d, inds...)
 setindex!(c::AbstractField, d::Field, inds...) = setindex!(c.data, d.data, inds...)
 
 set!(c::AbstractField, data::Number) = fill!(c.data, data)
-set!(c::AbstractField{A}, data::AbstractArray) where A = c.data .= convert(A, data)
-set!(c::AbstractField{A}, data::Function) where A = c.data .= convert(A, data.(nodes(c)))
 set!(c::AbstractField{Ac, G}, d::AbstractField{Ad, G}) where {Ac, Ad, G} = c.data .= convert(Ac, d.data)
+set!(c::FaceField, fcn::Function) = c.data .= fcn.(nodes(c))
+
+function set!(c::CellField, func::Function)
+    data = func.(nodes(c))
+    set!(c, data)
+    # Set ghost points to get approximation to first derivative at boundary
+    data_bottom = func(model.grid.zf[1])
+    data_top = func(model.grid.zf[end])
+
+    # Set ghost values so that
+    # ∂z(c, 1) = (c[1] - c[0]) / Δc(c, 1) = (c[1] - c_bottom) / 0.5*Δc(c, 1)
+    #
+    # and
+    # ∂z(c, N+1) = (c[N+1] - c[N]) / Δc(c, N+1) = (c_top - c[N]) / 0.5*Δc(c, N)
+
+    N = model.grid.N
+    @inbounds begin
+        c[0] = c[1] - 2 * (c[1] - c_bottom)
+        c[N+1] = c[N] + 2 * (c_top - c[N])
+    end
+
+    return nothing
+end
+
+set!(f::FaceField, data::AbstractArray) = f.data .= data
+
+function set!(c::CellField, data::AbstractArray)
+    for i in eachindex(data)
+        @inbounds c[i] = data[i]
+    end
+    # Default boundary conditions
+    set_default_bcs!(c)
+    return nothing
+end
+
+function set_default_bcs!(c)
+    @inbounds begin
+        c[0] = c[1]
+        c[model.grid.N+1] = c[model.grid.N]
+    end
+    return nothing
+end
 
 similar(c::CellField) = CellField(c.grid)
 similar(f::FaceField) = FaceField(f.grid)

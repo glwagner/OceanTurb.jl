@@ -150,3 +150,7 @@ function set_flux_bcs!(model, fld, bcs)
     set_bottom_flux_bc!(model, fld, bc[2])
     return nothing
 end
+
+function fill_top_ghost_cells!(c, κ, bc)
+    return nothing
+end

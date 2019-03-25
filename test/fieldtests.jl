@@ -5,13 +5,13 @@
 function test_cell_field_construction(T, N, L)
   grid = UniformGrid(T, N, L)
   c = CellField(grid)
-  length(c.data) == OceanTurb.cell_length(N) && size(c.data) == OceanTurb.cell_size(N)
+  typeof(c) <: CellField
 end
 
 function test_face_field_construction(T, N, L)
   grid = UniformGrid(T, N, L)
   f = FaceField(grid)
-  length(f.data) == OceanTurb.face_length(N) && size(f.data) == OceanTurb.face_size(N)
+  typeof(f) <: FaceField
 end
 
 function test_field_indexing()
@@ -81,7 +81,7 @@ function test_set_scalar_field(loc, T)
   f = Field(loc, g)
   a = 7
   set!(f, a)
-  f.data == a*ones(length(f))
+  !any(@. !(f.data == a))
 end
 
 function test_set_array_field(loc, T)
@@ -89,14 +89,15 @@ function test_set_array_field(loc, T)
   f = Field(loc, grid)
   data = rand(1:10, length(f))
   set!(f, data)
-  f.data == data
+  f.data[1:length(f)] == data
 end
 
 function test_set_function_field(loc, T)
   grid = UniformGrid(T, 2, 2.0)
   f = Field(loc, grid)
   fcn(z) = z^2
-  data_ans = fcn.(nodes(f))
+  z = nodes(f)
   set!(f, fcn)
-  f.data == data_ans
+  i = 2
+  f[i] == fcn(z[i])
 end

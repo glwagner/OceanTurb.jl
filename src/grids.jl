@@ -27,9 +27,9 @@ and variables located at cell faces (`FaceFields`) have dimension dimension N+1.
 import Base: eltype, length, size
 
 # Staggered grid lengths and sizes for fields
-cell_length(N) = N
+cell_length(N) = N+2
 face_length(N) = N+1
-  cell_size(N) = (N,)
+  cell_size(N) = (N+2,)
   face_size(N) = (N+1,)
 
      height(g::Grid) = g.L
@@ -79,8 +79,8 @@ function UniformGrid(T, N, L)
   L = convert(T, L)
   half_Δ = convert(T, 0.5Δ)
 
-  zc = range(-L+half_Δ; length=cell_length(N), stop=-half_Δ)
-  zf = range(-L; length=face_length(N), stop=zero(T))
+  zc = range(-L+half_Δ; length=N, stop=-half_Δ)
+  zf = range(-L; length=N+1, stop=zero(T))
 
   UniformGrid(N, L, Δ, Δ, zc, zf)
 end

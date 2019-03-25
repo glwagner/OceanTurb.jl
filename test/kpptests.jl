@@ -533,5 +533,5 @@ function test_kpp_diffusion_cosine()
     iterate!(model, dt)
 
     # The error tolerance is a bit arbitrary.
-    norm(c_ans.(z, time(model)) .- model.solution.T.data) < model.grid.N*1e-6
+    norm(c_ans.(z, time(model)) .- data(model.solution.T)) < model.grid.N*1e-6
 end

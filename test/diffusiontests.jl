@@ -27,5 +27,5 @@ function test_diffusion_cosine()
     iterate!(model, dt)
 
     # The error tolerance is a bit arbitrary.
-    norm(c_ans.(z, model.clock.time) .- model.solution.c.data) < model.grid.N*1e-6
+    norm(c_ans.(z, time(model)) .- data(model.solution.c)) < model.grid.N*1e-6
 end
