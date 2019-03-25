@@ -82,7 +82,8 @@ export # This file, core functionality:
 
     # Ocean turbulence models
     Diffusion,
-    KPP
+    KPP,
+    PacanowskiPhilander
 
 using
     StaticArrays,
@@ -183,5 +184,6 @@ end
 
 include("diffusion.jl")
 include("k_profile_parameterization.jl")
+include("pacanowski_philander.jl")
 
 end # module

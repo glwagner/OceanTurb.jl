@@ -1,4 +1,4 @@
-module Diffusion
+module PacanowskiPhilander
 
 using
     StaticArrays,
@@ -31,7 +31,7 @@ function Parameters(T=Float64;
     Cν₁ = 1e-2,
     Cκ₀ = 1e-5,
     Cκ₁ = 1e-2,
-    Cc  = 5
+    Cc  = 5,
     Cn  = 2
     )
 
@@ -61,7 +61,7 @@ function update_state!(m)
     return nothing
 end
 
-struct Model{P, TS, G, E, T} <: AbstractModel{TS, G, E, T}
+struct Model{TS, G, E, T} <: AbstractModel{TS, G, E, T}
     @add_standard_model_fields
     parameters :: Parameters{T}
     constants  :: Constants{T}
@@ -89,20 +89,28 @@ end
 #
 
 function local_richardson(U, V, T, S, g, α, β, i)
-    return ∂B∂z(T, S, g, α, β, i) / (∂z(U, i)^2 + ∂z(V, i)^2)
+    Bz = ∂B∂z(T, S, g, α, β, i)
+    S² = ∂z(U, i)^2 + ∂z(V, i)^2
+
+    if S² == 0 && Bz == 0 # Alistair Adcroft's theorem
+        return 0
+    else
+        return Bz / S²
+    end
 end
 
 local_richardson(m, i) = local_richardson(m.solution.U, m.solution.V, m.solution.T,
-                                          m.solution.S, m.constants.g, m.constants.α, m.constants.β)
+                                          m.solution.S, m.constants.g, m.constants.α,
+                                          m.constants.β, i)
 
 # Equation specification
 KU(Ri, ν₀, ν₁, c, n) = ν₀ + ν₁ / (1 + c*Ri)^n
-KT(Ri, ν₀, ν₁, c, n) = κ₀ + κ₁ / (1 + c*Ri)^(n+1)
+KT(Ri, κ₀, κ₁, c, n) = κ₀ + κ₁ / (1 + c*Ri)^(n+1)
 
-KU(m, i) = KU(local_richardon(m, i), m.parameters.Cν₀, m.parameters.Cν₁,
+KU(m, i) = KU(local_richardson(m, i), m.parameters.Cν₀, m.parameters.Cν₁,
               m.parameters.Cc, m.parameters.Cn)
 
-KT(m, i) = KT(local_richardon(m, i), m.parameters.Cκ₀, m.parameters.Cκ₁,
+KT(m, i) = KT(local_richardson(m, i), m.parameters.Cκ₀, m.parameters.Cκ₁,
               m.parameters.Cc, m.parameters.Cn)
 
 const KV = KU
@@ -115,7 +123,7 @@ function calc_rhs_explicit!(∂t, m)
 
     @inbounds begin
 
-        for i in interior(∂t)
+        for i in interior(U)
             ∂t.U[i] = ∇K∇c(KU(m, i+1), KU(m, i), U, i) + m.constants.f * V[i]
             ∂t.V[i] = ∇K∇c(KV(m, i+1), KV(m, i), V, i) - m.constants.f * U[i]
             ∂t.T[i] = ∇K∇c(KT(m, i+1), KT(m, i), T, i)
@@ -131,10 +139,10 @@ function calc_rhs_explicit!(∂t, m)
 
         # Bottom
         i = 1
-        ∂t.U[i] = ∇K∇c_bottom(KU(m, i+1), KU(m, i), U, m.bcs.U.bottom, m) + m.constants.f*V[i]
-        ∂t.V[i] = ∇K∇c_bottom(KV(m, i+1), KV(m, i), V, m.bcs.V.bottom, m) - m.constants.f*U[i]
-        ∂t.T[i] = ∇K∇c_bottom(KT(m, i+1), KT(m, i), T, m.bcs.T.bottom, m)
-        ∂t.S[i] = ∇K∇c_bottom(KS(m, i+1), KS(m, i), S, m.bcs.S.bottom, m)
+        ∂t.U[i] = ∇K∇c_bottom(KU(m, i+1), m.parameters.Cν₀, U, m.bcs.U.bottom, m) + m.constants.f*V[i]
+        ∂t.V[i] = ∇K∇c_bottom(KV(m, i+1), m.parameters.Cν₀, V, m.bcs.V.bottom, m) - m.constants.f*U[i]
+        ∂t.T[i] = ∇K∇c_bottom(KT(m, i+1), m.parameters.Cκ₀, T, m.bcs.T.bottom, m)
+        ∂t.S[i] = ∇K∇c_bottom(KS(m, i+1), m.parameters.Cκ₀, S, m.bcs.S.bottom, m)
     end
 
     return nothing
