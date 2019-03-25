@@ -5,10 +5,10 @@ turbulent surface boundary layer of the ocean.
 
 ## Installation
 
-As simple as
+Open julia, press `]` to enter package manager mode, and type
 
-```
-git clone https://github.com/glwagner/OceanTurb.jl.git
+```julia
+pkg> add https://github.com/glwagner/OceanTurb.jl.git
 ```
 
 ## Documentation
