@@ -237,15 +237,15 @@ var documenterSearchIndex = {"docs": [
     "page": "Pacanowski-Philander",
     "title": "Pacanowski-Philander",
     "category": "section",
-    "text": "newcommandc \nnewcommandp \nnewcommanddpartial\n\nnewcommandr1mathrm1\n\nnewcommandeemathrme\n\nnewcommandbeqbeginequation\nnewcommandeeqendequation\n\nnewcommandbeqsbegingather\nnewcommandeeqsendgatherPacanowski and Philander (1981) propose a simple one-dimensional model for equatorial boundary layers dominated by mechanical turbulent mixing. In their model, horizontal velocity, temperature, and salinity are governed bybeqs\nU_t =   f V - d_z overlinew u - F^u c \nV_t = - f U - d_z overlinew v - F^v c \nS_t =       - d_z overlinew s - F^S c \nT_t =       - d_z overlinew theta - F^T c\neeqswhere uppercase variables are resolved, mean quantities, and lowercase variables are unresolved perturbations. A key variable in the Pacaonwski and Philander formulation is the local Richardson number, defined byRi = - fracg rho_zrho_0 left ( U_z^2 + V_z^2 right ) cwhere g is the gravitational constant, rho_0 is a reference density, and rho is density. For simplicity, we use a linear equation of state between temperature, salinity, and density,rho(z t) = rho_0 left \n  alpha left ( T-T_0 right ) + beta left ( S-S_0 right ) right  cwhere typical values for the temperature and salinity expansion coefficients are alpha = 2 times 10^-4 rK m^3  kg and beta = 1."
+    "text": "newcommandc      \nnewcommandp      \nnewcommandd     partial\nnewcommandr1  mathrm1\nnewcommandee    mathrme\nnewcommandbeq   beginequation\nnewcommandeeq   endequation\nnewcommandbeqs  begingather\nnewcommandeeqs  endgather\nnewcommandRi    mathrmRiIn the model proposed by Pacanowski and Philander (1981), turbulent fluxes are diffusive, so thatoverlinew phi = K_Phi d_z Phi cwhere the diffusivity for velocity fields, K_U, isbeq labelmomentumdiffusivity\nK_U = nu_0 + fracnu_1left ( 1 + c Ri right )^n c\neeqwhile the diffusivity for tracer fields isbeq labeltracerdiffusivity\nK_T = kappa_0 + frackappa_1left ( 1 + c Ri right )^n+1 p\neeqIn \\eqref{momentumdiffusivity} and \\eqref{tracerdiffusivity}, the local Richardson number Ri is definedbeq\nRi = fracd_z Bleft ( d_z U right )^2 + left ( d_z V right )^2 c\neeqin terms of the buoyancy B = - g rho  rho_0, where g is gravitational acceleration, rho_0 is a reference density, and rho is the density deviation therefrom. With the linear equation of statebeq\nrho = rho_0 left  1 - alpha left ( T - T_0 right ) + beta left ( S - S_0 right ) right \neeqnear some reference temperature T_0 and reference salinity S_0, buoyancy B is given bybeq\nB = g left  alpha left ( T - T_0 right ) - beta left ( S - S_0 right ) right  c\neeqand its vertical derivative isbeq\nd_z B = g left ( alpha d_z T - beta d_z S right ) p\neeq"
 },
 
 {
-    "location": "models/pacanowskiphilander/#Eddy-diffusivities-for-momentum,-temperature,-and-salinity-1",
+    "location": "models/pacanowskiphilander/#Parameters-1",
     "page": "Pacanowski-Philander",
-    "title": "Eddy diffusivities for momentum, temperature, and salinity",
+    "title": "Parameters",
     "category": "section",
-    "text": "The core of the PP81 model is to parameterize vertical turbulent fluxes with an eddy diffusivity/eddy viscosity, such thatoverlinew phi = kappa_Phi d_z Phi cwhere kappa_Phi is the eddy diffusivity or viscosity of the quantity Phi.The eddy viscosity for both U and V iskappa_U = nu_0 + fracnu_1left ( 1 + c Ri right )^n cwhile the eddy diffusivity for T and S arekappa_T = kappa_0 + frac kappa_1  left ( 1 + c Ri right )^n+1 pThis parameterization implies an Ri-dependent turbulent Prandtl number ofPr = frackappa_Ukappa_T approx left ( 1 + c Ri right ) cwhen Ri is small. Typical values for the parameters (see CV12 arenu_0 = 10^-4 rcms,\nnu_1 = 10^-2 rcms,\nkappa_0 = 10^-5 rcms,\nkappa_1 = 10^-2 rcms,\nc = 5, and\nn=2."
+    "text": "Typical values for the model parameters in PP (see the text following equation 19 in chapter 3 of CV12) areParameter Value Units\nnu_0 10^-4 rm^2  s^-1\nnu_1 10^-2 rm^2  s^-1\nkappa_0 10^-5 rm^2  s^-1\nkappa_1 10^-2 rm^2  s^-1\nc 5 none\nn 2 none"
 },
 
 {
@@ -313,6 +313,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "man/functions/#OceanTurb.arraytype-Union{Tuple{Grid{T,A} where A<:AbstractArray}, Tuple{T}} where T",
+    "page": "Functions",
+    "title": "OceanTurb.arraytype",
+    "category": "method",
+    "text": "arraytype(grid::Grid)\n\nReturn the array type corresponding to data that lives on grid. Defaults to Array. New data types (for example, grids that exist on GPUs) must implement new array types.\n\n\n\n\n\n"
+},
+
+{
     "location": "man/functions/#OceanTurb.iter-Tuple{AbstractModel}",
     "page": "Functions",
     "title": "OceanTurb.iter",
@@ -326,6 +334,22 @@ var documenterSearchIndex = {"docs": [
     "title": "OceanTurb.iterate!",
     "category": "method",
     "text": "iterate!(model, Δt, nt=1)\n\nStep model forward in time by one time-step with step-size Δt.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.oncell-Tuple{Field{Face,A,G} where G where A,Any}",
+    "page": "Functions",
+    "title": "OceanTurb.oncell",
+    "category": "method",
+    "text": "oncell(c, i)\n\nReturn the interpolation of c onto cell point i.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.onface-Tuple{Field{Cell,A,G} where G where A,Any}",
+    "page": "Functions",
+    "title": "OceanTurb.onface",
+    "category": "method",
+    "text": "onface(c, i)\n\nReturn the interpolation of c onto face point i.\n\n\n\n\n\n"
 },
 
 {
