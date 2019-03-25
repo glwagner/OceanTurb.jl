@@ -38,6 +38,9 @@ export # This file, core functionality:
     Field,
     CellField,
     FaceField,
+    arraytype,
+    data,
+    nodes,
     Δc,
     Δf,
     onface,
@@ -45,7 +48,6 @@ export # This file, core functionality:
     ∂z,
     ∂²z,
     ∂z!,
-    nodes,
     set!,
     interior,
     top,
@@ -83,8 +85,8 @@ export # This file, core functionality:
     KPP
 
 using
-  StaticArrays,
-  LinearAlgebra
+    StaticArrays,
+    LinearAlgebra
 
 import Base: time, setproperty!
 
@@ -108,6 +110,7 @@ include("utils.jl")
 include("grids.jl")
 include("fields.jl")
 include("boundary_conditions.jl")
+include("operators.jl")
 include("equations.jl")
 include("timesteppers.jl")
 

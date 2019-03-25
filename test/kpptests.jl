@@ -164,16 +164,16 @@ function test_unresolved_KE(; CKE=0.1, Fb=1e-7, γ=0.01, g=9.81, ρ₀=1028, α=
     # Test for Bz > 0
     model.solution.T = T₁
     Bz = KPP.∂B∂z(model, i)
-    ke₁ = KPP.unresolved_kinetic_energy(model.solution.T, model.solution.S, Bz, Fb, CKE, g, α, β, i)
+    ke₁ = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, g, α, β, i)
     ke₁_answer = CKE * h^(4/3) * sqrt(Bz) * Fb^(1/3)
 
     # Test for Bz < 0
     model.solution.T = T₂
     Bz = KPP.∂B∂z(model, i)
-    ke₂ = KPP.unresolved_kinetic_energy(model.solution.T, model.solution.S, Bz, Fb, CKE, g, α, β, i)
-    ke₂_answer = 0
+    ke₂ = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, g, α, β, i)
+    ke₂_answer = 0.0
 
-    ke₂ == ke₂_answer && ke₁ ≈ ke₁_answer
+    ke₂ ≈ ke₂_answer && ke₁ ≈ ke₁_answer
 end
 
 function test_update_state(; N=10, L=20, Fθ=5.1e-3)
@@ -212,9 +212,10 @@ function test_bulk_richardson_number(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
         Ri[i] = KPP.bulk_richardson_number(model, i)
 
         h = - model.grid.zf[i]
+        h⁺ = h * (1 - 0.5*model.parameters.Cε)
         Bz = KPP.∂B∂z(model, i)
-        uke = KPP.unresolved_kinetic_energy(T, S, Bz, Fb, CKE, g, α, model.constants.β, i)
-        Ri_answer[i] = h*(B_N - g*α*T₀(-h)) / uke
+        uke = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, g, α, model.constants.β, i)
+        Ri_answer[i] = h⁺ * (B_N - g*α*T₀(-h)) / uke
     end
 
     isapprox(Ri_answer.data, Ri.data)
@@ -242,7 +243,7 @@ function test_mixing_depth_convection(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
     end
 
     h = KPP.mixing_depth(model)
-    h_answer = (CRi*CKE)^(3/2) * (α*g*γ)^(-3/4) * sqrt(Fb)
+    h_answer = (CRi*CKE)^(3/2) * (α*g*γ)^(-3/4) * sqrt(Fb) / (1 - 0.5*model.parameters.Cε)
 
     isapprox(h, h_answer, rtol=1e-3)
 end
@@ -255,7 +256,7 @@ function test_mixing_depth_shear(; Cε=0.5, N=20, L=20, CRi=1)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
 
-    h = CRi * U₀^2 / T₀
+    h = CRi * U₀^2 / T₀ / (1 - 0.5*model.parameters.Cε)
     ih = Int(N*(1 - h/L) + 1)
     @views T.data[ih:N] .= T₀
     @views U.data[ih:N] .= U₀
@@ -263,7 +264,7 @@ function test_mixing_depth_shear(; Cε=0.5, N=20, L=20, CRi=1)
     @views T.data[1:ih-1] .= -T₀
     @views U.data[1:ih-1] .= -U₀
 
-    KPP.mixing_depth(model) == 9.0
+    KPP.mixing_depth(model) ≈ h
 end
 
 function test_unstable()
@@ -309,7 +310,7 @@ function test_convective_velocity()
     KPP.ωb(model) ≈ (h*Fb)^(1/3)
 end
 
-function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, Cε=0.5/N)
+function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, Cε=1e-16)
     # Zero wind + convection => w_scale_U = Cb_U * Cε^(1/3) * ωb.
     parameters = KPP.Parameters(CRi=1, CKE=1, Cε=Cε, Cb_U=Cb_U, Cb_T=Cb_T)
     constants = KPP.Constants(g=1, α=1)
@@ -321,12 +322,11 @@ function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, Cε=
     model.solution.T[N] = 0
 
     Fb = 100
-    Fθ = Fb / (model.constants.α*model.constants.g)
-    model.bcs.T.top = FluxBoundaryCondition(Fθ)
+    model.bcs.T.top = FluxBoundaryCondition(Fb)
     KPP.update_state!(model)
 
     i = 16
-    h = sqrt(Fb)
+    h = sqrt(Fb) / (1-0.5Cε) # requires h to be an integer... ?
     ωb = (h*Fb)^(1/3)
 
     (KPP.w_scale_U(model, i) ≈ Cb_U * Cε^(1/3) * ωb &&
@@ -398,7 +398,7 @@ function test_turb_velocity_wind_stab(; Cε=0.5, Cκ=0.7, N=20, L=20, CRi=1, Cst
      KPP.w_scale_S(model, id) ≈ w_scale )
 end
 
-function test_turb_velocity_wind_unstab(; CKE=0, Cε=0.5, Cκ=0.7, N=20, L=20, CRi=1, Cunst=0.3)
+function test_turb_velocity_wind_unstab(; CKE=0, Cε=0.5, Cκ=0.7, N=20, L=20, CRi=(1-0.5Cε), Cunst=0.3)
     T₀ = 1
     U₀ = 3
     parameters = KPP.Parameters(CRi=CRi, Cκ=Cκ, CKE=CKE, Cε=Cε, Cunst=Cunst, Cd_U=Inf, Cd_T=Inf)
@@ -406,7 +406,7 @@ function test_turb_velocity_wind_unstab(; CKE=0, Cε=0.5, Cκ=0.7, N=20, L=20, C
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
 
-    h = CRi * U₀^2 / T₀
+    h = CRi * U₀^2 / T₀ / (1-0.5Cε)
     ih = Int(N*(1 - h/L) + 1) # 12
     @views T.data[ih:N] .= T₀
     @views U.data[ih:N] .= U₀
@@ -442,7 +442,7 @@ function test_turb_velocity_wind_unstab(; CKE=0, Cε=0.5, Cκ=0.7, N=20, L=20, C
      KPP.w_scale_S(model, id2) ≈ w_scale_T2 )
 end
 
-function test_conv_velocity_wind(; CKE=0, Cε=0.5, Cκ=0.7, N=20, L=20, CRi=1,
+function test_conv_velocity_wind(; CKE=0, Cε=0.5, Cκ=0.7, N=20, L=20, CRi=(1-0.5Cε),
                                  Cb_U=1.1, Cb_T=0.1, Cτ_U=1.3, Cτ_T=1.7)
     T₀ = 1
     U₀ = 3
@@ -452,7 +452,7 @@ function test_conv_velocity_wind(; CKE=0, Cε=0.5, Cκ=0.7, N=20, L=20, CRi=1,
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
 
-    h = CRi * U₀^2 / T₀
+    h = CRi * U₀^2 / T₀ / (1-0.5Cε)
     ih = Int(N*(1 - h/L) + 1) # 12
     @views T.data[ih:N] .= T₀
     @views U.data[ih:N] .= U₀
@@ -495,21 +495,21 @@ function test_diffusivity_plain(; K₀=1.1)
     KPP.update_state!(model)
 
     m = model
-    K_U = FaceField(model.grid)
-    K_V = FaceField(model.grid)
-    K_T = FaceField(model.grid)
-    K_S = FaceField(model.grid)
+    KU = FaceField(model.grid)
+    KV = FaceField(model.grid)
+    KT = FaceField(model.grid)
+    KS = FaceField(model.grid)
     for i = 1:model.grid.N+1
-        K_U[i] = KPP.K_U(model, i)
-        K_V[i] = KPP.K_V(model, i)
-        K_T[i] = KPP.K_T(model, i)
-        K_S[i] = KPP.K_S(model, i)
+        KU[i] = KPP.KU(model, i)
+        KV[i] = KPP.KV(model, i)
+        KT[i] = KPP.KT(model, i)
+        KS[i] = KPP.KS(model, i)
     end
 
-    (!any(@. K_U.data != K₀) &&
-     !any(@. K_V.data != K₀) &&
-     !any(@. K_T.data != K₀) &&
-     !any(@. K_S.data != K₀) )
+    (!any(@. KU.data != K₀) &&
+     !any(@. KV.data != K₀) &&
+     !any(@. KT.data != K₀) &&
+     !any(@. KS.data != K₀) )
 end
 
 

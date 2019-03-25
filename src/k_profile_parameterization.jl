@@ -5,7 +5,12 @@ using
     StaticArrays,
     LinearAlgebra
 
+import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top
+
+const nU = 1/4 # exponent for momentum turbulent velocity scale
+const nT = 1/2 # exponent for tracer turbulent velocity scale
 const nsol = 4
+
 @specify_solution CellField U V T S
 
 """
@@ -21,7 +26,7 @@ Construct KPP parameters.
 struct Parameters{T} <: AbstractParameters
     Cε    :: T  # Surface layer fraction
     Cκ    :: T  # Von Karman constant
-    CNL   :: T  # Non-local flux proportionality constant
+    CN    :: T  # Non-local flux proportionality constant
 
     Cstab :: T  # Reduction of wind-driven diffusivity due to stable buoyancy flux
     Cunst :: T  # Reduction of wind-driven diffusivity due to stable buoyancy flux
@@ -45,7 +50,7 @@ end
 function Parameters(T=Float64;
        Cε = 0.1,
        Cκ = 0.4,
-      CNL = 6.33,
+      CN = 6.33,
     Cstab = 2.0,
     Cunst = 6.4,
      Cb_U = 0.599,
@@ -59,7 +64,7 @@ function Parameters(T=Float64;
        K₀ = 1e-5, KU₀=K₀, KT₀=K₀, KS₀=K₀
      )
 
-     Parameters{T}(Cε, Cκ, CNL, Cstab, Cunst,
+     Parameters{T}(Cε, Cκ, CN, Cstab, Cunst,
                    Cb_U, Cτ_U, Cb_T, Cτ_T, Cd_U, Cd_T,
                    CRi, CKE, KU₀, KT₀, KS₀)
 end
@@ -149,10 +154,10 @@ end
 d(m, i) = -m.grid.zf[i] / m.state.h
 
 # K_{U,V,T,S} is calculated at face points
-K_U(m, i) = K_KPP(m.state.h, w_scale_U(m, i), d(m, i)) + m.parameters.KU₀
-K_T(m, i) = K_KPP(m.state.h, w_scale_T(m, i), d(m, i)) + m.parameters.KT₀
-K_S(m, i) = K_KPP(m.state.h, w_scale_S(m, i), d(m, i)) + m.parameters.KS₀
-const K_V = K_U
+KU(m, i) = K_KPP(m.state.h, w_scale_U(m, i), d(m, i)) + m.parameters.KU₀
+KT(m, i) = K_KPP(m.state.h, w_scale_T(m, i), d(m, i)) + m.parameters.KT₀
+KS(m, i) = K_KPP(m.state.h, w_scale_S(m, i), d(m, i)) + m.parameters.KS₀
+const KV = KU
 
 "Return the buoyancy gradient at face point i."
 ∂B∂z(T, S, g, α, β, i) = g * (α*∂z(T, i) - β*∂z(S, i))
@@ -167,27 +172,16 @@ function surface_layer_average(c, Cε, i)
     iε = length(c)+1 - Cε*(length(c)+1 - i) # (fractional) face "index" of the surface layer
     face = ceil(Int, iε)  # the next cell face above the fractional depth
     frac = face - iε # the fraction of the lowest cell in the surface layer.
-
-    # Example 1:
-
-    #   length(c) = 9 (face_length = 10)
-    #          Cε = 0.1
-    #           i = 9
-    #   => iε = 10 - 0.1*(1) = 9.9, face = 10, frac = 0.1.
-
-    # Example 2:
-
-    # length(c) = 99 (face_length = 100)
-    #        Cε = 0.1
-    #         i = 18
-    #       => iε = 100 - 0.1*82 = 91.8, face = 92, frac = 0.2.
+    surface_layer_integral = convert(eltype(c), 0)
 
     # Contribution of fractional cell to total integral
-    surface_layer_integral = frac > 0 ? frac * Δf(c, face-1) * c.data[face-1] : 0
+    if frac > 0
+        surface_layer_integral += frac * Δf(c, face-1) * c[face-1]
+    end
 
     # Add cells above face, if there are any.
     for j = face:length(c)
-      @inbounds surface_layer_integral += Δf(c, j) * c.data[j]
+      @inbounds surface_layer_integral += Δf(c, j) * c[j]
     end
 
     h = -c.grid.zf[i] # depth
@@ -198,11 +192,10 @@ end
 Return Δc(hᵢ), the difference between the surface-layer average of c and its value at depth hᵢ, where
 i is a face index.
 """
-Δ(c::CellField, Cε, i) = surface_layer_average(c, Cε, i) - onface(c, i)
+Δ(c, Cε, i) = surface_layer_average(c, Cε, i) - onface(c, i)
 
 "Returns the parameterization for unresolved KE at face point i."
-function unresolved_kinetic_energy(T, S, Bz, Fb, CKE, g, α, β, i)
-    h = -T.grid.zf[i]
+function unresolved_kinetic_energy(h, Bz, Fb, CKE, g, α, β, i)
     return CKE * h^(4/3) * sqrt(max(0, Bz)) * max(0, Fb)^(1/3)
 end
 
@@ -212,15 +205,18 @@ end
 Returns the bulk Richardson number of `model` at face `i`.
 """
 function bulk_richardson_number(U, V, T, S, Fb, CKE, Cε, g, α, β, i)
-    hΔB = -U.grid.zf[i] * ( g * (α*Δ(T, Cε, i) - β*Δ(S, Cε, i)) )
-    Bz = ∂B∂z(T, S, g, α, β, i)
-    uKE = unresolved_kinetic_energy(T, S, Bz, Fb, CKE, g, α, β, i)
-    KE = Δ(U, Cε, i)^2 + Δ(V, Cε, i)^2 + uKE
+    h = -U.grid.zf[i]
+    # (h - hε) * ΔB
+    h⁺ΔB = h * (1 - 0.5Cε) * g * (α*Δ(T, Cε, i) - β*Δ(S, Cε, i))
 
-    if KE == 0 && hΔB == 0 # Alistar Adcroft's theorem
+    Bz = ∂B∂z(T, S, g, α, β, i)
+    unresolved_KE = unresolved_kinetic_energy(h, Bz, Fb, CKE, g, α, β, i)
+    KE = Δ(U, Cε, i)^2 + Δ(V, Cε, i)^2 + unresolved_KE
+
+    if KE == 0 && h⁺ΔB == 0 # Alistar Adcroft's theorem
         return 0
     else
-        return hΔB / KE
+        return h⁺ΔB / KE
     end
 end
 
@@ -249,9 +245,9 @@ function mixing_depth(m)
         z★ = m.grid.zf[ih₁+1] # "mixing depth" is just above where Ri = inf.
 
     elseif Ri₁ < m.parameters.CRi # We descended to ih₁=2 and Ri is still too low:
-        z★ = m.grid.zf[1]         # mixing depth extends to bottom of grid.
+        z★ = m.grid.zf[2]         # mixing depth extends to top of bottom grid cell.
 
-    else                                             # We have descended below critical Ri:
+    else # We have descended below critical Ri.
         if ih₁ == m.grid.N
             z★ = m.grid.zf[m.grid.N]
         else
@@ -295,8 +291,6 @@ function w_scale_unstable(Cd, Cκ, Cunst, Cb, Cτ, ωτ, ωb, dϵ, n)
     end
 end
 
-const nU = 1/4
-const nT = 1/2
 
 "Return the vertical velocity scale for momentum at face point i."
 function w_scale_U(m, i)
@@ -336,9 +330,9 @@ const w_scale_S = w_scale_T
 #
 
 """
-    nonlocal_flux(flux, d, shape=default_shape)
+    N(CN, flux, d, shape=default_shape)
 
-Returns the nonlocal flux, N = flux*shape(d),
+Returns the nonlocal flux, N = CN*flux*shape(d),
 where `flux` is the flux of some quantity out of the surface,
 `shape` is a shape function, and `d` is a non-dimensional depth coordinate
 that increases from 0 at the surface to 1 at the bottom of the mixing layer.
@@ -348,43 +342,18 @@ a positive surface flux implies negative surface flux divergence,
 which implies a reduction to the quantity in question.
 For example, positive heat flux out of the surface implies cooling.
 """
-function nonlocal_flux(flux, d, shape=default_shape_N)
-    if 0 < d < 1
-        return flux*shape(d) # not minus sign due to flux convention
+N(CN, flux, d, shape=default_shape_N) = 0 < d < 1 ? CN*flux*shape(d) : 0
+
+function ∂N∂z(CN, Fϕ, m, i)
+    if isunstable(m)
+        return (N(CN, Fϕ, d(m, i+1)) - N(CN, Fϕ, d(m, i))) / Δf(m.grid, i)
     else
         return 0
     end
 end
 
-const N = nonlocal_flux
-
-∂NT∂z(m, i) = ( N(m.state.Fθ, d(m, i+1)) - N(m.state.Fθ, d(m, i)) ) / Δf(m.grid, i)
-∂NS∂z(m, i) = ( N(m.state.Fs, d(m, i+1)) - N(m.state.Fs, d(m, i)) ) / Δf(m.grid, i)
-
-#
-# Local diffusive flux
-#
-
-const BC = BoundaryCondition
-
-# ∇K∇c for c::CellField
-K∂z(K, c, i) = K*∂z(c, i)
-∇K∇c(Kᵢ₊₁, Kᵢ, c, i)              = ( K∂z(Kᵢ₊₁, c, i+1) -    K∂z(Kᵢ, c, i)      ) /    Δf(c, i)
-∇K∇c_top(Kᵢ, c, top_flux)         = (     -top_flux     - K∂z(Kᵢ, c, length(c)) ) / Δf(c, length(c))
-∇K∇c_bottom(Kᵢ₊₁, c, bottom_flux) = (  K∂z(Kᵢ₊₁, c, 2)  +     bottom_flux       ) /    Δf(c, 1)
-
-## Top and bottom flux estimates for constant (Dirichlet) boundary conditions
-bottom_flux(K, c, c_bndry, Δf) = -2K*( bottom(c) - c_bndry ) / bottom(Δf) # -K*∂c/∂z at the bottom
-top_flux(K, c, c_bndry, Δf)    = -2K*(  c_bndry  -  top(c) ) /   top(Δf)  # -K*∂c/∂z at the top
-
-∇K∇c_top(Kᵢ, c, bc::BC{<:Flux}, model) = ∇K∇c_top(Kᵢ, c, get_bc(bc, model))
-∇K∇c_bottom(Kᵢ₊₁, Kᵢ, c, bc::BC{<:Flux}, model) = ∇K∇c_bottom(Kᵢ₊₁, c, getbc(model, bc))
-∇K∇c_bottom(Kᵢ₊₁, Kᵢ, c, bc::BC{<:Gradient}, model) = ∇K∇c_bottom(Kᵢ₊₁, c, -Kᵢ*getbc(model, bc))
-
-function ∇K∇c_bottom(Kᵢ₊₁, Kᵢ, c, bc::BC{<:Value}, model)
-    flux = bottom_flux(Kᵢ, c, getbc(model, bc), Δf(model.grid, 1))
-    return ∇K∇c_bottom(Kᵢ₊₁, c, flux)
-end
+∂NT∂z(m, i) = ∂N∂z(m.parameters.CN, m.state.Fθ, m, i)
+∂NS∂z(m, i) = ∂N∂z(m.parameters.CN, m.state.Fs, m, i)
 
 #
 # Equation entry
@@ -393,31 +362,33 @@ end
 function calc_rhs_explicit!(∂t, m)
 
     # Preliminaries
-    U, V, T, S = m.solution
     update_state!(m)
+    U, V, T, S = m.solution
 
-    for i in interior(U)
-        @inbounds begin
-            ∂t.U[i] = ∇K∇c(K_U(m, i+1), K_U(m, i), U, i) + m.constants.f*V[i]
-            ∂t.V[i] = ∇K∇c(K_V(m, i+1), K_V(m, i), V, i) - m.constants.f*U[i]
-            ∂t.T[i] = ∇K∇c(K_T(m, i+1), K_T(m, i), T, i) - ∂NT∂z(m, i)
-            ∂t.S[i] = ∇K∇c(K_S(m, i+1), K_S(m, i), S, i) - ∂NS∂z(m, i)
+    @inbounds begin
+
+        for i in interior(U)
+            ∂t.U[i] = ∇K∇c(KU(m, i+1), KU(m, i), U, i) + m.constants.f*V[i]
+            ∂t.V[i] = ∇K∇c(KV(m, i+1), KV(m, i), V, i) - m.constants.f*U[i]
+            ∂t.T[i] = ∇K∇c(KT(m, i+1), KT(m, i), T, i) - ∂NT∂z(m, i)
+            ∂t.S[i] = ∇K∇c(KS(m, i+1), KS(m, i), S, i) - ∂NS∂z(m, i)
         end
-    end
 
-    # Flux into the top (the only boundary condition allowed)
-    i = m.grid.N
-    ∂t.U[i] = ∇K∇c_top(K_U(m, i), U, m.state.Fu) + m.constants.f*V[i]
-    ∂t.V[i] = ∇K∇c_top(K_V(m, i), V, m.state.Fv) - m.constants.f*U[i]
-    ∂t.T[i] = ∇K∇c_top(K_T(m, i), T, m.state.Fθ) - ∂NT∂z(m, i)
-    ∂t.S[i] = ∇K∇c_top(K_S(m, i), S, m.state.Fs) - ∂NS∂z(m, i)
+        # Flux into the top (the only boundary condition allowed)
+        i = m.grid.N
+        ∂t.U[i] = ∇K∇c_top(KU(m, i), U, m.state.Fu) + m.constants.f*V[i]
+        ∂t.V[i] = ∇K∇c_top(KV(m, i), V, m.state.Fv) - m.constants.f*U[i]
+        ∂t.T[i] = ∇K∇c_top(KT(m, i), T, m.state.Fθ) - ∂NT∂z(m, i)
+        ∂t.S[i] = ∇K∇c_top(KS(m, i), S, m.state.Fs) - ∂NS∂z(m, i)
 
-    # Bottom
-    i = 1
-    ∂t.U[i] = ∇K∇c_bottom(K_U(m, i+1), K_U(m, i), U, m.bcs.U.bottom, m) + m.constants.f*V[i]
-    ∂t.V[i] = ∇K∇c_bottom(K_V(m, i+1), K_V(m, i), V, m.bcs.V.bottom, m) - m.constants.f*U[i]
-    ∂t.T[i] = ∇K∇c_bottom(K_T(m, i+1), K_T(m, i), T, m.bcs.T.bottom, m) - ∂NT∂z(m, i)
-    ∂t.S[i] = ∇K∇c_bottom(K_S(m, i+1), K_S(m, i), S, m.bcs.S.bottom, m) - ∂NS∂z(m, i)
+        # Bottom
+        i = 1
+        ∂t.U[i] = ∇K∇c_bottom(KU(m, i+1), KU(m, i), U, m.bcs.U.bottom, m) + m.constants.f*V[i]
+        ∂t.V[i] = ∇K∇c_bottom(KV(m, i+1), KV(m, i), V, m.bcs.V.bottom, m) - m.constants.f*U[i]
+        ∂t.T[i] = ∇K∇c_bottom(KT(m, i+1), KT(m, i), T, m.bcs.T.bottom, m) - ∂NT∂z(m, i)
+        ∂t.S[i] = ∇K∇c_bottom(KS(m, i+1), KS(m, i), S, m.bcs.S.bottom, m) - ∂NS∂z(m, i)
+
+    end # inbounds
 
     return nothing
 end

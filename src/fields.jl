@@ -32,7 +32,7 @@ From the standpoint of designing new turbulence closures,
 the most important function that we output is `∂z`.
 =#
 
-import Base: +, *, -, setindex!, getindex, eachindex, similar, eltype, length
+import Base: +, *, -, setindex!, getindex, eachindex, lastindex, similar, eltype, length
 
 abstract type FieldLocation end
 struct Cell <: FieldLocation end
@@ -42,7 +42,7 @@ struct Field{L, A, G} <: AbstractField{A, G}
     data::A
     grid::G
     function Field(Location, data, grid)
-        new{Location,typeof(data),typeof(grid)}(data, grid)
+        new{Location, typeof(data), typeof(grid)}(data, grid)
     end
 end
 
@@ -75,8 +75,8 @@ end
 Return a `Field{Cell}` on `grid` with its data initialized to 0.
 """
 function CellField(A::DataType, grid)
-  data = convert(A, fill(0, cell_size(grid)))
-  Field(Cell, data, grid)
+    data = convert(A, fill(0, cell_size(grid)))
+    Field(Cell, data, grid)
 end
 
 CellField(grid) = CellField(arraytype(grid), grid)
@@ -112,6 +112,8 @@ end
 # Basic 'Field' functionality
 #
 
+data(c::Field) = c.data
+
 nodes(c::CellField) = c.grid.zc
 nodes(f::FaceField) = f.grid.zf
 
@@ -120,6 +122,9 @@ length(f::FaceField) = face_length(f.grid)
 
 # All indices
 eachindex(f::AbstractField) = eachindex(f.data)
+
+lastindex(c::CellField) = c.grid.N
+lastindex(f::FaceField) = f.grid.N + 1
 
 # Interior indices, omitting boundary-adjacent values
 interior(c::CellField) = 2:c.grid.N-1
@@ -221,24 +226,24 @@ end
 # Convenience functions
 top(a) = throw("top(a) Not implemented for typeof(a) = $(typeof(a)).")
 top(a::Number) = a
-top(a::AbstractArray) = a[end]
-top(a::Field) = a.data[end]
+top(a::Union{AbstractField, AbstractArray}) = @inbounds a[end]
 
 bottom(a) = throw("bottom(a) Not implemented for typeof(a) = $(typeof(a)).")
 bottom(a::Number) = a
-bottom(a::AbstractArray) = a[1]
-bottom(a::Field) = a.data[1]
+bottom(a::Union{AbstractField, AbstractArray}) = @inbounds a[1]
 
 """
-    avz(c, i)
+    onface(c, i)
 
-Return the average of a at index i.
-The average of a `Field{Cell}` is computed at face points.
-The average of a `Field{Face}` is computed at cell points.
+Return the interpolation of `c` onto face point `i`.
 """
-avz(a, i) = throw("avz not defined for arbitrary fields.")
-avz(f::FaceField, i) = 0.5*(f.data[i+1] + f.data[i])
-avz(c::CellField, i) = 0.5*(c.data[i] + c.data[i-1])
-
-oncell(f::FaceField, i) = 0.5*(f.data[i+1] + f.data[i])
 onface(c::CellField, i) = 0.5*(c.data[i] + c.data[i-1])
+onface(c::FaceField, i) = c[i]
+
+"""
+    oncell(c, i)
+
+Return the interpolation of `c` onto cell point `i`.
+"""
+oncell(f::FaceField, i) = 0.5*(f.data[i+1] + f.data[i])
+oncell(f::CellField, i) = c[i]
