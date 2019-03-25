@@ -27,15 +27,15 @@ struct Parameters{T} <: AbstractParameters
 end
 
 function Parameters(T=Float64;
-    Cν₀ = 1e-4,
-    Cν₁ = 1e-2,
-    Cκ₀ = 1e-5,
-    Cκ₁ = 1e-2,
-    Cc  = 5,
-    Cn  = 2
+    ν₀ = 1e-4,
+    ν₁ = 1e-2,
+    κ₀ = 1e-5,
+    κ₁ = 1e-2,
+    c  = 5,
+    n  = 2
     )
 
-    Parameters{T}(Cν₀, Cν₁, Cκ₀, Cκ₁, Cc, Cn)
+    Parameters{T}(ν₀, ν₁, κ₀, κ₁, c, n)
 end
 
 mutable struct State{T} <: FieldVector{4, T}

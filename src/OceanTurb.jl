@@ -5,6 +5,7 @@ export # This file, core functionality:
     AbstractSolution,
     AbstractParameters,
     Clock,
+    Constants,
     time,
     iter,
     set!,
