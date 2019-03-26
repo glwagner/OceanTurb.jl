@@ -367,29 +367,12 @@ function calc_rhs_explicit!(∂t, m)
 
     for i in eachindex(U)
         @inbounds begin
-            ∂t.U[i] = ∇K∇c(KU(m, i+1), KU(m, i), U, i) + m.constants.f*V[i]
-            ∂t.V[i] = ∇K∇c(KV(m, i+1), KV(m, i), V, i) - m.constants.f*U[i]
+            ∂t.U[i] = ∇K∇c(KU(m, i+1), KU(m, i), U, i) + m.constants.f * V[i]
+            ∂t.V[i] = ∇K∇c(KV(m, i+1), KV(m, i), V, i) - m.constants.f * U[i]
             ∂t.T[i] = ∇K∇c(KT(m, i+1), KT(m, i), T, i) - ∂NT∂z(m, i)
             ∂t.S[i] = ∇K∇c(KS(m, i+1), KS(m, i), S, i) - ∂NS∂z(m, i)
         end
     end
-
-    #=
-        # Flux into the top (the only boundary condition allowed)
-        i = m.grid.N
-        ∂t.U[i] = ∇K∇c_top(KU(m, i), U, m.state.Fu) + m.constants.f*V[i]
-        ∂t.V[i] = ∇K∇c_top(KV(m, i), V, m.state.Fv) - m.constants.f*U[i]
-        ∂t.T[i] = ∇K∇c_top(KT(m, i), T, m.state.Fθ) - ∂NT∂z(m, i)
-        ∂t.S[i] = ∇K∇c_top(KS(m, i), S, m.state.Fs) - ∂NS∂z(m, i)
-
-        # Bottom
-        i = 1
-        ∂t.U[i] = ∇K∇c_bottom(KU(m, i+1), KU(m, i), U, m.bcs.U.bottom, m) + m.constants.f*V[i]
-        ∂t.V[i] = ∇K∇c_bottom(KV(m, i+1), KV(m, i), V, m.bcs.V.bottom, m) - m.constants.f*U[i]
-        ∂t.T[i] = ∇K∇c_bottom(KT(m, i+1), KT(m, i), T, m.bcs.T.bottom, m) - ∂NT∂z(m, i)
-        ∂t.S[i] = ∇K∇c_bottom(KS(m, i+1), KS(m, i), S, m.bcs.S.bottom, m) - ∂NS∂z(m, i)
-    end # inbounds
-    =#
 
     return nothing
 end

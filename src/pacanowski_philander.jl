@@ -121,28 +121,19 @@ function calc_rhs_explicit!(∂t, m)
     update_state!(m)
     U, V, T, S = m.solution
 
-    @inbounds begin
+    N = m.grid.N
+    update_ghost_cells!(U, KU(m, 1), KU(m, N), m, m.bcs.U)
+    update_ghost_cells!(V, KV(m, 1), KV(m, N), m, m.bcs.V)
+    update_ghost_cells!(T, KT(m, 1), KT(m, N), m, m.bcs.T)
+    update_ghost_cells!(S, KS(m, 1), KS(m, N), m, m.bcs.S)
 
-        for i in interior(U)
+    for i in eachindex(U)
+        @inbounds begin
             ∂t.U[i] = ∇K∇c(KU(m, i+1), KU(m, i), U, i) + m.constants.f * V[i]
             ∂t.V[i] = ∇K∇c(KV(m, i+1), KV(m, i), V, i) - m.constants.f * U[i]
             ∂t.T[i] = ∇K∇c(KT(m, i+1), KT(m, i), T, i)
             ∂t.S[i] = ∇K∇c(KS(m, i+1), KS(m, i), S, i)
         end
-
-        # Flux into the top (the only boundary condition allowed)
-        i = m.grid.N
-        ∂t.U[i] = ∇K∇c_top(KU(m, i), U, m.state.Fu) + m.constants.f*V[i]
-        ∂t.V[i] = ∇K∇c_top(KV(m, i), V, m.state.Fv) - m.constants.f*U[i]
-        ∂t.T[i] = ∇K∇c_top(KT(m, i), T, m.state.Fθ)
-        ∂t.S[i] = ∇K∇c_top(KS(m, i), S, m.state.Fs)
-
-        # Bottom
-        i = 1
-        ∂t.U[i] = ∇K∇c_bottom(KU(m, i+1), m.parameters.Cν₀, U, m.bcs.U.bottom, m) + m.constants.f*V[i]
-        ∂t.V[i] = ∇K∇c_bottom(KV(m, i+1), m.parameters.Cν₀, V, m.bcs.V.bottom, m) - m.constants.f*U[i]
-        ∂t.T[i] = ∇K∇c_bottom(KT(m, i+1), m.parameters.Cκ₀, T, m.bcs.T.bottom, m)
-        ∂t.S[i] = ∇K∇c_bottom(KS(m, i+1), m.parameters.Cκ₀, S, m.bcs.S.bottom, m)
     end
 
     return nothing
