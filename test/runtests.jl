@@ -41,6 +41,10 @@ end
             @test test_set_array_field(loc, T)
             @test test_set_function_field(loc, T)
         end
+        @test test_integral(T)
+        @test test_ghost_cell_value(T)
+        @test test_ghost_cell_gradient(T)
+        @test test_ghost_cell_flux(T)
     end
     @test test_field_indexing()
 end
@@ -50,6 +54,7 @@ end
     @test test_diffusion_basic()
     @test test_diffusion_set_c()
     @test test_diffusion_cosine()
+    @test test_diffusive_flux()
 end
 
 @testset "KPP" begin

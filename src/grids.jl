@@ -1,29 +1,6 @@
 #= Grid types for OceanTurb.jl.
 
-OceanTurb.jl solves one-dimensional PDEs on a staggered grid.
-The geometry of a grid with N=3 is
-
-```
-      ▲ z
-      |
-
-         i=4           *    (ghost cell)
-                j=4   ===       ▲
-         i=3           *        | Δf[3]
-                j=3   ---       ▼
-         i=2           *    ▲
-                j=2   ---   | Δc[2]
-         i=1           *    ▼
-                j=1   ===
-         i=0           *    (ghost cell)
-```
-
-where the i's index cells and the j's index faces.
-The variable Δc gives the separation between
-cell centers, and Δf gives the separation between faces.
-
-Accordingly, variables located in cells (`CellFields`) have dimension N,
-and variables located at cell faces (`FaceFields`) have dimension dimension N+1.
+See fields.jl for the geometry of an OceanTurb.Field.
 =#
 
 import Base: eltype, length, size

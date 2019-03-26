@@ -24,14 +24,12 @@ The geometry of a grid with `N=3` is
 where the i's index cells and the j's index faces.
 The variable Δc gives the separation between
 cell centers, and Δf gives the separation between faces.
+Ghost cells at i=0 and i=N+1 bound the domain.
 
 There are two types of fields:
 
-  1. Fields defined at cell centers with dimension `N`: `Field{Cell}`
-  2. Fields defined at cell faces with dimension `N+1`: `Field{Face}`
-
-From the standpoint of designing new turbulence closures,
-the most important function that we output is `∂z`.
+  1. Fields defined at cell centers with dimension `N+2`: `Field{Cell}`
+  2. Fields defined at cell interfaces with dimension `N+1`: `Field{Face}`
 =#
 using OffsetArrays
 
@@ -186,6 +184,14 @@ function set_default_bcs!(c)
     return nothing
 end
 
+function integral(c::CellField)
+    total = 0
+    for i in eachindex(c)
+        @inbounds total += c[i] * Δf(c.grid, i)
+    end
+    return total
+end
+
 similar(c::CellField) = CellField(c.grid)
 similar(f::FaceField) = FaceField(f.grid)
 
@@ -272,7 +278,9 @@ end
 # Convenience functions
 top(a) = throw("top(a) Not implemented for typeof(a) = $(typeof(a)).")
 top(a::Number) = a
-top(a::Union{AbstractField, AbstractArray}) = @inbounds a[end]
+top(a::AbstractArray) = @inbounds a[end]
+top(a::CellField) = @inbounds a[a.grid.N]
+top(a::FaceField) = @inbounds a[a.grid.N+1]
 
 bottom(a) = throw("bottom(a) Not implemented for typeof(a) = $(typeof(a)).")
 bottom(a::Number) = a
@@ -284,12 +292,15 @@ bottom(a::Union{AbstractField, AbstractArray}) = @inbounds a[1]
 Return the interpolation of `c` onto face point `i`.
 """
 onface(c::CellField, i) = 0.5*(c.data[i] + c.data[i-1])
-onface(c::FaceField, i) = c[i]
+onface(f::FaceField, i) = f[i]
 
 """
-    oncell(c, i)
+    oncell(f, i)
 
-Return the interpolation of `c` onto cell point `i`.
+Return the interpolation of `f` onto cell point `i`.
 """
 oncell(f::FaceField, i) = 0.5*(f.data[i+1] + f.data[i])
-oncell(f::CellField, i) = c[i]
+oncell(c::CellField, i) = c[i]
+
+"Return the total flux (advective + diffusive) across face i."
+flux(w, κ, c, i) = w * onface(c, i) - κ * ∂z(c, i)

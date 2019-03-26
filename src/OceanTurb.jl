@@ -53,6 +53,7 @@ export # This file, core functionality:
     interior,
     top,
     bottom,
+    integral,
 
     # equations.jl
     Equation,
