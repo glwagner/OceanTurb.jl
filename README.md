@@ -19,7 +19,7 @@ pkg> add https://github.com/glwagner/OceanTurb.jl.git
 
 Coming soon.
 
-# The Boundary Layer Models
+# The turbulence models
 
 This code aims to provide solvers for as many oceanic boundary layer
 models as possible.
