@@ -187,8 +187,8 @@ end
 # Ocean Turbulence Models
 #
 
-include("diffusion.jl")
-include("k_profile_parameterization.jl")
-include("pacanowski_philander.jl")
+include("models/diffusion.jl")
+include("models/k_profile_parameterization.jl")
+include("models/pacanowski_philander.jl")
 
 end # module
