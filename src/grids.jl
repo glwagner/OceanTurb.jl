@@ -7,6 +7,7 @@ The geometry of a grid with N=3 is
       ▲ z
       |
 
+         i=4           *    (ghost cell)
                 j=4   ===       ▲
          i=3           *        | Δf[3]
                 j=3   ---       ▼
@@ -14,6 +15,7 @@ The geometry of a grid with N=3 is
                 j=2   ---   | Δc[2]
          i=1           *    ▼
                 j=1   ===
+         i=0           *    (ghost cell)
 ```
 
 where the i's index cells and the j's index faces.

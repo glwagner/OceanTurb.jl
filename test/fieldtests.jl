@@ -37,7 +37,7 @@ function test_face_∂z(T)
   f = FaceField([2, 4, 6], grid)
   fz = ∂z(f)
   fz_answer = CellField([2, 2], grid)
-  fz.data == fz_answer.data
+  fz.data[1:2] == fz_answer.data[1:2]
 end
 
 function test_cell_plus(T)

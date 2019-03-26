@@ -149,8 +149,8 @@ function set!(c::CellField, func::Function)
     data = func.(nodes(c))
     set!(c, data)
     # Set ghost points to get approximation to first derivative at boundary
-    data_bottom = func(model.grid.zf[1])
-    data_top = func(model.grid.zf[end])
+    data_bottom = func(c.grid.zf[1])
+    data_top = func(c.grid.zf[end])
 
     # Set ghost values so that
     # ∂z(c, 1) = (c[1] - c[0]) / Δc(c, 1) = (c[1] - c_bottom) / 0.5*Δc(c, 1)
@@ -158,10 +158,10 @@ function set!(c::CellField, func::Function)
     # and
     # ∂z(c, N+1) = (c[N+1] - c[N]) / Δc(c, N+1) = (c_top - c[N]) / 0.5*Δc(c, N)
 
-    N = model.grid.N
+    N = c.grid.N
     @inbounds begin
-        c[0] = c[1] - 2 * (c[1] - c_bottom)
-        c[N+1] = c[N] + 2 * (c_top - c[N])
+        c[0] = c[1] - 2 * (c[1] - data_bottom)
+        c[N+1] = c[N] + 2 * (data_top - c[N])
     end
 
     return nothing
@@ -173,15 +173,15 @@ function set!(c::CellField, data::AbstractArray)
     for i in eachindex(data)
         @inbounds c[i] = data[i]
     end
-    # Default boundary conditions
-    set_default_bcs!(c)
+    # Default boundary conditions if data is not an OffsetArray
+    typeof(data) <: OffsetArray || set_default_bcs!(c)
     return nothing
 end
 
 function set_default_bcs!(c)
     @inbounds begin
         c[0] = c[1]
-        c[model.grid.N+1] = c[model.grid.N]
+        c[c.grid.N+1] = c[c.grid.N]
     end
     return nothing
 end

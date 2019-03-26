@@ -80,6 +80,9 @@ export # This file, core functionality:
     set_flux_bcs!,
     set_bcs!,
     getbc,
+    update_top_ghost_cell!,
+    update_bottom_ghost_cell!,
+    update_ghost_cells!,
 
     # Ocean turbulence models
     Diffusion,

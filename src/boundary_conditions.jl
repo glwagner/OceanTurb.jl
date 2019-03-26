@@ -25,27 +25,24 @@ getbc(model, bc::BC{C, <:Number}) where C = bc.condition
 """
     FluxBoundaryCondition(boundary, flux)
 
-Constuct a boundary condition that specifies the flux
-of some field on a boundary. If `flux` is a function,
-its arguments must be synced with the expection of `Model`.
+Construct a boundary condition that specifies a field's flux
+of some field on a boundary.
 """
 FluxBoundaryCondition(bc) = BoundaryCondition(Flux, bc)
 
 """
-    ValueBoundaryCondition(boundary, flux)
+    ValueBoundaryCondition(boundary, value)
 
-Constuct a boundary condition that specifies the value
-of some field on a boundary. If `flux` is a function,
-its arguments must be synced with the expection of `Model`.
+Construct a boundary condition that specifies a field's value
+of some field on a boundary.
 """
 ValueBoundaryCondition(bc) = BoundaryCondition(Value, bc)
 
 """
-    GradientBoundaryCondition(boundary, flux)
+    GradientBoundaryCondition(boundary, gradient)
 
-Constuct a boundary condition that specifies the gradient
-of some field on a boundary. If `flux` is a function,
-its arguments must be synced with the expection of `Model`.
+Construct a boundary condition that specifies a field's gradient
+on a boundary.
 """
 GradientBoundaryCondition(bc) = BoundaryCondition(Gradient, bc)
 
@@ -134,6 +131,7 @@ end
 
 Set flux boundary conditions on `fld` as  `bcs = (bottom_bc, top_bc)`
 
+
     set_flux_bcs!(model; kwargs...)
 
 Set flux boundary conditions for `model`.
@@ -151,6 +149,50 @@ function set_flux_bcs!(model, fld, bcs)
     return nothing
 end
 
-function fill_top_ghost_cells!(c, κ, bc)
+"Return c₁, where c₁ = c₀ + ∂c/∂z * (z₁ - z₀) = c₀ + ∂c/∂z * Δz."
+linear_extrapolation(c₀, ∂c∂z, Δz) = c₀ + ∂c∂z * Δz
+
+get_gradient(c₀, Δf, κ, model, bc::BoundaryCondition{<:Gradient}) = getbc(model, bc)
+get_gradient(c₀, Δf, κ, model, bc::BoundaryCondition{<:Flux}) = -getbc(model, bc) / κ
+
+function get_gradient(cᴺ, Δf, κ, model, bc::BoundaryCondition{<:Value})
+    c_bndry = getbc(model, bc)
+    return 2 * (c_bndry - cᴺ) / Δf
+end
+
+"""
+    update_top_ghost_cell!(c, κ, model, bc)
+
+Update the top ghost cell of c given the boundary condition `bc`, `model`, and
+diffusivity `kappa`. `kappa` is used only if a flux boundary condition
+is specified.
+"""
+function update_top_ghost_cell!(c, κ, model, bc)
+    ∂c∂z = get_gradient(c[c.grid.N], Δf(c.grid, c.grid.N), κ, model, bc)
+    c[c.grid.N+1] = linear_extrapolation(c[c.grid.N], ∂c∂z, Δc(c.grid, c.grid.N+1))
+    return nothing
+end
+
+"""
+    update_bottom_ghost_cell!(c, κ, model, bc)
+
+Update the bottom ghost cell of c given the boundary condition `bc`, `model`, and
+diffusivity `kappa`. `kappa` is used only if a flux boundary condition
+is specified.
+"""
+function update_bottom_ghost_cell!(c, κ, model, bc)
+    ∂c∂z = get_gradient(c[1], -Δf(c.grid, 1), κ, model, bc)
+    c[0] = linear_extrapolation(c[1], ∂c∂z, -Δc(c.grid, 1))
+    return nothing
+end
+
+"""
+    update_ghost_cells!(c, κ, model, bc)
+
+Update the top and bottom ghost cells of `c` for `model`.
+"""
+function update_ghost_cells!(c, κbottom, κtop, model, fieldbcs)
+    update_bottom_ghost_cell!(c, κbottom, model, fieldbcs.bottom)
+    update_top_ghost_cell!(c, κtop, model, fieldbcs.top)
     return nothing
 end
