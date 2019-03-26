@@ -21,8 +21,8 @@ Coming soon.
 
 # The turbulence models
 
-This code aims to provide solvers for as many oceanic boundary layer
-models as possible.
+This code aims to provide solvers for as many ocean surface boundary layer
+turbulence models as possible.
 Currently we have solvers for
 
 * the diffusion equation
