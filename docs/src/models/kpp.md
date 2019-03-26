@@ -69,7 +69,8 @@ Buoyancy forcing is equivalently
 ```math
 \beq
 F_b = g \left ( \alpha F_\theta - \beta F_s \right ) \p
-\ee
+\eeq
+```
 
 The turbulent velocity scales associated with buoyancy and wind forcing are
 
@@ -115,15 +116,13 @@ The function ``\F{\K}{}(z)`` is
 
 ```math
 \beq  \label{unresolved_ke}
-\F{\K}{}(z) = \C{\K}{} (-z)^{4/3} \sqrt{ \max \left [ 0, B_z(z) \right ] } \max \left [ 0, F_b^{1/3} \right ] \p
+\F{\K}{}(z) = \C{\K}{} (-z)^{4/3} \sqrt{ \max \left [ 0, B_z(z) \right ] } \max \left [ 0, F_b \right ]^{1/3} + \C{\K_0}{} \p
 \eeq
 ```
 
-The unresolved kinetic energy constant is ``\C{\K}{} = 4.32``.
-
-
-where ``g`` is gravitational acceleration and ``\rho_0, T_0, S_0`` are reference densities, temperatures, and salinities.
-``\rho'`` is the density deviation from the reference.
+The unresolved kinetic energy constant is ``\C{\K}{} = 4.32`` and the minimum unresolved kinetic energy is ``\C{\K_0}{} = 10^{-11}``.
+To solve \eqref{bulk_ri} for ``h``, we evaluate the right side of \eqref{bulk_ri} for ``z < 0`` at increasing depths until the right side rises above the critical ``\C{\Ri}{}``.
+We then linearly interpolate to find ``h``.
 
 ### Non-local flux
 

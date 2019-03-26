@@ -1,35 +1,14 @@
 #= Grid types for OceanTurb.jl.
 
-OceanTurb.jl solves one-dimensional PDEs on a staggered grid.
-The geometry of a grid with N=3 is
-
-```
-      ▲ z
-      |
-
-                j=4   ===       ▲
-         i=3           *        | Δf[3]
-                j=3   ---       ▼
-         i=2           *    ▲
-                j=2   ---   | Δc[2]
-         i=1           *    ▼
-                j=1   ===
-```
-
-where the i's index cells and the j's index faces.
-The variable Δc gives the separation between
-cell centers, and Δf gives the separation between faces.
-
-Accordingly, variables located in cells (`CellFields`) have dimension N,
-and variables located at cell faces (`FaceFields`) have dimension dimension N+1.
+See fields.jl for the geometry of an OceanTurb.Field.
 =#
 
 import Base: eltype, length, size
 
 # Staggered grid lengths and sizes for fields
-cell_length(N) = N
+cell_length(N) = N+2
 face_length(N) = N+1
-  cell_size(N) = (N,)
+  cell_size(N) = (N+2,)
   face_size(N) = (N+1,)
 
      height(g::Grid) = g.L
@@ -79,8 +58,8 @@ function UniformGrid(T, N, L)
   L = convert(T, L)
   half_Δ = convert(T, 0.5Δ)
 
-  zc = range(-L+half_Δ; length=cell_length(N), stop=-half_Δ)
-  zf = range(-L; length=face_length(N), stop=zero(T))
+  zc = range(-L+half_Δ; length=N, stop=-half_Δ)
+  zf = range(-L; length=N+1, stop=zero(T))
 
   UniformGrid(N, L, Δ, Δ, zc, zf)
 end

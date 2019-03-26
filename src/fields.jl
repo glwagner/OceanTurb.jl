@@ -10,6 +10,7 @@ The geometry of a grid with `N=3` is
       ▲ z
       |
 
+         i=4           *
                 j=4   ===       ▲
          i=3           *        | Δf (i=3)
                 j=3   ---       ▼
@@ -17,20 +18,20 @@ The geometry of a grid with `N=3` is
                 j=2   ---   | Δc (j=2)
          i=1           *    ▼
                 j=1   ===
+         i=0           *
 ```
 
 where the i's index cells and the j's index faces.
 The variable Δc gives the separation between
 cell centers, and Δf gives the separation between faces.
+Ghost cells at i=0 and i=N+1 bound the domain.
 
 There are two types of fields:
 
-  1. Fields defined at cell centers with dimension `N`: `Field{Cell}`
-  2. Fields defined at cell faces with dimension `N+1`: `Field{Face}`
-
-From the standpoint of designing new turbulence closures,
-the most important function that we output is `∂z`.
+  1. Fields defined at cell centers with dimension `N+2`: `Field{Cell}`
+  2. Fields defined at cell interfaces with dimension `N+1`: `Field{Face}`
 =#
+using OffsetArrays
 
 import Base: +, *, -, setindex!, getindex, eachindex, lastindex, similar, eltype, length
 
@@ -76,7 +77,8 @@ Return a `Field{Cell}` on `grid` with its data initialized to 0.
 """
 function CellField(A::DataType, grid)
     data = convert(A, fill(0, cell_size(grid)))
-    Field(Cell, data, grid)
+    offset_data = OffsetArray(data, 0:grid.N+1)
+    Field(Cell, offset_data, grid)
 end
 
 CellField(grid) = CellField(arraytype(grid), grid)
@@ -112,22 +114,24 @@ end
 # Basic 'Field' functionality
 #
 
-data(c::Field) = c.data
+data(c::FaceField) = c.data
+data(c::CellField) = view(c.data, 1:c.grid.N)
 
 nodes(c::CellField) = c.grid.zc
 nodes(f::FaceField) = f.grid.zf
 
-length(c::CellField) = cell_length(c.grid)
-length(f::FaceField) = face_length(f.grid)
+length(c::CellField) = c.grid.N
+length(f::FaceField) = f.grid.N + 1
 
 # All indices
-eachindex(f::AbstractField) = eachindex(f.data)
+eachindex(c::CellField) = 1:c.grid.N
+eachindex(f::FaceField) = 1:f.grid.N + 1
 
 lastindex(c::CellField) = c.grid.N
 lastindex(f::FaceField) = f.grid.N + 1
 
 # Interior indices, omitting boundary-adjacent values
-interior(c::CellField) = 2:c.grid.N-1
+interior(c::CellField) = 2:c.grid.N - 1
 interior(f::FaceField) = 2:f.grid.N
 
 # Sugary sweet: access indices of c.data by indexing into c.
@@ -136,9 +140,57 @@ setindex!(c::AbstractField, d, inds...) = setindex!(c.data, d, inds...)
 setindex!(c::AbstractField, d::Field, inds...) = setindex!(c.data, d.data, inds...)
 
 set!(c::AbstractField, data::Number) = fill!(c.data, data)
-set!(c::AbstractField{A}, data::AbstractArray) where A = c.data .= convert(A, data)
-set!(c::AbstractField{A}, data::Function) where A = c.data .= convert(A, data.(nodes(c)))
 set!(c::AbstractField{Ac, G}, d::AbstractField{Ad, G}) where {Ac, Ad, G} = c.data .= convert(Ac, d.data)
+set!(c::FaceField, fcn::Function) = c.data .= fcn.(nodes(c))
+
+function set!(c::CellField, func::Function)
+    data = func.(nodes(c))
+    set!(c, data)
+    # Set ghost points to get approximation to first derivative at boundary
+    data_bottom = func(c.grid.zf[1])
+    data_top = func(c.grid.zf[end])
+
+    # Set ghost values so that
+    # ∂z(c, 1) = (c[1] - c[0]) / Δc(c, 1) = (c[1] - c_bottom) / 0.5*Δc(c, 1)
+    #
+    # and
+    # ∂z(c, N+1) = (c[N+1] - c[N]) / Δc(c, N+1) = (c_top - c[N]) / 0.5*Δc(c, N)
+
+    N = c.grid.N
+    @inbounds begin
+        c[0] = c[1] - 2 * (c[1] - data_bottom)
+        c[N+1] = c[N] + 2 * (data_top - c[N])
+    end
+
+    return nothing
+end
+
+set!(f::FaceField, data::AbstractArray) = f.data .= data
+
+function set!(c::CellField, data::AbstractArray)
+    for i in eachindex(data)
+        @inbounds c[i] = data[i]
+    end
+    # Default boundary conditions if data is not an OffsetArray
+    typeof(data) <: OffsetArray || set_default_bcs!(c)
+    return nothing
+end
+
+function set_default_bcs!(c)
+    @inbounds begin
+        c[0] = c[1]
+        c[c.grid.N+1] = c[c.grid.N]
+    end
+    return nothing
+end
+
+function integral(c::CellField)
+    total = 0
+    for i in eachindex(c)
+        @inbounds total += c[i] * Δf(c.grid, i)
+    end
+    return total
+end
 
 similar(c::CellField) = CellField(c.grid)
 similar(f::FaceField) = FaceField(f.grid)
@@ -193,7 +245,7 @@ and the derviative of a `Field{Face}` is computed at cell points.
 
 "Calculate `f = ∂c/∂z` in the grid interior."
 function ∂z!(f::FaceField, c::CellField)
-    for i = interior(f)
+    for i = eachindex(f)
         @inbounds f.data[i] = ∂z(c, i)
     end
     return nothing
@@ -226,7 +278,9 @@ end
 # Convenience functions
 top(a) = throw("top(a) Not implemented for typeof(a) = $(typeof(a)).")
 top(a::Number) = a
-top(a::Union{AbstractField, AbstractArray}) = @inbounds a[end]
+top(a::AbstractArray) = @inbounds a[end]
+top(a::CellField) = @inbounds a[a.grid.N]
+top(a::FaceField) = @inbounds a[a.grid.N+1]
 
 bottom(a) = throw("bottom(a) Not implemented for typeof(a) = $(typeof(a)).")
 bottom(a::Number) = a
@@ -238,12 +292,15 @@ bottom(a::Union{AbstractField, AbstractArray}) = @inbounds a[1]
 Return the interpolation of `c` onto face point `i`.
 """
 onface(c::CellField, i) = 0.5*(c.data[i] + c.data[i-1])
-onface(c::FaceField, i) = c[i]
+onface(f::FaceField, i) = f[i]
 
 """
-    oncell(c, i)
+    oncell(f, i)
 
-Return the interpolation of `c` onto cell point `i`.
+Return the interpolation of `f` onto cell point `i`.
 """
 oncell(f::FaceField, i) = 0.5*(f.data[i+1] + f.data[i])
-oncell(f::CellField, i) = c[i]
+oncell(c::CellField, i) = c[i]
+
+"Return the total flux (advective + diffusive) across face i."
+flux(w, κ, c, i) = w * onface(c, i) - κ * ∂z(c, i)

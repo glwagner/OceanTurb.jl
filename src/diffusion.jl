@@ -30,7 +30,7 @@ function Model(; N=10, L=1.0, κ=0.1,
     )
 
     solution = Solution(CellField(grid))
-    equation = Equation(calc_rhs!)
+    equation = Equation(calc_rhs_explicit!)
     timestepper = Timestepper(:ForwardEuler, solution)
 
     return Model(timestepper, grid, equation, solution, bcs, Clock(), parameters)
@@ -43,20 +43,13 @@ end
 # Equation specification
 κ(m, i) = m.parameters.κ
 
-function calc_rhs!(∂t, m)
+function calc_rhs_explicit!(∂t, m)
 
     c = m.solution.c
+    update_ghost_cells!(c, κ(m, 1), κ(m, c.grid.N), m, m.bcs.c)
 
-    @inbounds begin
-        for i in interior(c)
-            @inbounds ∂t.c[i] = ∇K∇c(κ(m, i+1), κ(m, i), c, i)
-        end
-
-        i = m.grid.N
-        ∂t.c[i] = ∇K∇c_top(κ(m, i+1), κ(m, i), c, m.bcs.c.top, m)
-
-        i = 1
-        ∂t.c[i] = ∇K∇c_bottom(κ(m, i+1), κ(m, i), c, m.bcs.c.bottom, m)
+    for i in eachindex(c)
+        @inbounds ∂t.c[i] = ∇K∇c(κ(m, i+1), κ(m, i), c, i)
     end
 
     return nothing

@@ -27,5 +27,21 @@ function test_diffusion_cosine()
     iterate!(model, dt)
 
     # The error tolerance is a bit arbitrary.
-    norm(c_ans.(z, model.clock.time) .- model.solution.c.data) < model.grid.N*1e-6
+    norm(c_ans.(z, time(model)) .- data(model.solution.c)) < model.grid.N*1e-6
+end
+
+function test_diffusive_flux()
+    model = Diffusion.Model(N=10, L=1, κ=1)
+    top_flux = 0.3
+    bottom_flux = 0.13
+    model.bcs.c.top = FluxBoundaryCondition(top_flux)
+    model.bcs.c.bottom = FluxBoundaryCondition(bottom_flux)
+
+    C₀ = integral(model.solution.c)
+    C(t) = C₀ - (top_flux - bottom_flux) * t
+
+    dt = 1e-6
+    iterate!(model, dt, 10)
+
+    return C(time(model)) ≈ integral(model.solution.c)
 end

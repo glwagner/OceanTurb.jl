@@ -8,7 +8,7 @@ function test_pp_basic()
 end
 
 function test_pp_diffusion_cosine()
-    parameters = PacanowskiPhilander.Parameters(Cκ₀=1, Cκ₁=0)
+    parameters = PacanowskiPhilander.Parameters(κ₀=1, κ₁=0)
     model = PacanowskiPhilander.Model(N=100, L=π/2, parameters=parameters)
     z = model.grid.zc
 
@@ -21,5 +21,5 @@ function test_pp_diffusion_cosine()
     iterate!(model, dt)
 
     # The error tolerance is a bit arbitrary.
-    norm(c_ans.(z, model.clock.time) .- model.solution.T.data) < model.grid.N*1e-6
+    norm(c_ans.(z, time(model)) .- data(model.solution.T)) < model.grid.N*1e-6
 end

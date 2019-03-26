@@ -28,29 +28,30 @@ struct Parameters{T} <: AbstractParameters
     Cκ    :: T  # Von Karman constant
     CN    :: T  # Non-local flux proportionality constant
 
-    Cstab :: T  # Reduction of wind-driven diffusivity due to stable buoyancy flux
-    Cunst :: T  # Reduction of wind-driven diffusivity due to stable buoyancy flux
+    Cstab :: T  # Stable buoyancy flux parameter for wind-driven turbulence
+    Cunst :: T  # Unstable buoyancy flux parameter for wind-driven turbulence
 
-    Cb_U  :: T  # Buoyancy flux viscosity proportionality for convective turbulence
-    Cτ_U  :: T  # Wind stress viscosity proportionality for convective turbulence
-    Cb_T  :: T  # Buoyancy flux diffusivity proportionality for convective turbulence
-    Cτ_T  :: T  # Wind stress diffusivity proportionality for convective turbulence
+    Cb_U  :: T  # Buoyancy flux parameter for convective turbulence
+    Cτ_U  :: T  # Wind stress parameter for convective turbulence
+    Cb_T  :: T  # Buoyancy flux parameter for convective turbulence
+    Cτ_T  :: T  # Wind stress parameter for convective turbulence
 
-    Cd_U  :: T  # Buoyancy flux diffusivity proportionality for convective turbulence
-    Cd_T  :: T  # Wind stress diffusivity proportionality for convective turbulence
+    Cd_U  :: T  # Wind mixing regime threshold for momentum
+    Cd_T  :: T  # Wind mixing regime threshold for tracers
 
-    CRi   :: T  # Critical bulk_richardson_number number
+    CRi   :: T  # Critical bulk Richardson number
     CKE   :: T  # Unresolved turbulence parameter
+    CKE₀  :: T  # Minimum unresolved turbulence kinetic energy
 
-    KU₀   :: T  # Interior diffusivity
-    KT₀   :: T  # Interior diffusivity
-    KS₀   :: T  # Interior diffusivity
+    KU₀   :: T  # Interior viscosity for velocity
+    KT₀   :: T  # Interior diffusivity for temperature
+    KS₀   :: T  # Interior diffusivity for salinity
 end
 
 function Parameters(T=Float64;
        Cε = 0.1,
        Cκ = 0.4,
-      CN = 6.33,
+       CN = 6.33,
     Cstab = 2.0,
     Cunst = 6.4,
      Cb_U = 0.599,
@@ -61,12 +62,13 @@ function Parameters(T=Float64;
      Cd_T = 2.5,
       CRi = 4.32,
       CKE = 0.3,
+     CKE₀ = 1e-11,
        K₀ = 1e-5, KU₀=K₀, KT₀=K₀, KS₀=K₀
      )
 
      Parameters{T}(Cε, Cκ, CN, Cstab, Cunst,
                    Cb_U, Cτ_U, Cb_T, Cτ_T, Cd_U, Cd_T,
-                   CRi, CKE, KU₀, KT₀, KS₀)
+                   CRi, CKE, CKE₀, KU₀, KT₀, KS₀)
 end
 
 # Shape functions (these shoul become parameters eventually).
@@ -156,23 +158,28 @@ const KV = KU
 
 "Returns the surface_layer_average for mixing depth h = -zf[i]."
 function surface_layer_average(c, Cε, i)
-    iε = length(c)+1 - Cε*(length(c)+1 - i) # (fractional) face "index" of the surface layer
-    face = ceil(Int, iε)  # the next cell face above the fractional depth
-    frac = face - iε # the fraction of the lowest cell in the surface layer.
-    surface_layer_integral = convert(eltype(c), 0)
+    if i == c.grid.N+1 # Return surface value
+        return onface(c, c.grid.N+1)
+    else
+        iε = length(c)+1 - Cε*(length(c)+1 - i) # (fractional) face "index" of the surface layer
+        face = ceil(Int, iε)  # the next cell face above the fractional depth
+        frac = face - iε # the fraction of the lowest cell in the surface layer.
+        surface_layer_integral = convert(eltype(c), 0)
 
-    # Contribution of fractional cell to total integral
-    if frac > 0
-        surface_layer_integral += frac * Δf(c, face-1) * c[face-1]
+        # Contribution of fractional cell to total integral
+        if frac > 0
+            surface_layer_integral += frac * Δf(c, face-1) * c[face-1]
+        end
+
+        # Add cells above face, if there are any.
+        for j = face:length(c)
+          @inbounds surface_layer_integral += Δf(c, j) * c[j]
+        end
+
+        h = -c.grid.zf[i] # depth
+
+        return surface_layer_integral / (Cε*h)
     end
-
-    # Add cells above face, if there are any.
-    for j = face:length(c)
-      @inbounds surface_layer_integral += Δf(c, j) * c[j]
-    end
-
-    h = -c.grid.zf[i] # depth
-    return surface_layer_integral / (Cε*h)
 end
 
 """
@@ -182,8 +189,8 @@ i is a face index.
 Δ(c, Cε, i) = surface_layer_average(c, Cε, i) - onface(c, i)
 
 "Returns the parameterization for unresolved KE at face point i."
-function unresolved_kinetic_energy(h, Bz, Fb, CKE, g, α, β, i)
-    return CKE * h^(4/3) * sqrt(max(0, Bz)) * max(0, Fb)^(1/3)
+function unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β, i)
+    return CKE * h^(4/3) * sqrt(max(0, Bz)) * max(0, Fb)^(1/3) + CKE₀
 end
 
 """
@@ -191,13 +198,13 @@ end
 
 Returns the bulk Richardson number of `model` at face `i`.
 """
-function bulk_richardson_number(U, V, T, S, Fb, CKE, Cε, g, α, β, i)
+function bulk_richardson_number(U, V, T, S, Fb, CKE, CKE₀, Cε, g, α, β, i)
     h = -U.grid.zf[i]
     # (h - hε) * ΔB
     h⁺ΔB = h * (1 - 0.5Cε) * g * (α*Δ(T, Cε, i) - β*Δ(S, Cε, i))
 
     Bz = ∂B∂z(T, S, g, α, β, i)
-    unresolved_KE = unresolved_kinetic_energy(h, Bz, Fb, CKE, g, α, β, i)
+    unresolved_KE = unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β, i)
     KE = Δ(U, Cε, i)^2 + Δ(V, Cε, i)^2 + unresolved_KE
 
     if KE == 0 && h⁺ΔB == 0 # Alistar Adcroft's theorem
@@ -209,7 +216,7 @@ end
 
 bulk_richardson_number(m, i) = bulk_richardson_number(
     m.solution.U, m.solution.V, m.solution.T, m.solution.S,
-    m.state.Fb, m.parameters.CKE, m.parameters.Cε, m.constants.g,
+    m.state.Fb, m.parameters.CKE, m.parameters.CKE₀, m.parameters.Cε, m.constants.g,
     m.constants.α, m.constants.β, i)
 
 """
@@ -220,19 +227,19 @@ Calculate the mixing depth 'h' for `model`.
 function mixing_depth(m)
     # Descend through grid until Ri rises above critical value
     Ri₁ = 0
-    ih₁ = m.grid.N + 1 # start at top
-    while ih₁ > 2 && Ri₁ < m.parameters.CRi
+    ih₁ = m.grid.N + 1 # start at top, where bulk Ri = 0 by definition.
+    while ih₁ > 1 && Ri₁ < m.parameters.CRi
         ih₁ -= 1 # descend
         Ri₁ = bulk_richardson_number(m, ih₁)
     end
 
-    # Here, ih₁ >= 2.
+    # Here, ih₁ >= 1.
 
-    if !isfinite(Ri₁)         # Ri is infinite:
-        z★ = m.grid.zf[ih₁+1] # "mixing depth" is just above where Ri = inf.
+    if !isfinite(Ri₁)       # Ri is infinite at face ih₁ but sub-critical above:
+        z★ = m.grid.zc[ih₁] # place mixing depth at cell center just above ih₁.
 
-    elseif Ri₁ < m.parameters.CRi # We descended to ih₁=2 and Ri is still too low:
-        z★ = m.grid.zf[2]         # mixing depth extends to top of bottom grid cell.
+    elseif Ri₁ < m.parameters.CRi # We descended to ih₁=1 and Ri is still too low:
+        z★ = m.grid.zf[1]         # mixing depth extends to bottom of the grid.
 
     else # We have descended below critical Ri.
         if ih₁ == m.grid.N
@@ -329,7 +336,7 @@ a positive surface flux implies negative surface flux divergence,
 which implies a reduction to the quantity in question.
 For example, positive heat flux out of the surface implies cooling.
 """
-N(CN, flux, d, shape=default_shape_N) = 0 < d < 1 ? CN*flux*shape(d) : 0
+N(CN, flux, d, shape=default_shape_N) = 0 < d < 1 ? -CN*flux*shape(d) : 0
 
 function ∂N∂z(CN, Fϕ, m, i)
     if isunstable(m)
@@ -352,30 +359,20 @@ function calc_rhs_explicit!(∂t, m)
     update_state!(m)
     U, V, T, S = m.solution
 
-    @inbounds begin
+    N = m.grid.N
+    update_ghost_cells!(U, KU(m, 1), KU(m, N), m, m.bcs.U)
+    update_ghost_cells!(V, KV(m, 1), KV(m, N), m, m.bcs.V)
+    update_ghost_cells!(T, KT(m, 1), KT(m, N), m, m.bcs.T)
+    update_ghost_cells!(S, KS(m, 1), KS(m, N), m, m.bcs.S)
 
-        for i in interior(U)
-            ∂t.U[i] = ∇K∇c(KU(m, i+1), KU(m, i), U, i) + m.constants.f*V[i]
-            ∂t.V[i] = ∇K∇c(KV(m, i+1), KV(m, i), V, i) - m.constants.f*U[i]
+    for i in eachindex(U)
+        @inbounds begin
+            ∂t.U[i] = ∇K∇c(KU(m, i+1), KU(m, i), U, i) + m.constants.f * V[i]
+            ∂t.V[i] = ∇K∇c(KV(m, i+1), KV(m, i), V, i) - m.constants.f * U[i]
             ∂t.T[i] = ∇K∇c(KT(m, i+1), KT(m, i), T, i) - ∂NT∂z(m, i)
             ∂t.S[i] = ∇K∇c(KS(m, i+1), KS(m, i), S, i) - ∂NS∂z(m, i)
         end
-
-        # Flux into the top (the only boundary condition allowed)
-        i = m.grid.N
-        ∂t.U[i] = ∇K∇c_top(KU(m, i), U, m.state.Fu) + m.constants.f*V[i]
-        ∂t.V[i] = ∇K∇c_top(KV(m, i), V, m.state.Fv) - m.constants.f*U[i]
-        ∂t.T[i] = ∇K∇c_top(KT(m, i), T, m.state.Fθ) - ∂NT∂z(m, i)
-        ∂t.S[i] = ∇K∇c_top(KS(m, i), S, m.state.Fs) - ∂NS∂z(m, i)
-
-        # Bottom
-        i = 1
-        ∂t.U[i] = ∇K∇c_bottom(KU(m, i+1), KU(m, i), U, m.bcs.U.bottom, m) + m.constants.f*V[i]
-        ∂t.V[i] = ∇K∇c_bottom(KV(m, i+1), KV(m, i), V, m.bcs.V.bottom, m) - m.constants.f*U[i]
-        ∂t.T[i] = ∇K∇c_bottom(KT(m, i+1), KT(m, i), T, m.bcs.T.bottom, m) - ∂NT∂z(m, i)
-        ∂t.S[i] = ∇K∇c_bottom(KS(m, i+1), KS(m, i), S, m.bcs.S.bottom, m) - ∂NS∂z(m, i)
-
-    end # inbounds
+    end
 
     return nothing
 end
