@@ -245,7 +245,7 @@ and the derviative of a `Field{Face}` is computed at cell points.
 
 "Calculate `f = ∂c/∂z` in the grid interior."
 function ∂z!(f::FaceField, c::CellField)
-    for i = interior(f)
+    for i = eachindex(f)
         @inbounds f.data[i] = ∂z(c, i)
     end
     return nothing

@@ -196,3 +196,12 @@ function update_ghost_cells!(c, κbottom, κtop, model, fieldbcs)
     update_top_ghost_cell!(c, κtop, model, fieldbcs.top)
     return nothing
 end
+
+# Convenience methods for pre-computed fluxes
+get_gradient(κ, flux) = - flux / κ
+
+function update_top_ghost_cell_flux!(c, κ, flux)
+    ∂c∂z = get_gradient(κ, flux)
+    c[c.grid.N+1] = linear_extrapolation(c[c.grid.N], ∂c∂z, Δc(c.grid, c.grid.N+1))
+    return nothing
+end

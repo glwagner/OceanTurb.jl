@@ -152,7 +152,8 @@ function test_buoyancy_gradient(; γ=0.01, g=9.81, ρ₀=1028, α=2e-4, β=0.0, 
     Bz ≈ Bz_answer
 end
 
-function test_unresolved_KE(; CKE=0.1, Fb=1e-7, γ=0.01, g=9.81, ρ₀=1028, α=2e-4, β=0.0, N=10, L=1.0)
+function test_unresolved_KE(; CKE=0.1, CKE₀=1e-11, Fb=1e-7, γ=0.01, g=9.81,
+                            ρ₀=1028, α=2e-4, β=0.0, N=10, L=1.0)
     Bz = g * α * γ
     T₁(z) = γ*z
     T₂(z) = -γ*z
@@ -164,14 +165,14 @@ function test_unresolved_KE(; CKE=0.1, Fb=1e-7, γ=0.01, g=9.81, ρ₀=1028, α=
     # Test for Bz > 0
     model.solution.T = T₁
     Bz = KPP.∂B∂z(model, i)
-    ke₁ = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, g, α, β, i)
-    ke₁_answer = CKE * h^(4/3) * sqrt(Bz) * Fb^(1/3)
+    ke₁ = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β, i)
+    ke₁_answer = CKE * h^(4/3) * sqrt(Bz) * Fb^(1/3) + CKE₀
 
     # Test for Bz < 0
     model.solution.T = T₂
     Bz = KPP.∂B∂z(model, i)
-    ke₂ = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, g, α, β, i)
-    ke₂_answer = 0.0
+    ke₂ = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β, i)
+    ke₂_answer = CKE₀
 
     ke₂ ≈ ke₂_answer && ke₁ ≈ ke₁_answer
 end
@@ -187,8 +188,8 @@ function test_update_state(; N=10, L=20, Fθ=5.1e-3)
 end
 
 function test_bulk_richardson_number(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
-                                       γ=0.01, N=20, L=20, Fb=2.1e-5)
-    parameters = KPP.Parameters(CRi=CRi, CKE=CKE, Cε=0.1/N)
+                                       CKE₀=0, γ=0.01, N=20, L=20, Fb=2.1e-5)
+    parameters = KPP.Parameters(CRi=CRi, CKE=CKE, CKE₀=CKE₀, Cε=0.1/N)
     constants = KPP.Constants(g=g, α=α)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
@@ -214,7 +215,7 @@ function test_bulk_richardson_number(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
         h = - model.grid.zf[i]
         h⁺ = h * (1 - 0.5*model.parameters.Cε)
         Bz = KPP.∂B∂z(model, i)
-        uke = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, g, α, model.constants.β, i)
+        uke = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, model.constants.β, i)
         Ri_answer[i] = h⁺ * (B_N - g*α*T₀(-h)) / uke
     end
 
@@ -223,7 +224,7 @@ end
 
 function test_mixing_depth_convection(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
                                        γ=0.01, N=200, L=20, Fb=4.1e-5)
-    parameters = KPP.Parameters(CRi=CRi, CKE=CKE, Cε=0.1/N)
+    parameters = KPP.Parameters(CRi=CRi, CKE=CKE, CKE₀=0, Cε=0.1/N)
     constants = KPP.Constants(g=g, α=α)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
@@ -251,7 +252,7 @@ end
 function test_mixing_depth_shear(; Cε=0.5, N=20, L=20, CRi=1)
     T₀ = 1
     U₀ = 3
-    parameters = KPP.Parameters(CRi=CRi, Cε=Cε)
+    parameters = KPP.Parameters(CRi=CRi, Cε=Cε, CKE₀=0)
     constants = KPP.Constants(g=1, α=1)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
@@ -312,7 +313,7 @@ end
 
 function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, Cε=1e-16)
     # Zero wind + convection => w_scale_U = Cb_U * Cε^(1/3) * ωb.
-    parameters = KPP.Parameters(CRi=1, CKE=1, Cε=Cε, Cb_U=Cb_U, Cb_T=Cb_T)
+    parameters = KPP.Parameters(CRi=1, CKE=1, CKE₀=0, Cε=Cε, Cb_U=Cb_U, Cb_T=Cb_T)
     constants = KPP.Constants(g=1, α=1)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
@@ -398,10 +399,12 @@ function test_turb_velocity_wind_stab(; Cε=0.5, Cκ=0.7, N=20, L=20, CRi=1, Cst
      KPP.w_scale_S(model, id) ≈ w_scale )
 end
 
-function test_turb_velocity_wind_unstab(; CKE=0, Cε=0.5, Cκ=0.7, N=20, L=20, CRi=(1-0.5Cε), Cunst=0.3)
+function test_turb_velocity_wind_unstab(; CKE=0, Cε=0.5, Cκ=0.7, N=20,
+                                        L=20, CRi=(1-0.5Cε), Cunst=0.3)
     T₀ = 1
     U₀ = 3
-    parameters = KPP.Parameters(CRi=CRi, Cκ=Cκ, CKE=CKE, Cε=Cε, Cunst=Cunst, Cd_U=Inf, Cd_T=Inf)
+    parameters = KPP.Parameters(CRi=CRi, Cκ=Cκ, CKE=CKE, CKE₀=0,
+                                Cε=Cε, Cunst=Cunst, Cd_U=Inf, Cd_T=Inf)
     constants = KPP.Constants(g=1, α=1)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
@@ -442,11 +445,11 @@ function test_turb_velocity_wind_unstab(; CKE=0, Cε=0.5, Cκ=0.7, N=20, L=20, C
      KPP.w_scale_S(model, id2) ≈ w_scale_T2 )
 end
 
-function test_conv_velocity_wind(; CKE=0, Cε=0.5, Cκ=0.7, N=20, L=20, CRi=(1-0.5Cε),
+function test_conv_velocity_wind(; CKE=0, CKE₀=0, Cε=0.5, Cκ=0.7, N=20, L=20, CRi=(1-0.5Cε),
                                  Cb_U=1.1, Cb_T=0.1, Cτ_U=1.3, Cτ_T=1.7)
     T₀ = 1
     U₀ = 3
-    parameters = KPP.Parameters(CRi=CRi, Cκ=Cκ, CKE=CKE, Cε=Cε, Cd_U=0, Cd_T=0,
+    parameters = KPP.Parameters(CRi=CRi, Cκ=Cκ, CKE=CKE, CKE₀=0, Cε=Cε, Cd_U=0, Cd_T=0,
                                 Cb_U=1.1, Cb_T=0.1, Cτ_U=1.3, Cτ_T=1.7)
     constants = KPP.Constants(g=1, α=1)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
