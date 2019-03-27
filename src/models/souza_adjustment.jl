@@ -29,9 +29,9 @@ function Parameters(T=Float64;
     Parameters{T}(κ, Cs, Cc, Cτ)
 end
 
-struct Model{TS, G, E, T} <: AbstractModel{TS, G, E, T}
+struct Model{P, TS, G, E, T} <: AbstractModel{TS, G, E, T}
     @add_standard_model_fields
-    parameters::Parameters
+    parameters::P
 end
 
 function Model(; N=10, L=1.0,
