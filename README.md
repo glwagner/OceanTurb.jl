@@ -17,7 +17,7 @@ pkg> add https://github.com/glwagner/OceanTurb.jl.git
 
 ## Example(s)
 
-Checkout our 
+Check our 
 [diffusion examples notebook](https://github.com/glwagner/OceanTurb.jl/blob/master/examples/diffusion_example.ipynb), 
 or for the more hardcore, 
 [our notebook of KPP examples](https://github.com/glwagner/OceanTurb.jl/blob/master/examples/kpp_examples.ipynb).
