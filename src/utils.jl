@@ -10,27 +10,23 @@ const stellaryear = 23hour + 56minute + 4.098903691
 const Ω = 2π/stellaryear
 
 function pressenter()
-  println("\nPress enter to continue.")
-  chomp(readline())
+    println("\nPress enter to continue.")
+    chomp(readline())
 end
 
 macro zeros(T, dims, vars...)
-  expr = Expr(:block)
-  append!(expr.args, [:($(esc(var)) = zeros($(esc(T)), $(esc(dims))); ) for var in vars])
-  expr
+    expr = Expr(:block)
+    append!(expr.args, [:($(esc(var)) = zeros($(esc(T)), $(esc(dims))); ) for var in vars])
+    expr
 end
 
 macro def(name, definition)
-  return quote
-      macro $(esc(name))()
-          esc($(Expr(:quote, definition)))
-      end
-  end
+    return quote
+        macro $(esc(name))()
+            esc($(Expr(:quote, definition)))
+        end
+    end
 end
-
-#fieldtype(::AbstractSolution{N, T}) where {N, T} = T
-#arraytype(::AbstractSolution{N, T}) where {N, T<:Field{L, A}} where {L, A} = A
-#eltype(::AbstractSolution{N, T}) where {N, T<:Field{L, A}} where {L, A} = eltype(A)
 
 macro specify_solution(T, names...)
     nfields = length(names)
@@ -38,8 +34,34 @@ macro specify_solution(T, names...)
       bc_fields = [ :( $(name)::FieldBoundaryConditions ) for name in names ]
 
       esc(
+          quote
+              struct Solution <: AbstractSolution{$(nfields), $(T)}
+                  $(soln_fields...)
+              end
+
+              struct BoundaryConditions <: FieldVector{$(nfields), FieldBoundaryConditions}
+                  $(bc_fields...)
+              end
+          end
+      )
+end
+
+macro pair_specify_solution(paired_specs...)
+
+    names = Symbol[]
+    fieldtypes = Symbol[]
+    for (i, spec) in enumerate(paired_specs)
+        isodd(i) && push!(fieldtypes, spec)
+        iseven(i) && push!(names, spec)
+    end
+
+    nspecs = length(names)
+    soln_fields = [ :( $(names[i])::$(fieldtypes[i])        ) for i = 1:nspecs ]
+      bc_fields = [ :( $(names[i])::FieldBoundaryConditions ) for i = 1:nspecs ]
+
+    esc(
         quote
-            struct Solution <: AbstractSolution{$(nfields), $(T)}
+            struct Solution <: AbstractSolution{$(nfields), Field}
                 $(soln_fields...)
             end
 
@@ -47,7 +69,7 @@ macro specify_solution(T, names...)
                 $(bc_fields...)
             end
         end
-      )
+    )
 end
 
 #=
