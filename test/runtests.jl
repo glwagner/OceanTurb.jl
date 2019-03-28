@@ -13,6 +13,13 @@ using
     @test test_zeros(Float32)
 end
 
+@testset "Solvers" begin
+    include("solvertests.jl")
+    @test test_tridiagonalsolve()
+    @test test_ldiv(10)
+end
+
+
 @testset "Grids" begin
     include("gridtests.jl")
     nz, Lz = 3, 4.2
@@ -56,6 +63,7 @@ end
 
     for stepper in (:ForwardEuler, :BackwardEuler)
         @test test_diffusion_cosine(stepper)
+        @test test_diffusive_flux(stepper, top_flux=0, bottom_flux=0)
         @test test_diffusive_flux(stepper)
     end
 end

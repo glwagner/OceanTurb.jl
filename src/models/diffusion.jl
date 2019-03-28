@@ -1,9 +1,10 @@
 module Diffusion
 
 using
-    StaticArrays,
     LinearAlgebra,
     OceanTurb
+
+import StaticArrays: FieldVector
 
 export
     Parameters,
@@ -33,10 +34,9 @@ function Model(; N=10, L=1.0, κ=0.1,
     solution = Solution(CellField(grid))
 
     if implicit(stepper)
-        get_κ = SolutionLike(κ)
-        lhs_array = OceanTurb.build_lhs_array(solution)
-        lhs = SolutionLike(lhs_array)
-        timestepper = Timestepper(stepper, calc_rhs_implicit!, solution, lhs)
+        diffusivity = SolutionLike(κ)
+        lhs = LeftHandSide(solution)
+        timestepper = Timestepper(stepper, calc_rhs_implicit!, diffusivity, solution, lhs)
     else
         timestepper = Timestepper(stepper, calc_rhs_explicit!, solution)
     end
@@ -64,11 +64,16 @@ function calc_rhs_implicit!(rhs, m)
     c = m.solution.c
     update_ghost_cells!(c, κ(m, 1), κ(m, c.grid.N), m, m.bcs.c)
 
+    #for i in eachindex(rhs.c)
+    #    @inbounds rhs.c[i] = 0
+    #end
+
     # Add flux across top and bottom boundary
     @inbounds begin
-        rhs.c[m.grid.N] = top_flux_div(0, κ(m, m.grid.N), c)
-        rhs.c[1] = bottom_flux_div(0, κ(m, 1), c)
+        rhs.c[m.grid.N] = ∇K∇c(κ(m, m.grid.N), 0, c, m.grid.N)
+        rhs.c[1] = ∇K∇c(0, κ(m, 1), c, 1)
     end
+
     return nothing
 end
 

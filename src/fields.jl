@@ -337,5 +337,6 @@ end
 "Return the total flux (advective + diffusive) across face i."
 flux(w, κ, c, i) = w * onface(c, i) - κ * ∂z(c, i)
 
-top_flux_div(wtop, κtop, c) = -flux(w, κ, c, c.grid.N) / Δf(c, c.grid.N)
-bottom_flux_div(wtop, κtop, c) = flux(w, κ, c, 1) / Δf(c, 1)
+top_flux_div(wtop, κtop, c) = -flux(wtop, κtop, c, c.grid.N) / Δf(c, c.grid.N)
+
+bottom_flux_div(wbottom, κbottom, c) = flux(wbottom, κbottom, c, 1) / Δf(c, 1)

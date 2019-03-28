@@ -55,6 +55,8 @@ export # This file, core functionality:
     top,
     bottom,
     integral,
+    top_flux_div,
+    bottom_flux_div,
 
     # timesteppers.jl
     Equation,
@@ -115,6 +117,7 @@ abstract type AbstractModel{T, G, TS} end  # Explain: what is a `Model`?
 #
 
 include("utils.jl")
+include("solvers.jl")
 include("grids.jl")
 include("boundary_conditions.jl")
 include("fields.jl")

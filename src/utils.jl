@@ -34,7 +34,12 @@ function build_solution(names, fieldtypes)
     bcfields =  [ :( $(names[i]) :: FieldBoundaryConditions ) for i = 1:nfields ]
     opfields =  [ :( $(names[i]) :: Function ) for i = 1:nfields ]
     ancfields = [ :( $(names[i]) :: T ) for i = 1:nfields ]
+    lhsfields = [ :( $(names[i]) :: Tridiagonal{T, A} ) for i = 1:nfields ]
     return quote
+        import StaticArrays: FieldVector
+        import LinearAlgebra: Tridiagonal
+        import OceanTurb: build_lhs
+
         struct Solution <: AbstractSolution{$(nfields), Field}
             $(solfields...)
         end
@@ -45,6 +50,19 @@ function build_solution(names, fieldtypes)
 
         struct SolutionLike{T} <: FieldVector{$(nfields), T}
             $(ancfields...)
+        end
+
+        struct LeftHandSide{T, A} <: FieldVector{$(nfields), Tridiagonal{T, A}}
+            $(lhsfields...)
+            function LeftHandSide(solution::AbstractSolution{1, Field})
+                lhs = build_lhs(solution)[1]
+                new{eltype(solution[1]), arraytype(solution[1])}(lhs)
+            end
+        end
+
+        function LeftHandSide(solution::AbstractSolution{N, Field}) where N
+            lhs = build_lhs(solution)
+            LeftHandSide{eltype(solution[1]), arraytype(solution[1])}(lhs...)
         end
     end
 end

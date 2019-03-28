@@ -14,10 +14,8 @@ function test_diffusion_set_c()
     model.solution.c.data[1:model.grid.N] == c0
 end
 
-function test_diffusive_flux(stepper=:ForwardEuler)
-    model = Diffusion.Model(N=10, L=1, κ=1, stepper=stepper)
-    top_flux = 0.3
-    bottom_flux = 0.13
+function test_diffusive_flux(stepper=:ForwardEuler; top_flux=0.3, bottom_flux=0.13, N=10)
+    model = Diffusion.Model(N=N, L=1, κ=1, stepper=stepper)
     model.bcs.c.top = FluxBoundaryCondition(top_flux)
     model.bcs.c.bottom = FluxBoundaryCondition(bottom_flux)
 
