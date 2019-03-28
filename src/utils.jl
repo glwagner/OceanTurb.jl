@@ -28,79 +28,64 @@ macro def(name, definition)
     end
 end
 
-macro specify_solution(T, names...)
+function build_solution(names, fieldtypes)
     nfields = length(names)
-    soln_fields = [ :( $(name)::$(T)                    ) for name in names ]
-      bc_fields = [ :( $(name)::FieldBoundaryConditions ) for name in names ]
+    solfields = [ :( $(names[i]) :: $(fieldtypes[i]) ) for i = 1:nfields ]
+    bcfields =  [ :( $(names[i]) :: FieldBoundaryConditions ) for i = 1:nfields ]
+    opfields =  [ :( $(names[i]) :: Function ) for i = 1:nfields ]
+    ancfields = [ :( $(names[i]) :: T ) for i = 1:nfields ]
+    lhsfields = [ :( $(names[i]) :: Tridiagonal{T, A} ) for i = 1:nfields ]
+    return quote
+        import StaticArrays: FieldVector
+        import LinearAlgebra: Tridiagonal
+        import OceanTurb: build_lhs
 
-      esc(
-          quote
-              struct Solution <: AbstractSolution{$(nfields), $(T)}
-                  $(soln_fields...)
-              end
+        struct Solution <: AbstractSolution{$(nfields), Field}
+            $(solfields...)
+        end
 
-              struct BoundaryConditions <: FieldVector{$(nfields), FieldBoundaryConditions}
-                  $(bc_fields...)
-              end
-          end
-      )
+        struct BoundaryConditions <: FieldVector{$(nfields), FieldBoundaryConditions}
+            $(bcfields...)
+        end
+
+        struct SolutionLike{T} <: FieldVector{$(nfields), T}
+            $(ancfields...)
+        end
+
+        struct LeftHandSide{T, A} <: FieldVector{$(nfields), Tridiagonal{T, A}}
+            $(lhsfields...)
+            function LeftHandSide(solution::AbstractSolution{1, Field})
+                lhs = build_lhs(solution)[1]
+                new{eltype(solution[1]), arraytype(solution[1])}(lhs)
+            end
+        end
+
+        function LeftHandSide(solution::AbstractSolution{N, Field}) where N
+            lhs = build_lhs(solution)
+            LeftHandSide{eltype(solution[1]), arraytype(solution[1])}(lhs...)
+        end
+    end
+end
+
+macro specify_solution(T, names...)
+    fieldtypes = [ T for name in names ]
+    esc(build_solution(names, fieldtypes))
 end
 
 macro pair_specify_solution(paired_specs...)
-
     names = Symbol[]
     fieldtypes = Symbol[]
     for (i, spec) in enumerate(paired_specs)
         isodd(i) && push!(fieldtypes, spec)
         iseven(i) && push!(names, spec)
     end
-
-    nspecs = length(names)
-    soln_fields = [ :( $(names[i])::$(fieldtypes[i])        ) for i = 1:nspecs ]
-      bc_fields = [ :( $(names[i])::FieldBoundaryConditions ) for i = 1:nspecs ]
-
-    esc(
-        quote
-            struct Solution <: AbstractSolution{$(nfields), Field}
-                $(soln_fields...)
-            end
-
-            struct BoundaryConditions <: FieldVector{$(nfields), FieldBoundaryConditions}
-                $(bc_fields...)
-            end
-        end
-    )
+    esc(build_solution(names, fieldtypes))
 end
-
-#=
-diff_N_fields = [ :( $(Symbol(:N, name))::Function    ) for name in names ]
-diff_K_fields = [ :( $(Symbol(:K, name))::Function    ) for name in names ]
-diffop_fields = [ :( $(name)::Tridiagonal{T, A}       ) for name in names ]
-
-struct DiffusiveOperator{T, A} <: FieldVector{$(nfields), Tridiagonal{T, A}}
-    $(diffop_fields...)
-end
-
-function DiffusiveOperator(solution)
-    lhs_array = []
-    for s in solution
-        T = eltype(s)
-        A = arraytype(s)
-        N = length(s)
-        lhs_s = Tridiagonal{T, A}(zeros(N-1), zeros(N), zeros(N-1))
-        push!(lhs_array, lhs_s)
-    end
-    lhs = DiffusiveOperator(lhs_array...)
-    return lhs
-end
-=#
-
 
 @def add_standard_model_fields begin
-  timestepper::TS
-  grid::G
-  equation::E
-  solution::Solution
-  bcs::BoundaryConditions
-  clock::Clock{T}
+  clock       :: Clock{T}
+  grid        :: G
+  timestepper :: TS
+  solution    :: Solution
+  bcs         :: BoundaryConditions
 end

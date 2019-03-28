@@ -38,18 +38,19 @@ struct Cell <: FieldLocation end
 struct Face <: FieldLocation end
 
 struct Field{L, A, G} <: AbstractField{A, G}
-    data::A
-    grid::G
+    data :: A
+    grid :: G
     function Field(Location, data, grid)
         new{Location, typeof(data), typeof(grid)}(data, grid)
     end
 end
 
-arraytype(::Field{L, A}) where {L, A} = A
-eltype(::Field{L, A}) where {L, A} = eltype(A)
-
 const CellField = Field{Cell}
 const FaceField = Field{Face}
+
+arraytype(::CellField{A}) where A <: OffsetArray{T, D, innerA} where {T, D, innerA} = innerA
+arraytype(::FaceField{A}) where A = A
+eltype(::Field{L, A}) where {L, A} = eltype(A)
 
 #
 # Field Constructors
@@ -131,6 +132,8 @@ lastindex(f::FaceField) = f.grid.N + 1
 # Interior indices, omitting boundary-adjacent values
 interiorindices(c::CellField) = 2:c.grid.N - 1
 interiorindices(f::FaceField) = 2:f.grid.N
+
+boundaryindices(c::CellField) = (1, c.grid.N)
 
 # Sugary sweet: access indices of c.data by indexing into c.
 getindex(c::AbstractField, inds...) = getindex(c.data, inds...)
@@ -300,5 +303,40 @@ Return the interpolation of `f` onto cell point `i`.
 oncell(f::FaceField, i) = 0.5*(f.data[i+1] + f.data[i])
 oncell(c::CellField, i) = c[i]
 
+
+#
+# Diffusive flux operators
+#
+
+const BC = BoundaryCondition
+
+# ∇K∇c for c::CellField
+K∂z(K, c, i) = K*∂z(c, i)
+∇K∇c(Kᵢ₊₁, Kᵢ, c, i)            = ( K∂z(Kᵢ₊₁, c, i+1) -    K∂z(Kᵢ, c, i)     ) /    Δf(c, i)
+∇K∇c_top(Kᴺ, c, top_flux)       = (     -top_flux     - K∂z(Kᴺ, c, c.grid.N) ) / Δf(c, c.grid.N)
+∇K∇c_bottom(K₂, c, bottom_flux) = (   K∂z(K₂, c, 2)  +      bottom_flux      ) /    Δf(c, 1)
+
+## Top and bottom flux estimates for constant (Dirichlet) boundary conditions
+bottom_flux(K, c, c_bndry, Δf) = -2K*( bottom(c) - c_bndry ) / Δf # -K*∂c/∂z at the bottom
+top_flux(K, c, c_bndry, Δf)    = -2K*(  c_bndry  -  top(c) ) / Δf # -K*∂c/∂z at the top
+
+∇K∇c_top(Kᴺ⁺¹, Kᴺ, c, bc::BC{<:Flux}, model) = ∇K∇c_top(Kᴺ, c, getbc(model, bc))
+∇K∇c_bottom(K₂, K₁, c, bc::BC{<:Flux}, model) = ∇K∇c_bottom(K₂, c, getbc(model, bc))
+∇K∇c_bottom(K₂, K₁, c, bc::BC{<:Gradient}, model) = ∇K∇c_bottom(K₂, c, -K₁*getbc(model, bc))
+
+function ∇K∇c_bottom(K₂, K₁, c, bc::BC{<:Value}, model)
+    flux = bottom_flux(K₁, c, getbc(model, bc), Δf(model.grid, 1))
+    return ∇K∇c_bottom(K₂, c, flux)
+end
+
+function ∇K∇c_top(Kᴺ⁺¹, Kᴺ, c, bc::BC{<:Value}, model)
+    flux = top_flux(Kᴺ⁺¹, c, getbc(model, bc), Δf(model.grid, length(c)+1))
+    return ∇K∇c_top(Kᴺ, c, flux)
+end
+
 "Return the total flux (advective + diffusive) across face i."
 flux(w, κ, c, i) = w * onface(c, i) - κ * ∂z(c, i)
+
+top_flux_div(wtop, κtop, c) = -flux(wtop, κtop, c, c.grid.N) / Δf(c, c.grid.N)
+
+bottom_flux_div(wbottom, κbottom, c) = flux(wbottom, κbottom, c, 1) / Δf(c, 1)

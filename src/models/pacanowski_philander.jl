@@ -38,34 +38,10 @@ function Parameters(T=Float64;
     Parameters{T}(ν₀, ν₁, κ₀, κ₁, c, n)
 end
 
-mutable struct State{T} <: FieldVector{4, T}
-    Fu :: T
-    Fv :: T
-    Fθ :: T
-    Fs :: T
-end
-
-State(T=Float64) = State{T}(0, 0, 0, 0)
-
-"""
-    update_state!(model)
-
-Update the top flux conditions and mixing depth for `model`
-and store in `model.state`.
-"""
-function update_state!(m)
-    m.state.Fu = getbc(m, m.bcs.U.top)
-    m.state.Fv = getbc(m, m.bcs.V.top)
-    m.state.Fθ = getbc(m, m.bcs.T.top)
-    m.state.Fs = getbc(m, m.bcs.S.top)
-    return nothing
-end
-
-struct Model{TS, G, E, T} <: AbstractModel{TS, G, E, T}
+struct Model{TS, G, T} <: AbstractModel{TS, G, T}
     @add_standard_model_fields
     parameters :: Parameters{T}
     constants  :: Constants{T}
-    state      :: State{T}
 end
 
 function Model(; N=10, L=1.0,
@@ -77,11 +53,9 @@ function Model(; N=10, L=1.0,
     )
 
     solution = Solution((CellField(grid) for i=1:nsol)...)
-    equation = Equation(calc_rhs_explicit!)
-    timestepper = Timestepper(:ForwardEuler, solution)
+    timestepper = Timestepper(:ForwardEuler, calc_rhs_explicit!, solution)
 
-    return Model(timestepper, grid, equation, solution, bcs, Clock(),
-                    parameters, constants, State())
+    return Model(Clock(), grid, timestepper, solution, bcs, parameters, constants)
 end
 
 #
@@ -118,7 +92,6 @@ const KS = KT
 
 function calc_rhs_explicit!(∂t, m)
 
-    update_state!(m)
     U, V, T, S = m.solution
 
     N = m.grid.N
