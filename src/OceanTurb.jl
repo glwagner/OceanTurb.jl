@@ -22,6 +22,7 @@ export # This file, core functionality:
     pressenter,
     @zeros,
     @specify_solution,
+    @pair_specify_solution,
     @add_standard_model_fields,
 
     # grids.jl
@@ -50,7 +51,7 @@ export # This file, core functionality:
     ∂²z,
     ∂z!,
     set!,
-    interior,
+    interiorindices,
     top,
     bottom,
     integral,
@@ -88,10 +89,12 @@ export # This file, core functionality:
     # Ocean turbulence models
     Diffusion,
     KPP,
-    PacanowskiPhilander
+    PacanowskiPhilander,
+    ContinuousAdjustment
 
 using
     StaticArrays,
+    OffsetArrays,
     LinearAlgebra
 
 import Base: time, setproperty!
@@ -190,5 +193,6 @@ end
 include("models/diffusion.jl")
 include("models/k_profile_parameterization.jl")
 include("models/pacanowski_philander.jl")
+include("models/continuous_convective_adjustment.jl")
 
 end # module

@@ -31,8 +31,6 @@ There are two types of fields:
   1. Fields defined at cell centers with dimension `N+2`: `Field{Cell}`
   2. Fields defined at cell interfaces with dimension `N+1`: `Field{Face}`
 =#
-using OffsetArrays
-
 import Base: +, *, -, setindex!, getindex, eachindex, lastindex, similar, eltype, length
 
 abstract type FieldLocation end
@@ -131,8 +129,8 @@ lastindex(c::CellField) = c.grid.N
 lastindex(f::FaceField) = f.grid.N + 1
 
 # Interior indices, omitting boundary-adjacent values
-interior(c::CellField) = 2:c.grid.N - 1
-interior(f::FaceField) = 2:f.grid.N
+interiorindices(c::CellField) = 2:c.grid.N - 1
+interiorindices(f::FaceField) = 2:f.grid.N
 
 # Sugary sweet: access indices of c.data by indexing into c.
 getindex(c::AbstractField, inds...) = getindex(c.data, inds...)

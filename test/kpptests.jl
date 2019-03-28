@@ -209,7 +209,7 @@ function test_bulk_richardson_number(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
 
     Ri = FaceField(model.grid)
     Ri_answer = FaceField(model.grid)
-    for i = interior(Ri)
+    for i = interiorindices(Ri)
         Ri[i] = KPP.bulk_richardson_number(model, i)
 
         h = - model.grid.zf[i]
@@ -239,7 +239,7 @@ function test_mixing_depth_convection(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
     KPP.update_state!(model)
 
     Ri = FaceField(model.grid)
-    for i = interior(Ri)
+    for i = interiorindices(Ri)
         Ri[i] = KPP.bulk_richardson_number(model, i)
     end
 
