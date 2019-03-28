@@ -1,4 +1,4 @@
-module SouzaAdjustment
+module ContinuousAdjustment
 
 using
     StaticArrays,

@@ -193,6 +193,6 @@ end
 include("models/diffusion.jl")
 include("models/k_profile_parameterization.jl")
 include("models/pacanowski_philander.jl")
-include("models/souza_adjustment.jl")
+include("models/continuous_convective_adjustment.jl")
 
 end # module
