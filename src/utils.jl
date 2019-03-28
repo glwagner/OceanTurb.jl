@@ -28,48 +28,39 @@ macro def(name, definition)
     end
 end
 
-macro specify_solution(T, names...)
+function build_solution(names, fieldtypes)
     nfields = length(names)
-    soln_fields = [ :( $(name)::$(T)                    ) for name in names ]
-      bc_fields = [ :( $(name)::FieldBoundaryConditions ) for name in names ]
+    solfields = [ :( $(names[i]) :: $(fieldtypes[i]) ) for i = 1:nfields ]
+    bcfields =  [ :( $(names[i]) :: FieldBoundaryConditions ) for i = 1:nfields ]
+    opfields =  [ :( $(names[i]) :: Function ) for i = 1:nfields ]
+    return quote
+        struct Solution <: AbstractSolution{$(nfields), Field}
+            $(solfields...)
+        end
 
-      esc(
-          quote
-              struct Solution <: AbstractSolution{$(nfields), $(T)}
-                  $(soln_fields...)
-              end
+        struct BoundaryConditions <: FieldVector{$(nfields), FieldBoundaryConditions}
+            $(bcfields...)
+        end
 
-              struct BoundaryConditions <: FieldVector{$(nfields), FieldBoundaryConditions}
-                  $(bc_fields...)
-              end
-          end
-      )
+        struct Functionary <: FieldVector{$(nfields), Function}
+            $(opfields...)
+        end
+    end
+end
+
+macro specify_solution(T, names...)
+    fieldtypes = [ T for name in names ]
+    esc(build_solution(names, fieldtypes))
 end
 
 macro pair_specify_solution(paired_specs...)
-
     names = Symbol[]
     fieldtypes = Symbol[]
     for (i, spec) in enumerate(paired_specs)
         isodd(i) && push!(fieldtypes, spec)
         iseven(i) && push!(names, spec)
     end
-
-    nspecs = length(names)
-    soln_fields = [ :( $(names[i])::$(fieldtypes[i])        ) for i = 1:nspecs ]
-      bc_fields = [ :( $(names[i])::FieldBoundaryConditions ) for i = 1:nspecs ]
-
-    esc(
-        quote
-            struct Solution <: AbstractSolution{$(nfields), Field}
-                $(soln_fields...)
-            end
-
-            struct BoundaryConditions <: FieldVector{$(nfields), FieldBoundaryConditions}
-                $(bc_fields...)
-            end
-        end
-    )
+    esc(build_solution(names, fieldtypes))
 end
 
 #=
@@ -97,10 +88,10 @@ end
 
 
 @def add_standard_model_fields begin
-  timestepper::TS
-  grid::G
-  equation::E
-  solution::Solution
-  bcs::BoundaryConditions
-  clock::Clock{T}
+  timestepper :: TS
+  grid        :: G
+  equation    :: E
+  solution    :: Solution
+  bcs         :: BoundaryConditions
+  clock       :: Clock{T}
 end

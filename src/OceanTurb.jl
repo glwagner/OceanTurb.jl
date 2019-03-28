@@ -90,7 +90,7 @@ export # This file, core functionality:
     Diffusion,
     KPP,
     PacanowskiPhilander,
-    SouzaAdjustment
+    ContinuousAdjustment
 
 using
     StaticArrays,
