@@ -14,24 +14,8 @@ function test_diffusion_set_c()
     model.solution.c.data[1:model.grid.N] == c0
 end
 
-function test_diffusion_cosine()
-    model = Diffusion.Model(N=100, L=π/2, κ=1)
-    z = model.grid.zc
-
-    c_init(z) = cos(2z)
-    c_ans(z, t) = exp(-4t) * c_init(z)
-
-    model.solution.c = c_init
-
-    dt = 1e-3
-    iterate!(model, dt)
-
-    # The error tolerance is a bit arbitrary.
-    norm(c_ans.(z, time(model)) .- data(model.solution.c)) < model.grid.N*1e-6
-end
-
-function test_diffusive_flux()
-    model = Diffusion.Model(N=10, L=1, κ=1)
+function test_diffusive_flux(stepper=:ForwardEuler)
+    model = Diffusion.Model(N=10, L=1, κ=1, stepper=stepper)
     top_flux = 0.3
     bottom_flux = 0.13
     model.bcs.c.top = FluxBoundaryCondition(top_flux)
@@ -44,4 +28,20 @@ function test_diffusive_flux()
     iterate!(model, dt, 10)
 
     return C(time(model)) ≈ integral(model.solution.c)
+end
+
+function test_diffusion_cosine(stepper=:ForwardEuler)
+    model = Diffusion.Model(N=100, L=π/2, κ=1, stepper=stepper)
+    z = model.grid.zc
+
+    c_init(z) = cos(2z)
+    c_ans(z, t) = exp(-4t) * c_init(z)
+
+    model.solution.c = c_init
+
+    dt = 1e-3
+    iterate!(model, dt)
+
+    # The error tolerance is a bit arbitrary.
+    norm(c_ans.(z, time(model)) .- data(model.solution.c)) < model.grid.N*1e-6
 end

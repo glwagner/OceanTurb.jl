@@ -103,7 +103,7 @@ function update_state!(m)
     return nothing
 end
 
-struct Model{TS, G, E, T} <: AbstractModel{TS, G, E, T}
+struct Model{TS, G, T} <: AbstractModel{TS, G, T}
     @add_standard_model_fields
     parameters :: Parameters{T}
     constants  :: Constants{T}
@@ -119,11 +119,9 @@ function Model(; N=10, L=1.0,
     )
 
     solution = Solution((CellField(grid) for i=1:nsol)...)
-    equation = Equation(calc_rhs_explicit!)
-    timestepper = Timestepper(:ForwardEuler, solution)
+    timestepper = Timestepper(:ForwardEuler, calc_rhs_explicit!, solution)
 
-    return Model(timestepper, grid, equation, solution, bcs, Clock(),
-                    parameters, constants, State())
+    return Model(Clock(), grid, timestepper, solution, bcs, parameters, constants, State())
 end
 
 

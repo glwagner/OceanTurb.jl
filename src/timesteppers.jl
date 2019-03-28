@@ -1,11 +1,8 @@
-# Timesteppers for OceanTurb.jl
+# Equation abstraction and timesteppers for OceanTurb.jl
 
-"Update the clock after one iteration."
-function update!(clock, Δt)
-  clock.time += Δt
-  clock.iter += 1
-  return nothing
-end
+implicit_timestepping_methods = (:BackwardEuler,)
+
+implicit(method) = method ∈ implicit_timestepping_methods
 
 """
     Timestepper(stepper, args...)
@@ -29,18 +26,26 @@ function iterate!(model, Δt, nt)
   return nothing
 end
 
+"Update the clock after one iteration."
+function update!(clock, Δt)
+  clock.time += Δt
+  clock.iter += 1
+  return nothing
+end
+
 #
 # Forward Euler Timestepper
 #
 
 struct ForwardEulerTimestepper{T} <: Timestepper
-  rhs::T
-  function ForwardEulerTimestepper(solution)
+  calc_rhs! :: Function
+  rhs       :: T
+  function ForwardEulerTimestepper(calc_rhs!, solution)
     rhs = deepcopy(solution)
     for fld in rhs
       set!(fld, 0)
     end
-    new{typeof(rhs)}(rhs)
+    new{typeof(rhs)}(calc_rhs!, rhs)
   end
 end
 
@@ -53,111 +58,116 @@ end
 # Forward Euler timestepping
 function iterate!(model::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
 
-  model.equation.R(model.timestepper.rhs, model)
+    # Evaluate the right-hand-side of ∂ϕ∂t for the current time-step.
+    model.timestepper.calc_rhs!(model.timestepper.rhs, model)
 
-  for j in eachindex(model.solution)
-      ϕ, rhs = unpack(model, j)
-      for i in eachindex(ϕ)
-          @inbounds ϕ[i] += Δt * rhs[i]
-      end
-  end
+    # Update the solution
+    for j in eachindex(model.solution)
+        @inbounds ϕ, rhs = unpack(model, j)
+        for i in eachindex(ϕ)
+            @inbounds ϕ[i] += Δt * rhs[i]
+        end
+    end
 
-  update!(model.clock, Δt)
+    update!(model.clock, Δt)
 
-  return nothing
+    return nothing
 end
 
-
-#=
 #
 # Backward Euler Timestepper
 #
 
-struct BackwardEulerTimestepper{R, L} <: Timestepper
-    rhs::R
-    lhs::L
-    function BackwardEulerTimestepper(solution, lhs)
+#=
+Could have
+
+struct DiffusiveEquation{K}
+    calc_rhs :: Function
+    calc_lhs :: Function
+    κ        :: K
+end
+
+and
+
+function calc_lhs!(lhs, Δt, model::AbstractModel{E}) <: where E <: DiffusiveEquation
+    calc_diffusive_lhs!(lhs, Δt, model.equation.κ, model)
+    return nothing
+end
+
+But perhaps this is too complicated.
+
+For now, our 'BackwardEulerTimestepper' can only treat diffusive terms
+implicitly.
+=#
+
+struct BackwardEulerTimestepper{K, R, L} <: Timestepper
+    calc_rhs! :: Function
+    Κ         :: K
+    rhs       :: R
+    lhs       :: L
+    function BackwardEulerTimestepper(calc_rhs!, Κ, solution, lhs)
         rhs = deepcopy(solution)
         for fld in rhs
             set!(fld, 0)
         end
-      new{typeof(rhs), typeof(lhs)}(rhs, lhs)
+        new{typeof(rhs), typeof(κ), typeof(lhs)}(calc_rhs!, Κ, rhs, lhs)
     end
 end
 
-#=
-function BackwardEulerTimestepper(solution)
+function build_lhs_array(solution)
     lhs_array = []
-    for s in solution
-        T = eltype(s)
-        A
-        N = length(s)
-        lhs_s = Tridiagonal{T, A}(zeros(N-1), zeros(N), zeros(N-1))
-        push!(lhs_array, lhs_s)
+    for fld in solution
+        T = eltype(fld)
+        A = arraytype(fld)
+        N = length(fld)
+        lhs_fld = Tridiagonal{T, A}(zeros(N-1), zeros(N), zeros(N-1))
+        push!(lhs_array, lhs_fld)
     end
-    lhs = DiffusiveOperator(lhs_array...)
-
-    rhs = deepcopy(solution)
-    for fld in rhs
-        set!(fld, 0)
-    end
-
-    BackwardEulerTimestepper(rhs, lhs)
+    return lhs_array
 end
-=#
 
-flux_div_op(m, κ, face, cell) = κ(m, face) / Δc(m, face) / Δf(m, cell)
+flux_div_op(m, K, face, cell) = K(m, face) / Δc(m, face) / Δf(m, cell)
+
+# Build backward Euler operator for diffusive problems
+function calc_diffusive_lhs!(lhs, Δt, K, m)
+    @inbounds begin
+        for j in eachindex(m.solution)
+            ϕ = m.solution[j]
+            Kϕ = K[j]
+
+            for i in interior(ϕ)
+                lhs.du[i] = -Δt*flux_div_op(m, Kϕ, i+1, i)
+                lhs.d[i] = 1 + Δt*(flux_div_op(m, Kϕ, i+1, i) + flux_div_op(m, Kϕ, i, i))
+                lhs.dl[i-1] = -Δt*flux_div_op(m, Kϕ, i, i)
+            end
+
+            # Bottom row
+            be.lhs.du[1] = -Δt*flux_div_op(m, Kϕ, 2, 1)
+            be.lhs.d[1] = 1 + Δt*flux_div_op(m, Kϕ, 2, 1)
+
+            # Top row
+            be.lhs.dl[length(ϕ)] = -Δt*flux_div_op(m, Kϕ, length(ϕ), length(ϕ))
+            be.lhs.d[length(ϕ)]  = 1 + Δt*flux_div_op(m, Kϕ, length(ϕ), length(ϕ))
+        end
+    end
+
+    return nothing
+end
 
 # Backward Euler timestepping for problems with diffusivity
 function iterate!(m::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimestepper
 
-    be = m.timestepper
-
-    for j in eachindex(m.solution)
-        ϕ, N, K, rhs, bcs = unpack(m, j)
-
-        # Interior step
-        for i in interior(ϕ)
-            @inbounds begin
-                # Compute rhs of backward Euler inversion equation
-                rhs.data[i] = N(m, i) + ϕ.data[i]
-
-                # Build backward euler operator for diffusive problems
-                be.lhs.dl[i-1] = -Δt*flux_div_op(m, K, i, i)
-                be.lhs.du[i]   = -Δt*flux_div_op(m, K, i+1, i)
-                be.lhs.d[i]    = 1 + Δt*(flux_div_op(m, K, i+1, i) + flux_div_op(m, K, i, i))
-            end
-        end
-
-        # Boundary conditions: inhomogeneous BCs added to rhs.
-        @inbounds rhs.data[end] = N(m, bcs.top) + ϕ.data[end]
-        @inbounds rhs.data[1]   = N(m, bcs.bottom) + ϕ.data[1]
-
-        @inbounds be.lhs.du[1] = -Δt*flux_div_op(m, K, 2, 1)
-        @inbounds be.lhs.d[1] = 1 + Δt*flux_div_op(m, K, 2, 1)
-
-        @inbounds be.lhs.dl[end] = -Δt*flux_div_op(m, K, length(ϕ), length(ϕ))
-        @inbounds be.lhs.d[end]  = 1 + Δt*flux_div_op(m, K, length(ϕ), length(ϕ))
-    end
+    # Evaluate the right-hand-side of ∂ϕ∂t for the current time-step.
+    model.timestepper.calc_rhs!(model.timestepper.rhs, model)
+    calc_diffusive_lhs!(model.timestepper.lhs, Δt, model.timestepper.K, model)
 
     # Update solution by inverting Tridiagonal lhs matrix
     for j in eachindex(m.solution)
-        ϕ, N, K, rhs, bcs = unpack(m, j)
-        ϕ.data .= rhs.data \ be.lhs
+        ϕdata = data(ϕ)
+        @inbounds ϕdata .= data(rhs) \ be.lhs
     end
 
     update!(m.clock, Δt)
 
   return nothing
 end
-
-
-function unpack(model::AbstractModel{TS}, i) where TS <: BackwardEulerTimestepper
-  ϕ = model.solution[i]
-  N = model.equation.N[i]
-  K = model.equation.K[i]
-  rhs = model.timestepper.rhs[i]
-  bcs = model.bcs[i]
-  return ϕ, N, K, rhs, bcs
-end
-=#

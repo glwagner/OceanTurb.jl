@@ -33,6 +33,7 @@ function build_solution(names, fieldtypes)
     solfields = [ :( $(names[i]) :: $(fieldtypes[i]) ) for i = 1:nfields ]
     bcfields =  [ :( $(names[i]) :: FieldBoundaryConditions ) for i = 1:nfields ]
     opfields =  [ :( $(names[i]) :: Function ) for i = 1:nfields ]
+    ancfields = [ :( $(names[i]) :: T ) for i = 1:nfields ]
     return quote
         struct Solution <: AbstractSolution{$(nfields), Field}
             $(solfields...)
@@ -42,8 +43,8 @@ function build_solution(names, fieldtypes)
             $(bcfields...)
         end
 
-        struct Functionary <: FieldVector{$(nfields), Function}
-            $(opfields...)
+        struct SolutionLike{T} <: FieldVector{$(nfields), T}
+            $(ancfields...)
         end
     end
 end
@@ -63,35 +64,10 @@ macro pair_specify_solution(paired_specs...)
     esc(build_solution(names, fieldtypes))
 end
 
-#=
-diff_N_fields = [ :( $(Symbol(:N, name))::Function    ) for name in names ]
-diff_K_fields = [ :( $(Symbol(:K, name))::Function    ) for name in names ]
-diffop_fields = [ :( $(name)::Tridiagonal{T, A}       ) for name in names ]
-
-struct DiffusiveOperator{T, A} <: FieldVector{$(nfields), Tridiagonal{T, A}}
-    $(diffop_fields...)
-end
-
-function DiffusiveOperator(solution)
-    lhs_array = []
-    for s in solution
-        T = eltype(s)
-        A = arraytype(s)
-        N = length(s)
-        lhs_s = Tridiagonal{T, A}(zeros(N-1), zeros(N), zeros(N-1))
-        push!(lhs_array, lhs_s)
-    end
-    lhs = DiffusiveOperator(lhs_array...)
-    return lhs
-end
-=#
-
-
 @def add_standard_model_fields begin
-  timestepper :: TS
+  clock       :: Clock{T}
   grid        :: G
-  equation    :: E
+  timestepper :: TS
   solution    :: Solution
   bcs         :: BoundaryConditions
-  clock       :: Clock{T}
 end

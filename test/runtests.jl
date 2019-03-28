@@ -53,8 +53,11 @@ end
     include("diffusiontests.jl")
     @test test_diffusion_basic()
     @test test_diffusion_set_c()
-    @test test_diffusion_cosine()
-    @test test_diffusive_flux()
+
+    for stepper in (:ForwardEuler, :BackwardEuler)
+        @test test_diffusion_cosine(stepper)
+        @test test_diffusive_flux(stepper)
+    end
 end
 
 @testset "KPP" begin

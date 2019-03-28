@@ -56,14 +56,13 @@ export # This file, core functionality:
     bottom,
     integral,
 
-    # equations.jl
-    Equation,
-
     # timesteppers.jl
+    Equation,
     Timestepper,
+    implicit,
     iterate!,
-    unpack,
     ForwardEulerTimestepper,
+    BackwardEulerTimestepper,
 
     # boundary_conditions.jl
     Flux,
@@ -109,7 +108,7 @@ abstract type Grid{T, A<:AbstractArray} end
 abstract type Timestepper end
 abstract type AbstractField{A<:AbstractArray, G<:Grid} end
 abstract type AbstractSolution{N, T} <: FieldVector{N, T} end
-abstract type AbstractModel{TS<:Timestepper, G<:Grid, E<:AbstractEquation, T<:AbstractFloat} end  # Explain: what is a `Model`?
+abstract type AbstractModel{T, G, TS} end  # Explain: what is a `Model`?
 
 #
 # Core OceanTurb.jl functionality
@@ -117,10 +116,8 @@ abstract type AbstractModel{TS<:Timestepper, G<:Grid, E<:AbstractEquation, T<:Ab
 
 include("utils.jl")
 include("grids.jl")
-include("fields.jl")
 include("boundary_conditions.jl")
-include("operators.jl")
-include("equations.jl")
+include("fields.jl")
 include("timesteppers.jl")
 
 mutable struct Clock{T}
@@ -171,7 +168,7 @@ end
 
 #
 # Physical oceanic constants
-#
+
 
 struct Constants{T}
     g  :: T # Gravitiational acceleration
