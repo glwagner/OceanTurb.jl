@@ -1,4 +1,42 @@
-# Numerical methods
+# Numerical methods in `OceanTurb.jl`
+
+## Spatial discretization
+
+`OceanTurb.jl` uses a one-dimensional finite-volume method
+to discretize momentum, temperature, salinity, and other variables
+in the ``z``-direction.
+
+An ASCII-art respresentation of an example grid with `N=3` is
+
+```text
+ ▲ z
+ |
+         i=4           *         
+                j=4   ===  Top   ▲              
+         i=3           *         | Δf[3]
+                j=3   ---        ▼
+         i=2           *             ▲            
+                j=2   ---            | Δc[2]
+         i=1           *             ▼  
+                j=1   ===  Bottom
+         i=0           *           
+```
+
+where the double lines indicate the top and bottom of the domain,
+the single lines indicate "face" boundaries, the
+`i`'s index cell centers (nodes) and `j`'s index the ``z``-location
+of cell interfaces (faces).
+Horizontal momentum and tracer variables are located at cell centers,
+while fluxes of these quantities (and vertical-velocity-like variables when present)
+are located at cell faces.
+The cells at ``i=0`` and ``i=4`` are 'ghost cells', whose values are set
+according to the boundary condition.
+For a no flux or zero gradient boundary condition, for example, we
+would set `c[0]=c[1]` and `c[4]=c[3]`.
+
+### Finite volume derivatives and fluxes
+
+The derivative of a quantity ``\Phi`` at face ``i`` is
 
 ```math
 \newcommand{\c}{\, ,}
@@ -14,63 +52,29 @@
 
 \newcommand{\beqs}{\begin{gather}}
 \newcommand{\eeqs}{\end{gather}}
-```
 
-## Spatial discretization
-
-`OceanTurb.jl` uses a one-dimensional finite-volume method
-to discretize momentum, temperature, salinity, and other variables.
-
-An ASCII-art respresentation of an example grid with `N=3` is
-
-```text
- ▲ z
- |
-         i=4           *         
-                j=4   ===  Top   ▲              
-         i=3           *         | Δf (i=3)
-                j=3   ---        ▼
-         i=2           *             ▲            
-                j=2   ---            | Δc (j=2)
-         i=1           *             ▼  
-                j=1   ===  Bottom
-         i=0           *           
-```
-
-where the double lines indicate the top and bottom of the domain,
-the single lines indicate "face" boundaries, the
-`i`'s index cell centers (nodes) and `j`'s index the ``z``-location
-of cell interfaces (faces).
-Horizontal momentum and tracer variables are located at cell centers,
-while fluxes of these quantities (and vertical-velocity-like variables when present)
-are located at cell faces.
-
-### Derivatives and diffusive fluxes
-
-The derivative of a quantity ``\phi`` at face ``i`` is
-
-```math
 \beq
-\left( \d_z \phi \right )_i = \frac{\phi_i - \phi_{i-1}}{\Delta c_i} \c
+\left( \d_z \Phi \right )_i = \frac{\Phi_i - \Phi_{i-1}}{\Delta c_i} \c
 \eeq
 ```
 
-where ``\phi_i`` denotes the value of ``\phi`` at cell ``i``, and
+where ``\Phi_i`` denotes the value of ``\Phi`` at cell ``i``, and
 ``\Delta c_i = z_{c, i} - z_{c, i-1}`` is the vertical separation between
 node ``i`` and cell point ``i-1``.
 
 With diffusivity given on cell interfaces, the diffusive flux
-at face ``i`` is just ``K_i \left ( \d_z \phi \right )_i``.
+at face ``i`` is just ``K_i \left ( \d_z \Phi \right )_i``.
 The (negative of the) divergence of the diffusive flux at node ``i`` is therefore
 
 ```math
-\newcommand{\Kdz}[1]{K_{#1} \left ( \d_z \phi \right )_{#1} }
+\newcommand{\Kdz}[1]{K_{#1} \left ( \d_z \Phi \right )_{#1} }
 \begin{align}
-\left ( \d_z K \d_z \phi \right )_i &= \frac{ \Kdz{i+1} - \Kdz{i} }{\Delta f_i} \c \\
+\left ( \d_z K \d_z \Phi \right )_i &= \frac{ \Kdz{i+1} - \Kdz{i} }{\Delta f_i} \c \\
 &= \frac{
-          \tfrac{K_{i+1}}{\Delta c_{i+1}} \phi_{i+1}
-        - \left ( \tfrac{K_{i+1}}{\Delta c_{i+1}} + \tfrac{K_i}{\Delta c_i} \right ) \phi_i
-         + \tfrac{K_i}{\Delta c_i} \phi_{i-1}}{\Delta f_i} \p
+          \tfrac{K_{i+1}}{\Delta c_{i+1}} \Phi_{i+1}
+        - \left ( \tfrac{K_{i+1}}{\Delta c_{i+1}} + \tfrac{K_i}{\Delta c_i} \right ) \Phi_i
+         + \tfrac{K_i}{\Delta c_i} \Phi_{i-1}}{\Delta f_i} \p
+ \label{fluxdivop}
 \end{align}
 ```
 
@@ -78,8 +82,9 @@ In the top cell where ``i=N``, the diffusive flux is
 
 ```math
 \begin{align}
-\left ( \d_z K \d_z \phi \right )_N &= \frac{ - F_{\mathrm{top}} - K_N \left ( \d_z \phi \right )_N}{\Delta f_N} \c \\
-&= -\frac{F_{\mathrm{top}}}{\Delta f_N} - \frac{K_N \phi_N - K_N \phi_{N-1}}{\Delta f_N \Delta c_N} \p
+\left ( \d_z K \d_z \Phi \right )_N &= \frac{ - F_{\mathrm{top}} - K_N \left ( \d_z \Phi \right )_N}{\Delta f_N} \c \\
+&= -\frac{F_{\mathrm{top}}}{\Delta f_N} - \frac{K_N \Phi_N - K_N \Phi_{N-1}}{\Delta f_N \Delta c_N} \p
+ \label{fluxdivop_top}
 \end{align}
 ```
 
@@ -87,18 +92,20 @@ In the bottom cell where ``i=1``, on the other hand, the diffusive flux is
 
 ```math
 \begin{align}
-\left ( \d_z K \d_z \phi \right )_1 &= \frac{  K_2 \left ( \d_z \phi \right )_2 + F_{\mathrm{bottom}}}{\Delta f_1} \c \\
-&= \frac{F_{\mathrm{bottom}}}{\Delta f_1} + \frac{K_2 \phi_2 - K_2 \phi_1}{\Delta f_1 \Delta c_2}
+\left ( \d_z K \d_z \Phi \right )_1 &= \frac{  K_2 \left ( \d_z \Phi \right )_2 + F_{\mathrm{bottom}}}{\Delta f_1} \c \\
+&= \frac{F_{\mathrm{bottom}}}{\Delta f_1} + \frac{K_2 \Phi_2 - K_2 \Phi_1}{\Delta f_1 \Delta c_2}
+\label{fluxdivop_bottom}
 \end{align}
 ```
 
 
-# Time-stepping
+# Time-stepping in `OceanTurb.jl`
 
 To integrate ocean surface boundary layer models forward in time,
 we implement various explicit and implicit-explicit time-stepping schemes.
+The function `iterate!(model, Δt, Nt)` steps a model forward in time.
 
-## Explicit schemes
+### Explicit schemes
 
 Our explicit time-stepping schemes integrate partial differential equations
 of the form
@@ -114,19 +121,26 @@ where ``\Phi`` is a variable like velocity, temperature, or salinity and ``R``
 is an arbitrary function representing any number of processes, including turbulent
 diffusion and internal forcing.
 
-## Implicit-explicit time-stepping
+### Implicit-explicit time-stepping
 
 Our mixed implicit-explicit time-stepping schemes integrate partial differential equations
 of the form
 ```math
 \beq \label{implicitdiffusion}
-\d_t \Phi - \d_z K \d_z \phi = R(\Phi) \c
+\d_t \Phi - \d_z K \d_z \Phi = R(\Phi) \c
 \eeq
 ```
 where ``K`` is a diffusivity that,  in general, depends on the model state
 and thus the time-step.
 These implicit-explicit schemes treat the diffusive term on the left
 of \eqref{implicitdiffusion} implicitly.
+
+## Time-stepping methods
+
+We implement `iterate!` functions and types for:
+
+* explicit forward Euler
+* semi-implicit backward Euler
 
 ### Forward Euler method
 
@@ -163,27 +177,53 @@ L_{ij} \Phi^{n+1}_j = \left [ \Phi^n + \Delta t R \left ( \Phi^n \right ) \right
 
 where ``L_{ij}`` is a matrix, and the subscripts ``i`` or ``j`` denote grid points
 ``i`` or ``j``.
-Note that the diffusive operator that contributes to ``L_{ij}`` does not include fluxes
-across boundary faces; fluxes through boundary faces due either to Dirichlet (Value)
-boundary conditions or non-zero fluxes must be included in ``R \left ( \Phi \right )``.
-For the diffusive problems considered by our backward Euler solver, ``L_{ij}`` has the form
+For the diffusive problems considered by our backward Euler solver, the matrix
+multiplication ``L_{ij} \Phi_j`` has the form
+
 
 ```math
-\beq
-L_{ij} = \left [ \begin{matrix}
+\begin{align}
+L_{ij} &= \left [ \delta_{ij} - \Delta t \left (\d_z K \d_z \right )_{ij} \right ] \Phi_j \\
+
+&= \left [ \begin{matrix}
+
 1 + \Delta t \tfrac{K^n_2}{\Delta f_1 \Delta c_2}
-  & -\Delta t \tfrac{K^n_2}{\Delta f_1 \Delta c_2} & \cdot & \cdot & \cdot & \cdot & \cdot \\
-- \Delta t \tfrac{K^n_1}{\Delta f_1 \Delta c_1}
-  & 1 + \tfrac{\Delta t}{\Delta f_1} \left (\tfrac{K^n_1}{\Delta c_1} + \tfrac{K^n_2}{\Delta f_1 \Delta c_2} \right )
-    & -\Delta t \tfrac{K^n_2}{\Delta c_2} & \cdot & \cdot & \cdot & \cdot \\
-\cdot & \ddots & \ddots & \ddots & \cdot & \cdot & \cdot \\
-\cdot & \cdot
+  & -\Delta t \tfrac{K^n_2}{\Delta f_1 \Delta c_2}
+    & \cdot & \cdot & \cdot & \cdot \\
+
+\ddots & \ddots & \ddots & \cdot & \cdot & \cdot \\
+
+\cdot
   & - \Delta t \tfrac{K_i}{\Delta c_i \Delta f_i}
-  & 1 - \tfrac{\Delta t}{\Delta f_i} \left ( \tfrac{K_{i+1}}{\Delta c_{i+1}} + \tfrac{K_i}{\Delta c_i} \right )
+  & 1 + \tfrac{\Delta t}{\Delta f_i} \left ( \tfrac{K_{i+1}}{\Delta c_{i+1}} + \tfrac{K_i}{\Delta c_i} \right )
   & - \Delta t \tfrac{K_{i+1}}{\Delta c_{i+1} \Delta f_{i+1}} & \cdot & \cdot \\
-\cdot & \cdot & \cdot & \ddots & \ddots & \ddots & \cdot \\
-\cdot & \cdot & \cdot & \cdot & \cdot & - \Delta t \tfrac{K^n_N}{\Delta c_N \Delta f_N}
+
+\cdot & \cdot & \ddots & \ddots & \ddots & \cdot \\
+
+\cdot & \cdot & \cdot & \cdot & - \Delta t \tfrac{K^n_N}{\Delta c_N \Delta f_N}
   & 1 + \Delta t \tfrac{K^n_N}{\Delta c_N \Delta f_N}
 \end{matrix} \right ]
-\eeq
+\left [ \begin{matrix}
+\Phi_1 \\[1.1ex]
+\vdots \\[1.1ex]
+\Phi_i \\[1.1ex]
+\vdots \\[1.1ex]
+\Phi_N
+\end{matrix} \right ]
+\label{implicitoperatormatrix}
+\end{align}
 ```
+
+To form the matrix operator in \eqref{implicitoperatormatrix}, we have used
+the second-order flux divergence finite difference operators in
+\eqref{fluxdivop}--\eqref{fluxdivop_bottom}.
+
+It is crucial to note that the diffusive operator that contributes to ``L_{ij}``
+does not include fluxes across boundary faces.
+In particular, ``L_{ij}`` in \eqref{implicitoperatormatrix} enforces a
+no-flux condition across the top and bottom faces.
+Accordingly, fluxes through boundary faces due either to Dirichlet (Value)
+boundary conditions or non-zero fluxes are accounted for
+by adding the contribution of the flux diverence across
+the top and bottom face to ``R \left ( \Phi \right )``.
+For example...
