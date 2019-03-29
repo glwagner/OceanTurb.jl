@@ -121,7 +121,7 @@ The function ``\F{\K}{}(z)`` is
 ```
 
 The unresolved kinetic energy constant is ``\C{\K}{} = 4.32`` and the minimum unresolved kinetic energy is ``\C{\K_0}{} = 10^{-11}``.
-To solve \eqref{bulk_ri} for ``h``, we evaluate the right side of \eqref{bulk_ri} for ``z < 0`` at increasing depths until the right side rises above the critical ``\C{\Ri}{}``.
+To solve \eqref{bulk\_ri} for ``h``, we evaluate the right side of \eqref{bulk\_ri} for ``z < 0`` at increasing depths until the right side rises above the critical ``\C{\Ri}{}``.
 We then linearly interpolate to find ``h``.
 
 ### Non-local flux
