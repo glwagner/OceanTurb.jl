@@ -49,11 +49,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "numerics/#Numerical-methods-1",
+    "location": "numerics/#Numerical-methods-in-OceanTurb.jl-1",
     "page": "Numerical methods",
-    "title": "Numerical methods",
+    "title": "Numerical methods in OceanTurb.jl",
     "category": "section",
-    "text": "newcommandc \nnewcommandp \nnewcommanddpartial\n\nnewcommandr1mathrm1\n\nnewcommandeemathrme\n\nnewcommandbeqbeginequation\nnewcommandeeqendequation\n\nnewcommandbeqsbegingather\nnewcommandeeqsendgather"
+    "text": "OceanTurb.jl uses a one-dimensional finite-volume method to discretize momentum, temperature, salinity, and other variables in the z-direction. A variety of explicit and implicit-explicit schemes are implemented for temporal integration. At the moment, we only support the treatment of diffusive operators implicitly for semi-implicit time-integration."
 },
 
 {
@@ -61,39 +61,47 @@ var documenterSearchIndex = {"docs": [
     "page": "Numerical methods",
     "title": "Spatial discretization",
     "category": "section",
-    "text": "OceanTurb.jl uses a one-dimensional finite-volume method to discretize momentum, temperature, salinity, and other variables.An ASCII-art respresentation of an example grid with N=3 is ▲ z\n |\n         i=4           *         \n                j=4   ===  Top   ▲              \n         i=3           *         | Δf (i=3)\n                j=3   ---        ▼\n         i=2           *             ▲            \n                j=2   ---            | Δc (j=2)\n         i=1           *             ▼  \n                j=1   ===  Bottom\n         i=0           *           where the double lines indicate the top and bottom of the domain, the single lines indicate \"face\" boundaries, the i\'s index cell centers (nodes) and j\'s index the z-location of cell interfaces (faces). Horizontal momentum and tracer variables are located at cell centers, while fluxes of these quantities (and vertical-velocity-like variables when present) are located at cell faces."
+    "text": "An ASCII-art respresentation of an example grid with N=3 is ▲ z\n |\n         i=4           *         \n                j=4   ===  Top   ▲              \n         i=3           *         | Δf[3]\n                j=3   ---        ▼\n         i=2           *             ▲            \n                j=2   ---            | Δc[2]\n         i=1           *             ▼  \n                j=1   ===  Bottom\n         i=0           *           where the double lines indicate the top and bottom of the domain, the single lines indicate \"face\" boundaries, the i\'s index cell centers (nodes) and j\'s index the z-location of cell interfaces (faces). Horizontal momentum and tracer variables are located at cell centers, while fluxes of these quantities (and vertical-velocity-like variables when present) are located at cell faces. The cells at i=0 and i=4 are \'ghost cells\', whose values are set according to the boundary condition. For a no flux or zero gradient boundary condition, for example, we would set c[0]=c[1] and c[4]=c[3]."
 },
 
 {
-    "location": "numerics/#Derivatives-and-diffusive-fluxes-1",
+    "location": "numerics/#Finite-volume-derivatives-and-fluxes-1",
     "page": "Numerical methods",
-    "title": "Derivatives and diffusive fluxes",
+    "title": "Finite volume derivatives and fluxes",
     "category": "section",
-    "text": "The derivative of a quantity phi at face i isbeq\nleft( d_z phi right )_i = fracphi_i - phi_i-1Delta c_i c\neeqwhere phi_i denotes the value of phi at cell i, and Delta c_i = z_c i - z_c i-1 is the vertical separation between node i and cell point i-1.With diffusivity given on cell interfaces, the diffusive flux at face i is just K_i left ( d_z phi right )_i. The (negative of the) divergence of the diffusive flux at node i is thereforenewcommandKdz1K_1 left ( d_z phi right )_1 \nbeginalign\nleft ( d_z K d_z phi right )_i = frac Kdzi+1 - Kdzi Delta f_i c \n= frac\n          tfracK_i+1Delta c_i+1 phi_i+1\n        - left ( tfracK_i+1Delta c_i+1 + tfracK_iDelta c_i right ) phi_i\n         + tfracK_iDelta c_i phi_i-1Delta f_i p\nendalignIn the top cell where i=N, the diffusive flux isbeginalign\nleft ( d_z K d_z phi right )_N = frac - F_mathrmtop - K_N left ( d_z phi right )_NDelta f_N c \n= -fracF_mathrmtopDelta f_N - fracK_N phi_N - K_N phi_N-1Delta f_N Delta c_N p\nendalignIn the bottom cell where i=1, on the other hand, the diffusive flux isbeginalign\nleft ( d_z K d_z phi right )_1 = frac  K_2 left ( d_z phi right )_2 + F_mathrmbottomDelta f_1 c \n= fracF_mathrmbottomDelta f_1 + fracK_2 phi_2 - K_2 phi_1Delta f_1 Delta c_2\nendalign"
+    "text": "The derivative of a quantity Phi at face i isnewcommandc \nnewcommandp \nnewcommanddpartial\n\nnewcommandr1mathrm1\n\nnewcommandeemathrme\n\nnewcommandbeqbeginequation\nnewcommandeeqendequation\n\nnewcommandbeqsbegingather\nnewcommandeeqsendgather\n\nbeq\nleft( d_z Phi right )_i = fracPhi_i - Phi_i-1Delta c_i c\neeqwhere Phi_i denotes the value of Phi at cell i, and Delta c_i = z_c i - z_c i-1 is the vertical separation between node i and cell point i-1.With diffusivity given on cell interfaces, the diffusive flux at face i is just K_i left ( d_z Phi right )_i. The (negative of the) divergence of the diffusive flux at node i is thereforenewcommandKdz1K_1 left ( d_z Phi right )_1 \nbeginalign\nleft ( d_z K d_z Phi right )_i = frac Kdzi+1 - Kdzi Delta f_i c \n= frac\n          tfracK_i+1Delta c_i+1 Phi_i+1\n        - left ( tfracK_i+1Delta c_i+1 + tfracK_iDelta c_i right ) Phi_i\n         + tfracK_iDelta c_i Phi_i-1Delta f_i p\n labelfluxdivop\nendalignIn the top cell where i=N, the diffusive flux isbeginalign\nleft ( d_z K d_z Phi right )_N = frac - F_mathrmtop - K_N left ( d_z Phi right )_NDelta f_N c \n= -fracF_mathrmtopDelta f_N - fracK_N Phi_N - K_N Phi_N-1Delta f_N Delta c_N p\n labelfluxdivop_top\nendalignIn the bottom cell where i=1, on the other hand, the diffusive flux isbeginalign\nleft ( d_z K d_z Phi right )_1 = frac  K_2 left ( d_z Phi right )_2 + F_mathrmbottomDelta f_1 c \n= fracF_mathrmbottomDelta f_1 + fracK_2 Phi_2 - K_2 Phi_1Delta f_1 Delta c_2\nlabelfluxdivop_bottom\nendalign"
 },
 
 {
-    "location": "numerics/#Time-stepping-1",
+    "location": "numerics/#Time-integration-1",
     "page": "Numerical methods",
-    "title": "Time-stepping",
+    "title": "Time integration",
     "category": "section",
-    "text": "To integrate ocean surface boundary layer models forward in time, we implement various explicit and implicit-explicit time-stepping schemes."
+    "text": "To integrate ocean surface boundary layer models forward in time, we implement various explicit and implicit-explicit time-stepping schemes. The function iterate!(model, Δt, Nt) steps a model forward in time."
 },
 
 {
-    "location": "numerics/#Explicit-schemes-1",
+    "location": "numerics/#Explicit-time-integration-schemes-1",
     "page": "Numerical methods",
-    "title": "Explicit schemes",
+    "title": "Explicit time integration schemes",
     "category": "section",
     "text": "Our explicit time-stepping schemes integrate partial differential equations of the formbeq\nd_t Phi = R(Phi) c\nlabelexplicitform\neeqwhere Phi is a variable like velocity, temperature, or salinity and R is an arbitrary function representing any number of processes, including turbulent diffusion and internal forcing."
 },
 
 {
-    "location": "numerics/#Implicit-explicit-time-stepping-1",
+    "location": "numerics/#Implicit-explicit-time-integration-schemes-1",
     "page": "Numerical methods",
-    "title": "Implicit-explicit time-stepping",
+    "title": "Implicit-explicit time integration schemes",
     "category": "section",
-    "text": "Our mixed implicit-explicit time-stepping schemes integrate partial differential equations of the formbeq labelimplicitdiffusion\nd_t Phi - d_z K d_z phi = R(Phi) c\neeqwhere K is a diffusivity that,  in general, depends on the model state and thus the time-step. These implicit-explicit schemes treat the diffusive term on the left of \\eqref{implicitdiffusion} implicitly."
+    "text": "Our mixed implicit-explicit time-stepping schemes integrate partial differential equations of the formbeq labelimplicitdiffusion\nd_t Phi - d_z K d_z Phi = R(Phi) c\neeqwhere K is a diffusivity that,  in general, depends on the model state and thus the time-step. These implicit-explicit schemes treat the diffusive term on the left of \\eqref{implicitdiffusion} implicitly."
+},
+
+{
+    "location": "numerics/#Time-integration-methods-1",
+    "page": "Numerical methods",
+    "title": "Time integration methods",
+    "category": "section",
+    "text": "We implement iterate! functions and types for:explicit forward Euler\nsemi-implicit backward Euler"
 },
 
 {
@@ -109,7 +117,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Numerical methods",
     "title": "Backward Euler method",
     "category": "section",
-    "text": "The backward Euler method uses the temporal discretizationbeq\nPhi^n+1 - Delta t left ( d_z K^n d_z right ) Phi^n+1 = Phi^n + Delta t R(Phi^n)\neeqThe z-derivatives in the diffusive term generate a matrix problem to be solved for Phi^n+1:beq\nL_ij Phi^n+1_j = left  Phi^n + Delta t R left ( Phi^n right ) right _i\neeqwhere L_ij is a matrix, and the subscripts i or j denote grid points i or j. Note that the diffusive operator that contributes to L_ij does not include fluxes across boundary faces; fluxes through boundary faces due either to Dirichlet (Value) boundary conditions or non-zero fluxes must be included in R left ( Phi right ). For the diffusive problems considered by our backward Euler solver, L_ij has the formbeq\nL_ij = left  beginmatrix\n1 + Delta t tfracK^n_2Delta f_1 Delta c_2\n   -Delta t tfracK^n_2Delta f_1 Delta c_2  cdot  cdot  cdot  cdot  cdot \n- Delta t tfracK^n_1Delta f_1 Delta c_1\n   1 + tfracDelta tDelta f_1 left (tfracK^n_1Delta c_1 + tfracK^n_2Delta f_1 Delta c_2 right )\n     -Delta t tfracK^n_2Delta c_2  cdot  cdot  cdot  cdot \ncdot  ddots  ddots  ddots  cdot  cdot  cdot \ncdot  cdot\n   - Delta t tfracK_iDelta c_i Delta f_i\n   1 - tfracDelta tDelta f_i left ( tfracK_i+1Delta c_i+1 + tfracK_iDelta c_i right )\n   - Delta t tfracK_i+1Delta c_i+1 Delta f_i+1  cdot  cdot \ncdot  cdot  cdot  ddots  ddots  ddots  cdot \ncdot  cdot  cdot  cdot  cdot  - Delta t tfracK^n_NDelta c_N Delta f_N\n   1 + Delta t tfracK^n_NDelta c_N Delta f_N\nendmatrix right \neeq"
+    "text": "The backward Euler method uses the temporal discretizationbeq\nPhi^n+1 - Delta t left ( d_z K^n d_z right ) Phi^n+1 = Phi^n + Delta t R(Phi^n)\neeqThe z-derivatives in the diffusive term generate a matrix problem to be solved for Phi^n+1:beq\nL_ij Phi^n+1_j = left  Phi^n + Delta t R left ( Phi^n right ) right _i\neeqwhere L_ij is a matrix, and the subscripts i or j denote grid points i or j. For the diffusive problems considered by our backward Euler solver, the matrix multiplication L_ij Phi_j has the formbeginalign\nL_ij = left  delta_ij - Delta t left (d_z K d_z right )_ij right  Phi_j \n\n= left  beginmatrix\n\n1 + Delta t tfracK^n_2Delta f_1 Delta c_2\n   -Delta t tfracK^n_2Delta f_1 Delta c_2\n     cdot  cdot  cdot  cdot \n\nddots  ddots  ddots  cdot  cdot  cdot \n\ncdot\n   - Delta t tfracK_iDelta c_i Delta f_i\n   1 + tfracDelta tDelta f_i left ( tfracK_i+1Delta c_i+1 + tfracK_iDelta c_i right )\n   - Delta t tfracK_i+1Delta c_i+1 Delta f_i+1  cdot  cdot \n\ncdot  cdot  ddots  ddots  ddots  cdot \n\ncdot  cdot  cdot  cdot  - Delta t tfracK^n_NDelta c_N Delta f_N\n   1 + Delta t tfracK^n_NDelta c_N Delta f_N\nendmatrix right \nleft  beginmatrix\nPhi_1 11ex\nvdots 11ex\nPhi_i 11ex\nvdots 11ex\nPhi_N\nendmatrix right \nlabelimplicitoperatormatrix\nendalignTo form the matrix operator in \\eqref{implicitoperatormatrix}, we have used the second-order flux divergence finite difference operators in \\eqref{fluxdivop}–\\eqref{fluxdivop_bottom}.It is crucial to note that the diffusive operator that contributes to L_ij does not include fluxes across boundary faces. In particular, L_ij in \\eqref{implicitoperatormatrix} enforces a no-flux condition across the top and bottom faces. Accordingly, fluxes through boundary faces due either to Dirichlet (Value) boundary conditions or non-zero fluxes are accounted for by adding the contribution of the flux diverence across the top and bottom face to R left ( Phi right ). For example..."
 },
 
 {
