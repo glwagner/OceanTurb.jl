@@ -1,10 +1,14 @@
 # Numerical methods in `OceanTurb.jl`
 
-## Spatial discretization
-
 `OceanTurb.jl` uses a one-dimensional finite-volume method
 to discretize momentum, temperature, salinity, and other variables
 in the ``z``-direction.
+A variety of explicit and implicit-explicit schemes are
+implemented for temporal integration.
+At the moment, we only support the treatment of diffusive operators
+implicitly for semi-implicit time-integration.
+
+# Spatial discretization
 
 An ASCII-art respresentation of an example grid with `N=3` is
 
@@ -99,13 +103,13 @@ In the bottom cell where ``i=1``, on the other hand, the diffusive flux is
 ```
 
 
-# Time-stepping in `OceanTurb.jl`
+# Time integration
 
 To integrate ocean surface boundary layer models forward in time,
 we implement various explicit and implicit-explicit time-stepping schemes.
 The function `iterate!(model, Δt, Nt)` steps a model forward in time.
 
-### Explicit schemes
+### Explicit time integration schemes
 
 Our explicit time-stepping schemes integrate partial differential equations
 of the form
@@ -121,7 +125,7 @@ where ``\Phi`` is a variable like velocity, temperature, or salinity and ``R``
 is an arbitrary function representing any number of processes, including turbulent
 diffusion and internal forcing.
 
-### Implicit-explicit time-stepping
+### Implicit-explicit time integration schemes
 
 Our mixed implicit-explicit time-stepping schemes integrate partial differential equations
 of the form
@@ -135,7 +139,7 @@ and thus the time-step.
 These implicit-explicit schemes treat the diffusive term on the left
 of \eqref{implicitdiffusion} implicitly.
 
-## Time-stepping methods
+## Time integration methods
 
 We implement `iterate!` functions and types for:
 
