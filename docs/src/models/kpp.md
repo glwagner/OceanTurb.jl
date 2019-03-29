@@ -93,9 +93,9 @@ r_b \equiv \left ( \frac{\omega_b}{\omega_\tau} \right )^3 \qquad \text{and}
 \eeq
 ```
 
-### The boundary layer depth, ``h``
+### The mixing layer depth, ``h``
 
-The boundary layer depth ``h`` is defined implicitly via the bulk Richardson number criterion
+The mixing layer depth ``h`` is defined implicitly via the bulk Richardson number criterion
 
 ```math
 \beq \label{bulk_ri}
