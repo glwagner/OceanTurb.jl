@@ -17,6 +17,7 @@ makedocs(
                 "Boundary layer models" => Any[
                   "models/basics.md",
                   "models/kpp.md",
+                  "models/edmf.md",
                   "models/pacanowskiphilander.md"],
                 "DocStrings" => Any[
                       "man/types.md",
