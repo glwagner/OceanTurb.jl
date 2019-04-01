@@ -82,7 +82,7 @@ by environment and updraft vertical velocities ``W_i``.
 
 ## Zero-plume, 1.5-order EDMF scheme
 
-A relatively simple EDMF scheme arises in the limit of vanishing updrafts
+A relatively simple EDMF scheme emerges in the limit of vanishing updrafts
 and downdrafts, in which case ``W = W_0 = a_0 = 0``.
 In the 1.5-order version of this closure, turbulent diffusivity is modeled
 via the prognostic turbulent kinetic energy (TKE) equation
@@ -90,7 +90,8 @@ via the prognostic turbulent kinetic energy (TKE) equation
 ```math
 \beq
 \d_t e = K \left [ \left ( \d_z U \right )^2 + \left ( \d_z V \right )^2 \right ] + \d_z \left ( K \d_z e \right )
-  + K \d_z B - \C{\ep}{} \frac{e^{3/2}}{\F{\ell}{}} \c
+  - K \d_z B - \C{\ep}{} \frac{e^{3/2}}{\F{\ell}{}} \c
+  \label{TKE}
 \eeq
 ```
 where ``\C{\ep}{} = 2.0`` is a model parameter,
@@ -100,7 +101,7 @@ and ``K`` is the eddy diffusivity defined in terms of turbulent 'velocity' ``\sq
 ```math
 \beq
 K = \C{K}{} \underbrace{
-      \C{\kappa}{} z \left ( 1 - \F{b}{} \tfrac{F_b}{\uwind^3} z \right )^{\F{n}{}}}
+      \C{\kappa}{} z \left ( 1 - \F{a}{} \tfrac{F_b}{\uwind^3} z \right )^{\F{n}{}}}
         _{\defn \F{\ell}{}}
         \, \sqrt{e} \p
         \label{eddydiffusivity}
@@ -108,12 +109,12 @@ K = \C{K}{} \underbrace{
 ```
 In \eqref{eddydiffusivity}, ``F_b = g \left ( \alpha F_\theta - \beta F_s \right )`` is the buoyancy flux define in terms of temperature and salinity fluxes ``F_\theta`` and ``F_s``, and ``\uwind \defn | \b{F}_u |^{1/2}`` is the friction velocity defined in terms of velocity flux ``\b{F}_u = \b{\tau} / \rho_0`` or wind-stress ``\b{\tau}`` and reference density ``\rho_0``.
 ``\C{\kappa}{} = 0.41`` and ``\C{K}{} = 0.1`` in \eqref{eddydiffusivity} are the 'Von Karman' and eddy diffusivity model parameters, respectively.
-``\F{b}{}`` and ``\F{n}{}`` in \eqref{eddydiffusivity} are piecewise constant model functions
+``\F{a}{}`` and ``\F{n}{}`` in \eqref{eddydiffusivity} are piecewise constant model functions
 that model the effect of boundary layer stability on the mixing length and are
 
 ```math
 \beq
-\F{b}{} = \left \{ \begin{matrix}
+\F{a}{} = \left \{ \begin{matrix}
 -100 & \text{for unstable boundary layers with } F_b > 0 \\
 2.7 & \text{for stable boundary layers with } F_b \le 0
 \end{matrix} \right . \c
@@ -130,3 +131,6 @@ and
 \end{matrix} \right . \p
 \eeq
 ```
+
+Note that parameterized buoyancy flux ``\overline{w b} \defn -K \d_z B`` appears in the
+TKE equation \eqref{TKE}.
