@@ -92,7 +92,7 @@ export # This file, core functionality:
     KPP,
     PacanowskiPhilander,
     ContinuousAdjustment,
-    EDMF
+    EDMF0
 
 using
     StaticArrays,
