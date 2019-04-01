@@ -257,6 +257,38 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "models/edmf/#",
+    "page": "The eddy-diffusivity mass-flux (EDMF) schemes",
+    "title": "The eddy-diffusivity mass-flux (EDMF) schemes",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "models/edmf/#The-eddy-diffusivity-mass-flux-(EDMF)-schemes-1",
+    "page": "The eddy-diffusivity mass-flux (EDMF) schemes",
+    "title": "The eddy-diffusivity mass-flux (EDMF) schemes",
+    "category": "section",
+    "text": "newcommandc          \nnewcommandp          \nnewcommandd         partial\nnewcommandr1      mathrm1\nnewcommandb1      boldsymbol1\nnewcommandee        mathrme\nnewcommanddi         mathrmd\nnewcommandep        epsilon\n\nnewcommandbeq       beginequation\nnewcommandeeq       endequation\nnewcommandbeqs      begingather\nnewcommandeeqs      endgather\n\n Non-dimensional numbers\nnewcommandRi        mathrmRi\nnewcommandK         mathrmKE        \n\nnewcommandbtau      btau  wind stress vector\n\n Model functions and constants\nrenewcommandF2      Upsilon^1_2\nrenewcommandC2      C^1_2\n\nnewcommanduwind     varpi_tau\nnewcommandubuoy     varpi_b\n\nnewcommanddefn      stackrelrdef=The EDMF family of schemes parameterizes turbulent convection by introducing a conditional average that partitions the subgrid boundary layer flow into a turbulent \'environment\' with area a_0, and non-turbulent updrafts and downdrafts with areas a_i for i0.We consider two types of EDMF schemes: those with prognostic equations that model the time-evolution and spatial distribution of turbulent kinetic energy (TKE), and those that parameterize the effect of turbulent environmental mixing with a \'K-profile\'."
+},
+
+{
+    "location": "models/edmf/#Turbulent-eddy-diffusivty-and-mass-flux-1",
+    "page": "The eddy-diffusivity mass-flux (EDMF) schemes",
+    "title": "Turbulent eddy diffusivty and mass flux",
+    "category": "section",
+    "text": "In all schemes, the turbulent velocity fluxes are parameterized with an eddy diffusivity. For the x-velocity U, for example,beq\noverlinew u = d_z left ( K d_z U right ) c\neeqwhere K is the eddy diffusivity. We consider various models for eddy diffusivity ranging from a model similar to the K-profile parameterizaton (KPP), and a formulation in terms of a prognostic, time- and z-dependent turbulent kinetic energy variable, e. The turbulent flux of scalars phi such as temperature and salinity is parameterized by both a turbulent flux and mass transport,beq\noverlineu phi = d_z left ( K d_z Phi right )\n  - d_z sum_i a_i W^*_i Phi^*_i c\neeqwhere Phi^*_i is the difference between the average of phi within domain i and the total horizontal average Phi:beginalign\nPhi^*_i defn left ( frac1A_i int_A_i rd A - frac1A int_A rd A right ) phi c \n= Phi_i - Phi c\nendalignwhere we have introduced the notation Phi_i to denote the average of phi within the environment or updraft area A_i. The terms a_i W^*_i Phi^*_i account for the vertical transport of phi by environment and updraft vertical velocities W_i."
+},
+
+{
+    "location": "models/edmf/#Zero-plume,-1.5-order-EDMF-scheme-1",
+    "page": "The eddy-diffusivity mass-flux (EDMF) schemes",
+    "title": "Zero-plume, 1.5-order EDMF scheme",
+    "category": "section",
+    "text": "A relatively simple EDMF scheme emerges in the limit of vanishing updrafts and downdrafts, in which case W = W_0 = a_0 = 0. In the 1.5-order version of this closure, turbulent diffusivity is modeled via the prognostic turbulent kinetic energy (TKE) equationbeq\nd_t e = K left  left ( d_z U right )^2 + left ( d_z V right )^2 right  + d_z left ( K d_z e right )\n  - K d_z B - Cep frace^32Fell c\n  labelTKE\neeqwhere Cep = 20 is a model parameter, d_z B = g left( alpha d_z T - beta d_z S right ) is the buoyancy gradient in terms of gravitational acceleration g and thermal expansion and haline contraction coefficients alpha and beta, and K is the eddy diffusivity defined in terms of turbulent \'velocity\' sqrte and a mixing length Fell:beq\nK = CK underbrace\n      Ckappa z left ( 1 - Fa tfracF_buwind^3 z right )^Fn\n        _defn Fell\n         sqrte p\n        labeleddydiffusivity\neeqIn \\eqref{eddydiffusivity}, F_b = g left ( alpha F_theta - beta F_s right ) is the buoyancy flux define in terms of temperature and salinity fluxes F_theta and F_s, and uwind defn  bF_u ^12 is the friction velocity defined in terms of velocity flux bF_u = btau  rho_0 or wind-stress btau and reference density rho_0. Ckappa = 041 and CK = 01 in \\eqref{eddydiffusivity} are the \'Von Karman\' and eddy diffusivity model parameters, respectively. Fa and Fn in \\eqref{eddydiffusivity} are piecewise constant model functions that model the effect of boundary layer stability on the mixing length and arebeq\nFa = left  beginmatrix\n-100  textfor unstable boundary layers with  F_b  0 \n27  textfor stable boundary layers with  F_b le 0\nendmatrix right  c\neeqandbeq\nFn = left  beginmatrix\n02  textfor unstable boundary layers with  F_b  0 \n-1  textfor stable boundary layers with  F_b le 0\nendmatrix right  p\neeqNote that parameterized buoyancy flux overlinew b defn -K d_z B appears in the TKE equation \\eqref{TKE}."
+},
+
+{
     "location": "models/pacanowskiphilander/#",
     "page": "Pacanowski-Philander",
     "title": "Pacanowski-Philander",
