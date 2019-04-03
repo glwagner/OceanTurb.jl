@@ -314,7 +314,7 @@ const BC = BoundaryCondition
 K∂z(K, c, i) = K*∂z(c, i)
 ∇K∇c(Kᵢ₊₁, Kᵢ, c, i)            = ( K∂z(Kᵢ₊₁, c, i+1) -    K∂z(Kᵢ, c, i)     ) /    Δf(c, i)
 ∇K∇c_top(Kᴺ, c, top_flux)       = (     -top_flux     - K∂z(Kᴺ, c, c.grid.N) ) / Δf(c, c.grid.N)
-∇K∇c_bottom(K₂, c, bottom_flux) = (   K∂z(K₂, c, 2)  +      bottom_flux      ) /    Δf(c, 1)
+∇K∇c_bottom(K₂, c, bottom_flux) = (   K∂z(K₂, c, 2)   +     bottom_flux      ) /    Δf(c, 1)
 
 ## Top and bottom flux estimates for constant (Dirichlet) boundary conditions
 bottom_flux(K, c, c_bndry, Δf) = -2K*( bottom(c) - c_bndry ) / Δf # -K*∂c/∂z at the bottom

@@ -21,9 +21,12 @@ export # This file, core functionality:
     Ω,
     pressenter,
     @zeros,
-    @specify_solution,
-    @pair_specify_solution,
+    @solution,
+    @named_solution,
+    @typed_solution,
+    @pair_typed_solution,
     @add_standard_model_fields,
+    @add_clock_grid_timestepper,
 
     # grids.jl
     Grid,
@@ -92,7 +95,7 @@ export # This file, core functionality:
     KPP,
     PacanowskiPhilander,
     ContinuousAdjustment,
-    EDMF0
+    EddyDiffusivityMassFlux
 
 using
     StaticArrays,

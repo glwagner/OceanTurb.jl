@@ -13,9 +13,7 @@ import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top, Constants
 import .KPP: ∂B∂z
 
 const nsol = 4
-
-# Just one field: "c"
-@specify_solution CellField U V T S
+@solution U V T S
 
 struct Parameters{T} <: AbstractParameters
     Cν₀ :: T

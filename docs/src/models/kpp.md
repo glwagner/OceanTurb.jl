@@ -25,8 +25,8 @@
 \renewcommand{\F}[2]      {\Upsilon^{#1}_{#2}}
 \renewcommand{\C}[2]      {C^{#1}_{#2}}
 
-\newcommand{\uwind}     {\varpi_{\tau}}
-\newcommand{\ubuoy}     {\varpi_b}
+\newcommand{\uwind}     {\omega_{\tau}}
+\newcommand{\ubuoy}     {\omega_b}
 ```
 
 The K-Profile-Parameterization, or "KPP", is proposed by

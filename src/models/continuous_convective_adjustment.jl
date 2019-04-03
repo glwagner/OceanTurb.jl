@@ -10,7 +10,8 @@ export
 
 import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top
 
-@pair_specify_solution CellField B FaceField wb
+const nsol = 2
+@solution B wb
 
 struct Parameters{T} <: AbstractParameters
     Cκ :: T  # Diffusivity

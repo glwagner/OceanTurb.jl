@@ -13,7 +13,7 @@ export
 import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top
 
 # Just one field: "c"
-@specify_solution CellField c
+@solution c
 
 struct Parameters{T} <: AbstractParameters
     κ::T
@@ -34,7 +34,7 @@ function Model(; N=10, L=1.0, κ=0.1,
     solution = Solution(CellField(grid))
 
     if implicit(stepper)
-        diffusivity = SolutionLike(κ)
+        diffusivity = Accessory(κ)
         lhs = LeftHandSide(solution)
         timestepper = Timestepper(stepper, calc_rhs_implicit!, diffusivity, solution, lhs)
     else
@@ -63,10 +63,6 @@ end
 function calc_rhs_implicit!(rhs, m)
     c = m.solution.c
     update_ghost_cells!(c, κ(m, 1), κ(m, c.grid.N), m, m.bcs.c)
-
-    #for i in eachindex(rhs.c)
-    #    @inbounds rhs.c[i] = 0
-    #end
 
     # Add flux across top and bottom boundary
     @inbounds begin

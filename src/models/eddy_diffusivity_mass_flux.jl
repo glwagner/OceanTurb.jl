@@ -1,4 +1,4 @@
-module EDMF0
+module EDMF
 
 using
     OceanTurb,
@@ -11,22 +11,12 @@ import OceanTurb: oncell
 import .KPP: ∂B∂z
 
 const nsol = 5
-@specify_solution CellField U V T S e
+@named_solution ZeroPlume U V T S e
 
-"""
-    Parameters(; kwargs...)
-
-Construct KPP parameters.
-
-    Args
-    ====
-    Cε : Surface layer fraction
-    etc.
-"""
 struct Parameters{T} <: AbstractParameters
-    Cε      :: T  # Surface layer fraction
-    Cκ      :: T  # Von Karman constant
-    CK      :: T  # Minimum unresolved turbulence kinetic energy
+         Cε :: T  # Surface layer fraction
+         Cκ :: T  # Von Karman constant
+         CK :: T  # Minimum unresolved turbulence kinetic energy
 
     Ca_stab :: T  # Stable buoyancy flux parameter for wind-driven turbulence
     Ca_unst :: T  # Unstable buoyancy flux parameter for wind-driven turbulence
@@ -34,9 +24,9 @@ struct Parameters{T} <: AbstractParameters
     Cn_stab :: T  # Stable buoyancy flux parameter for wind-driven turbulence
     Cn_unst :: T  # Unstable buoyancy flux parameter for wind-driven turbulence
 
-    KU₀   :: T  # Interior viscosity for velocity
-    KT₀   :: T  # Interior diffusivity for temperature
-    KS₀   :: T  # Interior diffusivity for salinity
+        KU₀ :: T  # Interior viscosity for velocity
+        KT₀ :: T  # Interior diffusivity for temperature
+        KS₀ :: T  # Interior diffusivity for salinity
 end
 
 function Parameters(T=Float64;
@@ -80,25 +70,27 @@ function update_state!(m)
     return nothing
 end
 
-struct Model{TS, G, T} <: AbstractModel{TS, G, T}
-    @add_standard_model_fields
+struct ZeroPlumeModel{TS, G, T} <: AbstractModel{TS, G, T}
+    @add_clock_grid_timestepper
+      solution :: ZeroPlumeSolution
+           bcs :: ZeroPlumeBoundaryConditions
     parameters :: Parameters{T}
     constants  :: Constants{T}
-    state      :: State{T}
+         state :: State{T}
 end
 
-function Model(; N=10, L=1.0,
+function ZeroPlumeModel(; N=10, L=1.0,
             grid = UniformGrid(N, L),
        constants = Constants(),
       parameters = Parameters(),
          stepper = :ForwardEuler,
-             bcs = BoundaryConditions((ZeroFluxBoundaryConditions() for i=1:nsol)...)
+             bcs = ZeroPlumeBoundaryConditions((ZeroFluxBoundaryConditions() for i=1:nsol)...)
     )
 
-    solution = Solution((CellField(grid) for i=1:nsol)...)
+    solution = ZeroPlumeSolution((CellField(grid) for i=1:nsol)...)
     timestepper = Timestepper(stepper, calc_rhs_explicit!, solution)
 
-    return Model(Clock(), grid, timestepper, solution, bcs, parameters, constants, State())
+    return ZeroPlumeModel(Clock(), grid, timestepper, solution, bcs, parameters, constants, State())
 end
 
 
