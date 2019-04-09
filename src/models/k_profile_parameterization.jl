@@ -2,7 +2,6 @@ module KPP
 
 using
     OceanTurb,
-    StaticArrays,
     LinearAlgebra
 
 import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top, Constants
@@ -119,7 +118,14 @@ function Model(; N=10, L=1.0,
     )
 
     solution = Solution((CellField(grid) for i=1:nsol)...)
-    timestepper = Timestepper(:ForwardEuler, calc_rhs_explicit!, solution)
+
+    if implicit(stepper)
+        diffusivity = Accessory{Function}(KU, KV, KT, KS)
+        lhs = OceanTurb.build_lhs(solution)
+        timestepper = Timestepper(stepper, calc_rhs_implicit!, diffusivity, solution, lhs)
+    else
+        timestepper = Timestepper(stepper, calc_rhs_explicit!, solution)
+    end
 
     return Model(Clock(), grid, timestepper, solution, bcs, parameters, constants, State())
 end
@@ -156,7 +162,7 @@ const KV = KU
 
 "Returns the surface_layer_average for mixing depth h = -zf[i]."
 function surface_layer_average(c, Cε, i)
-    if i == c.grid.N+1 # Return surface value
+    if i > c.grid.N # Return surface value
         return onface(c, c.grid.N+1)
     else
         iε = length(c)+1 - Cε*(length(c)+1 - i) # (fractional) face "index" of the surface layer
@@ -224,29 +230,27 @@ Calculate the mixing depth 'h' for `model`.
 """
 function mixing_depth(m)
     # Descend through grid until Ri rises above critical value
-    Ri₁ = 0
-    ih₁ = m.grid.N + 1 # start at top, where bulk Ri = 0 by definition.
+    ih₁ = m.grid.N + 1 # start at top.
+    Ri₁ = bulk_richardson_number(m, ih₁) # should be 0.
     while ih₁ > 1 && Ri₁ < m.parameters.CRi
         ih₁ -= 1 # descend
         Ri₁ = bulk_richardson_number(m, ih₁)
     end
 
-    # Here, ih₁ >= 1.
+    # Edge cases:
+    # 1. Mixing depth is 0 or whole domain:
+    if ih₁ == 1 || ih₁ == m.grid.N+1
+        z★ = m.grid.zf[ih₁]
 
-    if !isfinite(Ri₁)       # Ri is infinite at face ih₁ but sub-critical above:
-        z★ = m.grid.zc[ih₁] # place mixing depth at cell center just above ih₁.
+    # 2. Ri is infinite somewhere inside the domain.
+    elseif !isfinite(Ri₁)
+        z★ = m.grid.zc[ih₁]
 
-    elseif Ri₁ < m.parameters.CRi # We descended to ih₁=1 and Ri is still too low:
-        z★ = m.grid.zf[1]         # mixing depth extends to bottom of the grid.
-
-    else # We have descended below critical Ri.
-        if ih₁ == m.grid.N
-            z★ = m.grid.zf[m.grid.N]
-        else
-            ΔRi = bulk_richardson_number(m, ih₁+1) - Ri₁ # linearly interpolate to find h.
-            # x = x₀ + Δx * (y-y₀) / Δy
-            z★ = m.grid.zf[ih₁] + Δf(m.grid, ih₁) * (m.parameters.CRi - Ri₁) / ΔRi
-        end
+    # Main case: mixing depth is in the interior.
+    else
+        ΔRi = bulk_richardson_number(m, ih₁+1) - Ri₁ # linearly interpolate to find h.
+        # x = x₀ + Δx * (y-y₀) / Δy
+        z★ = m.grid.zf[ih₁] + Δf(m.grid, ih₁) * (m.parameters.CRi - Ri₁) / ΔRi
     end
 
     return -z★ # "depth" is negative height.
@@ -358,10 +362,10 @@ function calc_rhs_explicit!(∂t, m)
     U, V, T, S = m.solution
 
     N = m.grid.N
-    update_ghost_cells!(U, KU(m, 1), KU(m, N), m, m.bcs.U)
-    update_ghost_cells!(V, KV(m, 1), KV(m, N), m, m.bcs.V)
-    update_ghost_cells!(T, KT(m, 1), KT(m, N), m, m.bcs.T)
-    update_ghost_cells!(S, KS(m, 1), KS(m, N), m, m.bcs.S)
+    update_ghost_cells!(U, KU(m, 1), KU(m, N+1), m, m.bcs.U)
+    update_ghost_cells!(V, KV(m, 1), KV(m, N+1), m, m.bcs.V)
+    update_ghost_cells!(T, KT(m, 1), KT(m, N+1), m, m.bcs.T)
+    update_ghost_cells!(S, KS(m, 1), KS(m, N+1), m, m.bcs.S)
 
     for i in eachindex(U)
         @inbounds begin
@@ -370,6 +374,45 @@ function calc_rhs_explicit!(∂t, m)
             ∂t.T[i] = ∇K∇c(KT(m, i+1), KT(m, i), T, i) - ∂NT∂z(m, i)
             ∂t.S[i] = ∇K∇c(KS(m, i+1), KS(m, i), S, i) - ∂NS∂z(m, i)
         end
+    end
+
+    return nothing
+end
+
+
+function calc_rhs_implicit!(rhs, m)
+
+    # Preliminaries
+    update_state!(m)
+    U, V, T, S = m.solution
+
+    N = m.grid.N
+    update_ghost_cells!(U, KU(m, 1), KU(m, N+1), m, m.bcs.U)
+    update_ghost_cells!(V, KV(m, 1), KV(m, N+1), m, m.bcs.V)
+    update_ghost_cells!(T, KT(m, 1), KT(m, N+1), m, m.bcs.T)
+    update_ghost_cells!(S, KS(m, 1), KS(m, N+1), m, m.bcs.S)
+
+    # Interior RHS
+    for i in interiorindices(U)
+        @inbounds begin
+            rhs.U[i] =   m.constants.f * V[i]
+            rhs.V[i] = - m.constants.f * U[i]
+            rhs.T[i] = - ∂NT∂z(m, i)
+            rhs.S[i] = - ∂NS∂z(m, i)
+        end
+    end
+
+    # Boundary points
+    @inbounds begin
+        rhs.U[N] = ∇K∇c(KU(m, N+1), 0, U, N) + m.constants.f * V[N]
+        rhs.V[N] = ∇K∇c(KV(m, N+1), 0, V, N) - m.constants.f * U[N]
+        rhs.T[N] = ∇K∇c(KT(m, N+1), 0, T, N) - ∂NT∂z(m, N)
+        rhs.S[N] = ∇K∇c(KS(m, N+1), 0, S, N) - ∂NS∂z(m, N)
+
+        rhs.U[1] = ∇K∇c(0, KU(m, 1), U, 1) + m.constants.f * V[1]
+        rhs.V[1] = ∇K∇c(0, KV(m, 1), V, 1) - m.constants.f * U[1]
+        rhs.T[1] = ∇K∇c(0, KT(m, 1), T, 1) - ∂NT∂z(m, 1)
+        rhs.S[1] = ∇K∇c(0, KS(m, 1), S, 1) - ∂NS∂z(m, 1)
     end
 
     return nothing

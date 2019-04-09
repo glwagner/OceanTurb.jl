@@ -108,7 +108,14 @@ end
 
     @test test_diffusivity_plain()
 
-    @test test_kpp_diffusion_cosine()
+    for stepper in (:ForwardEuler, :BackwardEuler)
+        @test test_kpp_diffusion_cosine(stepper)
+        for fieldname in (:U, :V, :T, :S)
+            for top_flux in (0.3, -0.3)
+                @test test_flux(stepper, fieldname=fieldname, top_flux=top_flux)
+            end
+        end
+    end
 end
 
 @testset "Pacanowski-Philander" begin

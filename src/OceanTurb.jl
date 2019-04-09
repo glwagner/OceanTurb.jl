@@ -95,7 +95,7 @@ export # This file, core functionality:
     KPP,
     PacanowskiPhilander,
     ContinuousAdjustment,
-    EddyDiffusivityMassFlux
+    EDMF
 
 using
     StaticArrays,

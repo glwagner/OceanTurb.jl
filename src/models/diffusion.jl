@@ -4,8 +4,6 @@ using
     LinearAlgebra,
     OceanTurb
 
-import StaticArrays: FieldVector
-
 export
     Parameters,
     Model
@@ -52,7 +50,7 @@ end
 
 function calc_rhs_explicit!(∂t, m)
     c = m.solution.c
-    update_ghost_cells!(c, κ(m, 1), κ(m, c.grid.N), m, m.bcs.c)
+    update_ghost_cells!(c, κ(m, 1), κ(m, c.grid.N+1), m, m.bcs.c)
     for i in eachindex(c)
         @inbounds ∂t.c[i] = ∇K∇c(κ(m, i+1), κ(m, i), c, i)
     end
@@ -62,11 +60,11 @@ end
 
 function calc_rhs_implicit!(rhs, m)
     c = m.solution.c
-    update_ghost_cells!(c, κ(m, 1), κ(m, c.grid.N), m, m.bcs.c)
+    update_ghost_cells!(c, κ(m, 1), κ(m, c.grid.N+1), m, m.bcs.c)
 
     # Add flux across top and bottom boundary
     @inbounds begin
-        rhs.c[m.grid.N] = ∇K∇c(κ(m, m.grid.N), 0, c, m.grid.N)
+        rhs.c[m.grid.N] = ∇K∇c(κ(m, m.grid.N+1), 0, c, m.grid.N)
         rhs.c[1] = ∇K∇c(0, κ(m, 1), c, 1)
     end
 
