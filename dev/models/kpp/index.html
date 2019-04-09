@@ -23,8 +23,8 @@
 \renewcommand{\F}[2]      {\Upsilon^{#1}_{#2}}
 \renewcommand{\C}[2]      {C^{#1}_{#2}}
 
-\newcommand{\uwind}     {\varpi_{\tau}}
-\newcommand{\ubuoy}     {\varpi_b}\]</div><p>The K-Profile-Parameterization, or &quot;KPP&quot;, is proposed by <a href="https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872">Large et al (1994)</a> as a model for convection- and wind-driven mixing in the upper ocean. In KPP, vertical turbulent fluxes of a quantity <span>$\phi$</span> are parameterized as</p><div>\[\beq
+\newcommand{\uwind}     {\omega_{\tau}}
+\newcommand{\ubuoy}     {\omega_b}\]</div><p>The K-Profile-Parameterization, or &quot;KPP&quot;, is proposed by <a href="https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872">Large et al (1994)</a> as a model for convection- and wind-driven mixing in the upper ocean. In KPP, vertical turbulent fluxes of a quantity <span>$\phi$</span> are parameterized as</p><div>\[\beq
 \overline{w \phi} = - K_\Phi \d_z \Phi + N_\phi \c
 \eeq\]</div><p>where <span>$\Phi$</span> is the resolved or horizontally-averaged quantity, <span>$K_\Phi$</span> is a turbulent diffusivity, and <span>$N_\phi$</span> is a &#39;non-local&#39; flux.</p><p>The non-local flux and turbulent diffusivity are defined to vanish at the surface, and at the bottom of the &#39;mixing layer&#39; <span>$h$</span>, which roughly corresponds to the depth at which turbulent fluxes and turbulent kinetic energy decay to zero.</p><h2><a class="nav-anchor" id="Description-of-the-model-1" href="#Description-of-the-model-1">Description of the model</a></h2><p>Below, we denote &#39;model parameters&#39; as <span>$\C{\mathrm{label}}{\mathrm{var}}$</span>, where &#39;label&#39; describes the parameter and &#39;var&#39; is a variable like <span>$U, V, T$</span> or <span>$S$</span>.</p><p>Buoyancy is then defined in terms of <span>$T$</span> and <span>$S$</span> as</p><div>\[\begin{align}
 B &amp; \equiv - \frac{g \rho&#39;}{\rho_0} \\
