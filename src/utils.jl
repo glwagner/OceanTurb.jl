@@ -28,31 +28,37 @@ macro def(name, definition)
     end
 end
 
-function build_solution(names, fieldtypes)
-    nfields = length(names)
-    solfields = [ :( $(names[i]) :: $(fieldtypes[i]) ) for i = 1:nfields ]
-    bcfields =  [ :( $(names[i]) :: FieldBoundaryConditions ) for i = 1:nfields ]
-    opfields =  [ :( $(names[i]) :: Function ) for i = 1:nfields ]
-    ancfields = [ :( $(names[i]) :: T ) for i = 1:nfields ]
-    lhsfields = [ :( $(names[i]) :: Tridiagonal{T, A} ) for i = 1:nfields ]
+function build_solution(fieldnames, fieldtypes=[Field for name in fieldnames]; name=Symbol(""))
+    nfields = length(fieldnames)
+    solfields = [ :( $(fieldnames[i]) :: $(fieldtypes[i]) ) for i = 1:nfields ]
+    bcfields =  [ :( $(fieldnames[i]) :: FieldBoundaryConditions ) for i = 1:nfields ]
+    opfields =  [ :( $(fieldnames[i]) :: Function ) for i = 1:nfields ]
+    accfields = [ :( $(fieldnames[i]) :: T ) for i = 1:nfields ]
+    lhsfields = [ :( $(fieldnames[i]) :: Tridiagonal{T, A} ) for i = 1:nfields ]
+
+    sol_name = Symbol(name, :Solution)
+    bc_name = Symbol(name, :BoundaryConditions)
+    acc_signature = Expr(:curly, Symbol(name, :Accessory), :T)
+    lhs_signature = Expr(:curly, Symbol(name, :LeftHandSide), :T, :A)
+
     return quote
         import StaticArrays: FieldVector
         import LinearAlgebra: Tridiagonal
         import OceanTurb: build_lhs
 
-        struct Solution <: AbstractSolution{$(nfields), Field}
+        struct $sol_name <: AbstractSolution{$(nfields), Field}
             $(solfields...)
         end
 
-        struct BoundaryConditions <: FieldVector{$(nfields), FieldBoundaryConditions}
+        struct $bc_name <: FieldVector{$(nfields), FieldBoundaryConditions}
             $(bcfields...)
         end
 
-        struct SolutionLike{T} <: FieldVector{$(nfields), T}
-            $(ancfields...)
+        struct $acc_signature <: FieldVector{$(nfields), T}
+            $(accfields...)
         end
 
-        struct LeftHandSide{T, A} <: FieldVector{$(nfields), Tridiagonal{T, A}}
+        struct $lhs_signature <: FieldVector{$(nfields), Tridiagonal{T, A}}
             $(lhsfields...)
             function LeftHandSide(solution::AbstractSolution{1, Field})
                 lhs = build_lhs(solution)[1]
@@ -67,25 +73,39 @@ function build_solution(names, fieldtypes)
     end
 end
 
-macro specify_solution(T, names...)
-    fieldtypes = [ T for name in names ]
-    esc(build_solution(names, fieldtypes))
+macro solution(fieldnames...)
+    esc(build_solution(fieldnames))
 end
 
-macro pair_specify_solution(paired_specs...)
-    names = Symbol[]
+macro named_solution(name, fieldnames...)
+    esc(build_solution(fieldnames, name=name))
+end
+
+macro typed_solution(T, fieldnames...)
+    fieldtypes = [ T for name in fieldnames ]
+    esc(build_solution(fieldnames, fieldtypes))
+end
+
+macro pair_typed_solution(paired_specs...)
+    fieldnames = Symbol[]
     fieldtypes = Symbol[]
     for (i, spec) in enumerate(paired_specs)
         isodd(i) && push!(fieldtypes, spec)
-        iseven(i) && push!(names, spec)
+        iseven(i) && push!(fieldnames, spec)
     end
-    esc(build_solution(names, fieldtypes))
+    esc(build_solution(fieldnames, fieldtypes))
 end
 
 @def add_standard_model_fields begin
-  clock       :: Clock{T}
-  grid        :: G
-  timestepper :: TS
-  solution    :: Solution
-  bcs         :: BoundaryConditions
+    clock       :: Clock{T}
+    grid        :: G
+    timestepper :: TS
+    solution    :: Solution
+    bcs         :: BoundaryConditions
+end
+
+@def add_clock_grid_timestepper begin
+    clock       :: Clock{T}
+    grid        :: G
+    timestepper :: TS
 end

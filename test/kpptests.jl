@@ -516,9 +516,9 @@ function test_diffusivity_plain(; K₀=1.1)
 end
 
 
-function test_kpp_diffusion_cosine()
+function test_kpp_diffusion_cosine(stepper=:ForwardEuler)
     parameters = KPP.Parameters(K₀=1)
-    model = KPP.Model(N=100, L=π/2, parameters=parameters)
+    model = KPP.Model(N=100, L=π/2, parameters=parameters, stepper=stepper)
     z = model.grid.zc
 
     c_init(z) = cos(2z)
@@ -537,4 +537,21 @@ function test_kpp_diffusion_cosine()
 
     # The error tolerance is a bit arbitrary.
     norm(c_ans.(z, time(model)) .- data(model.solution.T)) < model.grid.N*1e-6
+end
+
+function test_flux(stepper=:ForwardEuler; fieldname=:U, top_flux=0.3, bottom_flux=0.13, N=10)
+    model = KPP.Model(N=N, L=1, stepper=stepper)
+
+    bcs = getproperty(model.bcs, fieldname)
+    bcs.top = FluxBoundaryCondition(top_flux)
+    bcs.bottom = FluxBoundaryCondition(bottom_flux)
+
+    c = getproperty(model.solution, fieldname)
+    C₀ = integral(c)
+    C(t) = C₀ - (top_flux - bottom_flux) * t
+
+    dt = 1e-6
+    iterate!(model, dt, 10)
+
+    return C(time(model)) ≈ integral(c)
 end
