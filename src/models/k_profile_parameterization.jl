@@ -118,14 +118,12 @@ function Model(; N=10, L=1.0,
     )
 
     solution = Solution((CellField(grid) for i=1:nsol)...)
+    K = Accessory{Function}(KU, KV, KT, KS)
+    R = Accessory{Function}(RU, RV, RT, RS)
+    eqn = Equation(R, K, update_state!)
+    lhs = OceanTurb.build_lhs(solution)
 
-    if implicit(stepper)
-        diffusivity = Accessory{Function}(KU, KV, KT, KS)
-        lhs = OceanTurb.build_lhs(solution)
-        timestepper = Timestepper(stepper, calc_rhs_implicit!, diffusivity, solution, lhs)
-    else
-        timestepper = Timestepper(stepper, calc_rhs_explicit!, solution)
-    end
+    timestepper = Timestepper(stepper, eqn, solution, lhs)
 
     return Model(Clock(), grid, timestepper, solution, bcs, parameters, constants, State())
 end
@@ -145,12 +143,6 @@ function K_KPP(h, w_scale, d, shape=default_shape_K)
 end
 
 d(m, i) = -m.grid.zf[i] / m.state.h
-
-# K_{U,V,T,S} is calculated at face points
-KU(m, i) = K_KPP(m.state.h, w_scale_U(m, i), d(m, i)) + m.parameters.KU₀
-KT(m, i) = K_KPP(m.state.h, w_scale_T(m, i), d(m, i)) + m.parameters.KT₀
-KS(m, i) = K_KPP(m.state.h, w_scale_S(m, i), d(m, i)) + m.parameters.KS₀
-const KV = KU
 
 "Return the buoyancy gradient at face point i."
 ∂B∂z(T, S, g, α, β, i) = g * (α*∂z(T, i) - β*∂z(S, i))
@@ -352,70 +344,18 @@ end
 ∂NS∂z(m, i) = ∂N∂z(m.parameters.CN, m.state.Fs, m, i)
 
 #
-# Equation entry
+# Equation specification
 #
 
-function calc_rhs_explicit!(∂t, m)
+# K_{U,V,T,S} is calculated at face points
+KU(m, i) = K_KPP(m.state.h, w_scale_U(m, i), d(m, i)) + m.parameters.KU₀
+KT(m, i) = K_KPP(m.state.h, w_scale_T(m, i), d(m, i)) + m.parameters.KT₀
+KS(m, i) = K_KPP(m.state.h, w_scale_S(m, i), d(m, i)) + m.parameters.KS₀
+const KV = KU
 
-    # Preliminaries
-    update_state!(m)
-    U, V, T, S = m.solution
-
-    N = m.grid.N
-    update_ghost_cells!(U, KU(m, 1), KU(m, N+1), m, m.bcs.U)
-    update_ghost_cells!(V, KV(m, 1), KV(m, N+1), m, m.bcs.V)
-    update_ghost_cells!(T, KT(m, 1), KT(m, N+1), m, m.bcs.T)
-    update_ghost_cells!(S, KS(m, 1), KS(m, N+1), m, m.bcs.S)
-
-    for i in eachindex(U)
-        @inbounds begin
-            ∂t.U[i] = ∇K∇c(KU(m, i+1), KU(m, i), U, i) + m.constants.f * V[i]
-            ∂t.V[i] = ∇K∇c(KV(m, i+1), KV(m, i), V, i) - m.constants.f * U[i]
-            ∂t.T[i] = ∇K∇c(KT(m, i+1), KT(m, i), T, i) - ∂NT∂z(m, i)
-            ∂t.S[i] = ∇K∇c(KS(m, i+1), KS(m, i), S, i) - ∂NS∂z(m, i)
-        end
-    end
-
-    return nothing
-end
-
-
-function calc_rhs_implicit!(rhs, m)
-
-    # Preliminaries
-    update_state!(m)
-    U, V, T, S = m.solution
-
-    N = m.grid.N
-    update_ghost_cells!(U, KU(m, 1), KU(m, N+1), m, m.bcs.U)
-    update_ghost_cells!(V, KV(m, 1), KV(m, N+1), m, m.bcs.V)
-    update_ghost_cells!(T, KT(m, 1), KT(m, N+1), m, m.bcs.T)
-    update_ghost_cells!(S, KS(m, 1), KS(m, N+1), m, m.bcs.S)
-
-    # Interior RHS
-    for i in interiorindices(U)
-        @inbounds begin
-            rhs.U[i] =   m.constants.f * V[i]
-            rhs.V[i] = - m.constants.f * U[i]
-            rhs.T[i] = - ∂NT∂z(m, i)
-            rhs.S[i] = - ∂NS∂z(m, i)
-        end
-    end
-
-    # Boundary points
-    @inbounds begin
-        rhs.U[N] = ∇K∇c(KU(m, N+1), 0, U, N) + m.constants.f * V[N]
-        rhs.V[N] = ∇K∇c(KV(m, N+1), 0, V, N) - m.constants.f * U[N]
-        rhs.T[N] = ∇K∇c(KT(m, N+1), 0, T, N) - ∂NT∂z(m, N)
-        rhs.S[N] = ∇K∇c(KS(m, N+1), 0, S, N) - ∂NS∂z(m, N)
-
-        rhs.U[1] = ∇K∇c(0, KU(m, 1), U, 1) + m.constants.f * V[1]
-        rhs.V[1] = ∇K∇c(0, KV(m, 1), V, 1) - m.constants.f * U[1]
-        rhs.T[1] = ∇K∇c(0, KT(m, 1), T, 1) - ∂NT∂z(m, 1)
-        rhs.S[1] = ∇K∇c(0, KS(m, 1), S, 1) - ∂NS∂z(m, 1)
-    end
-
-    return nothing
-end
+RU(m, i) =   m.constants.f * m.solution.V[i]
+RV(m, i) = - m.constants.f * m.solution.U[i]
+RT(m, i) = - ∂NT∂z(m, i)
+RS(m, i) = - ∂NS∂z(m, i)
 
 end # module

@@ -88,7 +88,13 @@ function ZeroPlumeModel(; N=10, L=1.0,
     )
 
     solution = ZeroPlumeSolution((CellField(grid) for i=1:nsol)...)
-    timestepper = Timestepper(stepper, calc_rhs_explicit!, solution)
+
+    KZP = ZeroPlumeAccessory{Function}(K, K, K, K, K)
+    RZP = ZeroPlumeAccessory{Any}(RU, RV, nothing, nothing, Re)
+    eqn = Equation(RZP, KZP, update_state!)
+    lhs = OceanTurb.build_lhs(solution)
+
+    timestepper = Timestepper(stepper, eqn, solution, lhs)
 
     return ZeroPlumeModel(Clock(), grid, timestepper, solution, bcs, parameters, constants, State())
 end
@@ -111,8 +117,6 @@ function mixing_length(m, z, i)
     return nothing
 end
 
-K(m, i) = m.parameters.CK * mixing_length(m, m.grid.zf[i], i) * sqrt(m.solution.e[i])
-
 oncell(f::Function, m, i) = 0.5 * (f(m, i) + f(m, i+1))
 
 turb_production(m, i) = K(m, i) * (∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2)
@@ -121,34 +125,12 @@ wb(m, i) = -K(m, i) * ∂B∂z(m, i)
 #
 # Equation entry
 #
+K(m, i) = m.parameters.CK * mixing_length(m, m.grid.zf[i], i) * sqrt(m.solution.e[i])
 
-function calc_rhs_explicit!(∂t, m)
+De(m, i) = m.parameters.Cε * m.solution.e[i]^(3/2) / mixing_length(m, m.grid.zc[i], i)
 
-    # Preliminaries
-    update_state!(m)
-    U, V, T, S, e = m.solution
-
-    N = m.grid.N
-    update_ghost_cells!(U, K(m, 1), K(m, N), m, m.bcs.U)
-    update_ghost_cells!(V, K(m, 1), K(m, N), m, m.bcs.V)
-    update_ghost_cells!(T, K(m, 1), K(m, N), m, m.bcs.T)
-    update_ghost_cells!(S, K(m, 1), K(m, N), m, m.bcs.S)
-    update_ghost_cells!(e, K(m, 1), K(m, N), m, m.bcs.e)
-
-    for i in eachindex(U)
-        @inbounds begin
-            ∂t.U[i] = ∇K∇c(K(m, i+1), K(m, i), U, i) + m.constants.f * V[i]
-            ∂t.V[i] = ∇K∇c(K(m, i+1), K(m, i), V, i) - m.constants.f * U[i]
-            ∂t.T[i] = ∇K∇c(K(m, i+1), K(m, i), T, i)
-            ∂t.S[i] = ∇K∇c(K(m, i+1), K(m, i), S, i)
-            ∂t.e[i] = (
-                ∇K∇c(K(m, i+1), K(m, i), e, i)
-                + oncell(turb_production, m, i) + oncell(wb, m, i)
-                - m.parameters.Cε * e[i]^(3/2) / mixing_length(m, m.grid.zc[i], i))
-        end
-    end
-
-    return nothing
-end
+RU(m, i) =   m.constants.f * m.solution.V[i]
+RV(m, i) = - m.constants.f * m.solution.U[i]
+Re(m, i) = oncell(turb_production, m, i) + oncell(wb, m, i) - De(m, i)
 
 end # module
