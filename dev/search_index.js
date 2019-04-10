@@ -77,23 +77,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Numerical methods",
     "title": "Time integration",
     "category": "section",
-    "text": "To integrate ocean surface boundary layer models forward in time, we implement various explicit and implicit-explicit time-stepping schemes. The function iterate!(model, Δt, Nt) steps a model forward in time."
-},
-
-{
-    "location": "numerics/#Explicit-time-integration-schemes-1",
-    "page": "Numerical methods",
-    "title": "Explicit time integration schemes",
-    "category": "section",
-    "text": "Our explicit time-stepping schemes integrate partial differential equations of the formbeq\nd_t Phi = R(Phi) c\nlabelexplicitform\neeqwhere Phi is a variable like velocity, temperature, or salinity and R is an arbitrary function representing any number of processes, including turbulent diffusion and internal forcing."
-},
-
-{
-    "location": "numerics/#Implicit-explicit-time-integration-schemes-1",
-    "page": "Numerical methods",
-    "title": "Implicit-explicit time integration schemes",
-    "category": "section",
-    "text": "Our mixed implicit-explicit time-stepping schemes integrate partial differential equations of the formbeq labelimplicitdiffusion\nd_t Phi - d_z K d_z Phi = R(Phi) c\neeqwhere K is a diffusivity that,  in general, depends on the model state and thus the time-step. These implicit-explicit schemes treat the diffusive term on the left of \\eqref{implicitdiffusion} implicitly."
+    "text": "To integrate ocean surface boundary layer models forward in time, we implement various explicit and implicit-explicit time-stepping schemes. The function iterate!(model, Δt, Nt) steps a model forward in time.Timesteppers in OceanTurb.jl integrate equations of the formbeq labelequationform\nd_t Phi = d_z K d_z Phi + R(Phi) c\neeqwhere Phi(z t) is a variable like velocity, temperature, or salinity, K is a diffusivity which is a general nonlinear function of Phi, z, and external parameters, and R is an arbitrary function representing any number of processes, including the Coriolis force or external forcing."
 },
 
 {
@@ -109,7 +93,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Numerical methods",
     "title": "Forward Euler method",
     "category": "section",
-    "text": "The explicit forward Euler time integration scheme uses the temporal discretization \\eqref{explicitform}:beq\nPhi^n+1 = Phi^n + Delta t  R left ( Phi^n right )\neeqwhere the superscripts n and n+1 denote the solution at time-step n and n+1, respectively."
+    "text": "The explicit forward Euler time integration scheme usesbeq\nPhi^n+1 = Phi^n + Delta t  big  left ( d_z K^n d_z right ) Phi^n + R left ( Phi^n right ) big \neeqwhere the superscripts n and n+1 denote the solution at time-step n and n+1, respectively."
 },
 
 {
@@ -117,7 +101,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Numerical methods",
     "title": "Backward Euler method",
     "category": "section",
-    "text": "The backward Euler method uses the temporal discretizationbeq\nPhi^n+1 - Delta t left ( d_z K^n d_z right ) Phi^n+1 = Phi^n + Delta t R(Phi^n)\neeqThe z-derivatives in the diffusive term generate a matrix problem to be solved for Phi^n+1:beq\nL_ij Phi^n+1_j = left  Phi^n + Delta t R left ( Phi^n right ) right _i\neeqwhere L_ij is a matrix, and the subscripts i or j denote grid points i or j. For the diffusive problems considered by our backward Euler solver, the matrix multiplication L_ij Phi_j has the formbeginalign\nL_ij = left  delta_ij - Delta t left (d_z K d_z right )_ij right  Phi_j \n\n= left  beginmatrix\n\n1 + Delta t tfracK^n_2Delta f_1 Delta c_2\n   -Delta t tfracK^n_2Delta f_1 Delta c_2\n     cdot  cdot  cdot  cdot \n\nddots  ddots  ddots  cdot  cdot  cdot \n\ncdot\n   - Delta t tfracK_iDelta c_i Delta f_i\n   1 + tfracDelta tDelta f_i left ( tfracK_i+1Delta c_i+1 + tfracK_iDelta c_i right )\n   - Delta t tfracK_i+1Delta c_i+1 Delta f_i+1  cdot  cdot \n\ncdot  cdot  ddots  ddots  ddots  cdot \n\ncdot  cdot  cdot  cdot  - Delta t tfracK^n_NDelta c_N Delta f_N\n   1 + Delta t tfracK^n_NDelta c_N Delta f_N\nendmatrix right \nleft  beginmatrix\nPhi_1 11ex\nvdots 11ex\nPhi_i 11ex\nvdots 11ex\nPhi_N\nendmatrix right \nlabelimplicitoperatormatrix\nendalignTo form the matrix operator in \\eqref{implicitoperatormatrix}, we have used the second-order flux divergence finite difference operators in \\eqref{fluxdivop}–\\eqref{fluxdivop_bottom}.It is crucial to note that the diffusive operator that contributes to L_ij does not include fluxes across boundary faces. In particular, L_ij in \\eqref{implicitoperatormatrix} enforces a no-flux condition across the top and bottom faces. Accordingly, fluxes through boundary faces due either to Dirichlet (Value) boundary conditions or non-zero fluxes are accounted for by adding the contribution of the flux diverence across the top and bottom face to R left ( Phi right ). For example..."
+    "text": "The backward Euler method uses the temporal discretizationbeq\nPhi^n+1 - Delta t left ( d_z K^n d_z right ) Phi^n+1 = Phi^n + Delta t R(Phi^n)\neeqThe z-derivatives in the diffusive term generate a matrix problem to be solved for Phi^n+1:beq\nL^n_ij Phi^n+1_j = left  Phi^n + Delta t R left ( Phi^n right ) right _i\neeqwhere L^n_ij is a matrix operator at time-step n, and the subscripts i or j denote grid points i or j. For the diffusive problems considered by our backward Euler solver, the matrix multiplication L^n_ij Phi_j^n+1 has the formbeginalign\nL^n_ij Phi_j^n+1 = left  1 - Delta t left (d_z K^n d_z right ) right _ij Phi_j^n+1 \n\n= left  beginmatrix\n\n1 + Delta t tfracK^n_2Delta f_1 Delta c_2\n   -Delta t tfracK^n_2Delta f_1 Delta c_2\n     cdot  cdot  cdot  cdot \n\nddots  ddots  ddots  cdot  cdot  cdot \n\ncdot\n   - Delta t tfracK^n_iDelta c_i Delta f_i\n   1 + tfracDelta tDelta f_i left ( tfracK^n_i+1Delta c_i+1 + tfracK^n_iDelta c_i right )\n   - Delta t tfracK^n_i+1Delta c_i+1 Delta f_i+1  cdot  cdot \n\ncdot  cdot  ddots  ddots  ddots  cdot \n\ncdot  cdot  cdot  cdot  - Delta t tfracK^n_NDelta c_N Delta f_N\n   1 + Delta t tfracK^n_NDelta c_N Delta f_N\nendmatrix right \nleft  beginmatrix\nPhi^n+1_1 11ex\nvdots 11ex\nPhi^n+1_i 11ex\nvdots 11ex\nPhi^n+1_N\nendmatrix right \nlabelimplicitoperatormatrix\nendalignTo form the matrix operator in \\eqref{implicitoperatormatrix}, we have used the second-order flux divergence finite difference operators in \\eqref{fluxdivop}–\\eqref{fluxdivop_bottom}.It is crucial to note that the diffusive operator that contributes to L^n_ij does not include fluxes across boundary faces. In particular, L^n_ij in \\eqref{implicitoperatormatrix} enforces a no-flux condition across the top and bottom faces. Accordingly, fluxes through boundary faces due either to Dirichlet (Value) boundary conditions or non-zero fluxes are accounted for by adding the contribution of the flux diverence across the top and bottom face to R left ( Phi right )."
 },
 
 {
