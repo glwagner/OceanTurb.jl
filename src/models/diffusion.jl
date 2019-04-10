@@ -1,20 +1,13 @@
 module Diffusion
 
-using
-    LinearAlgebra,
-    OceanTurb
-
-export
-    Parameters,
-    Model
-
+using LinearAlgebra, OceanTurb
 import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top
 
 # Just one field: "c"
 @solution c
 
 struct Parameters{T} <: AbstractParameters
-    κ::T
+    K::T
 end
 
 struct Model{P, TS, G, T} <: AbstractModel{TS, G, T}
@@ -22,22 +15,19 @@ struct Model{P, TS, G, T} <: AbstractModel{TS, G, T}
     parameters::P
 end
 
-function Model(; N=10, L=1.0, κ=0.1,
-    grid = UniformGrid(N, L),
-    parameters = Parameters(κ),
-    stepper = :ForwardEuler,
-    bcs = BoundaryConditions(ZeroFluxBoundaryConditions())
+function Model(; N=10, L=1.0, K=0.1,
+          grid = UniformGrid(N, L),
+    parameters = Parameters(K),
+       stepper = :ForwardEuler,
+           bcs = BoundaryConditions(ZeroFluxBoundaryConditions())
     )
 
     solution = Solution(CellField(grid))
-
-    if implicit(stepper)
-        diffusivity = Accessory(κ)
-        lhs = LeftHandSide(solution)
-        timestepper = Timestepper(stepper, calc_rhs_implicit!, diffusivity, solution, lhs)
-    else
-        timestepper = Timestepper(stepper, calc_rhs_explicit!, solution)
-    end
+    K = Accessory(Kc)
+    R = Accessory(nothing)
+    eqn = Equation(R, K)
+    lhs = LeftHandSide(solution)
+    timestepper = Timestepper(stepper, eqn, solution, lhs)
 
     return Model(Clock(), grid, timestepper, solution, bcs, parameters)
 end
@@ -46,29 +36,7 @@ end
 # Equation specification
 #
 
-κ(m, i) = m.parameters.κ
-
-function calc_rhs_explicit!(∂t, m)
-    c = m.solution.c
-    update_ghost_cells!(c, κ(m, 1), κ(m, c.grid.N+1), m, m.bcs.c)
-    for i in eachindex(c)
-        @inbounds ∂t.c[i] = ∇K∇c(κ(m, i+1), κ(m, i), c, i)
-    end
-
-    return nothing
-end
-
-function calc_rhs_implicit!(rhs, m)
-    c = m.solution.c
-    update_ghost_cells!(c, κ(m, 1), κ(m, c.grid.N+1), m, m.bcs.c)
-
-    # Add flux across top and bottom boundary
-    @inbounds begin
-        rhs.c[m.grid.N] = ∇K∇c(κ(m, m.grid.N+1), 0, c, m.grid.N)
-        rhs.c[1] = ∇K∇c(0, κ(m, 1), c, 1)
-    end
-
-    return nothing
-end
+Rc(m, i) = nothing
+Kc(m, i) = m.parameters.K
 
 end # module

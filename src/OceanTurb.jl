@@ -125,6 +125,7 @@ include("solvers.jl")
 include("grids.jl")
 include("boundary_conditions.jl")
 include("fields.jl")
+include("equations.jl")
 include("timesteppers.jl")
 
 mutable struct Clock{T}

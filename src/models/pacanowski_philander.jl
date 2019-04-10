@@ -51,7 +51,12 @@ function Model(; N=10, L=1.0,
     )
 
     solution = Solution((CellField(grid) for i=1:nsol)...)
-    timestepper = Timestepper(:ForwardEuler, calc_rhs_explicit!, solution)
+    K = Accessory{Function}(KU, KV, KT, KS)
+    R = Accessory{Any}(RU, RV, nothing, nothing)
+    eqn = Equation(R, K)
+    lhs = OceanTurb.build_lhs(solution)
+
+    timestepper = Timestepper(stepper, eqn, solution, lhs)
 
     return Model(Clock(), grid, timestepper, solution, bcs, parameters, constants)
 end
@@ -75,7 +80,10 @@ local_richardson(m, i) = local_richardson(m.solution.U, m.solution.V, m.solution
                                           m.solution.S, m.constants.g, m.constants.α,
                                           m.constants.β, i)
 
+#
 # Equation specification
+#
+
 KU(Ri, ν₀, ν₁, c, n) = ν₀ + ν₁ / (1 + c*Ri)^n
 KT(Ri, κ₀, κ₁, c, n) = κ₀ + κ₁ / (1 + c*Ri)^(n+1)
 
@@ -88,26 +96,7 @@ KT(m, i) = KT(local_richardson(m, i), m.parameters.Cκ₀, m.parameters.Cκ₁,
 const KV = KU
 const KS = KT
 
-function calc_rhs_explicit!(∂t, m)
-
-    U, V, T, S = m.solution
-
-    N = m.grid.N
-    update_ghost_cells!(U, KU(m, 1), KU(m, N), m, m.bcs.U)
-    update_ghost_cells!(V, KV(m, 1), KV(m, N), m, m.bcs.V)
-    update_ghost_cells!(T, KT(m, 1), KT(m, N), m, m.bcs.T)
-    update_ghost_cells!(S, KS(m, 1), KS(m, N), m, m.bcs.S)
-
-    for i in eachindex(U)
-        @inbounds begin
-            ∂t.U[i] = ∇K∇c(KU(m, i+1), KU(m, i), U, i) + m.constants.f * V[i]
-            ∂t.V[i] = ∇K∇c(KV(m, i+1), KV(m, i), V, i) - m.constants.f * U[i]
-            ∂t.T[i] = ∇K∇c(KT(m, i+1), KT(m, i), T, i)
-            ∂t.S[i] = ∇K∇c(KS(m, i+1), KS(m, i), S, i)
-        end
-    end
-
-    return nothing
-end
+RU(m, i) =   m.constants.f * m.solution.V[i]
+RV(m, i) = - m.constants.f * m.solution.U[i]
 
 end # module

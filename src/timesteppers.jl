@@ -1,10 +1,7 @@
 # Equation abstraction and timesteppers for OceanTurb.jl
 
 import LinearAlgebra: Tridiagonal
-
-implicit_timestepping_methods = (:BackwardEuler,)
-
-implicit(method) = method ∈ implicit_timestepping_methods
+import Base: @propagate_inbounds
 
 """
     Timestepper(stepper, args...)
@@ -29,90 +26,110 @@ function iterate!(model, Δt, nt)
 end
 
 "Update the clock after one iteration."
-function update!(clock, Δt)
+function tick!(clock, Δt)
     clock.time += Δt
     clock.iter += 1
     return nothing
 end
 
 #
-# Forward Euler Timestepper
+# ForwardEuler timestepper
 #
 
-struct ForwardEulerTimestepper{T} <: Timestepper
-    calc_rhs! :: Function
-    rhs       :: T
-    function ForwardEulerTimestepper(calc_rhs!, solution)
+struct ForwardEulerTimestepper{R, ER, EK} <: Timestepper
+    eqn :: Equation{ER, EK}
+    rhs :: R
+    function ForwardEulerTimestepper(eqn::Equation{R, K}, solution, args...) where {R, K}
         rhs = deepcopy(solution)
         for fld in rhs
             set!(fld, 0)
         end
-        new{typeof(rhs)}(calc_rhs!, rhs)
+        new{typeof(rhs), R, K}(eqn, rhs)
     end
 end
 
-function unpack(model::AbstractModel{TS}, i) where TS <: ForwardEulerTimestepper
-  ϕ = model.solution[i]
-  rhs = model.timestepper.rhs[i]
-  return ϕ, rhs
+function update!(m)
+    m.timestepper.eqn.update!(m)
+    for j in eachindex(m.solution)
+        @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
+        @inbounds update_ghost_cells!(ϕ, Kϕ(m, 1), Kϕ(m, m.grid.N+1), m, bcsϕ)
+    end
+    return nothing
+end
+
+explicit_rhs_kernel(ϕ, Kϕ, Rϕ, m, i) = ∇K∇c(Kϕ(m, i+1), Kϕ(m, i), ϕ, i) + Rϕ(m, i)
+explicit_rhs_kernel(ϕ, Kϕ, ::Nothing, m, i) = ∇K∇c(Kϕ(m, i+1), Kϕ(m, i), ϕ, i)
+
+implicit_rhs_top(ϕ, Kϕ, Rϕ, m) = @inbounds ∇K∇c(Kϕ(m, m.grid.N+1), 0, ϕ, m.grid.N) + Rϕ(m, m.grid.N)
+implicit_rhs_top(ϕ, Kϕ, ::Nothing, m) = @inbounds ∇K∇c(Kϕ(m, m.grid.N+1), 0, ϕ, m.grid.N)
+
+implicit_rhs_bottom(ϕ, Kϕ, Rϕ, m) = @inbounds ∇K∇c(0, Kϕ(m, 1), ϕ, 1) + Rϕ(m, 1)
+implicit_rhs_bottom(ϕ, Kϕ, ::Nothing, m) = @inbounds ∇K∇c(0, Kϕ(m, 1), ϕ, 1)
+
+implicit_rhs_kernel!(rhs, ϕ, R, m, i) = rhs[i] = R(m, i)
+implicit_rhs_kernel!(rhs, ϕ, ::Nothing, m, i) = nothing
+
+"Evaluate the right-hand-side of ∂ϕ∂t for the current time-step."
+function calc_explicit_rhs!(rhs, eqn, m)
+    for (j, rhsϕ) in enumerate(rhs)
+        @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
+        for i in eachindex(rhsϕ)
+            @inbounds rhsϕ[i] = explicit_rhs_kernel(ϕ, Kϕ, Rϕ, m, i)
+        end
+    end
+    return nothing
+end
+
+function calc_implicit_rhs!(rhs, eqn, m)
+    N = m.grid.N
+    for (j, rhsϕ) in enumerate(rhs)
+        @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
+
+        for i in interiorindices(rhsϕ)
+            @inbounds implicit_rhs_kernel!(rhsϕ, ϕ, Rϕ, m, i)
+        end
+
+        @inbounds rhsϕ[N] = implicit_rhs_top(ϕ, Kϕ, Rϕ, m)
+        @inbounds rhsϕ[1] = implicit_rhs_bottom(ϕ, Kϕ, Rϕ, m)
+    end
+
+    return nothing
 end
 
 # Forward Euler timestepping
-function iterate!(model::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
+function iterate!(m::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
 
-    # Evaluate the right-hand-side of ∂ϕ∂t for the current time-step.
-    model.timestepper.calc_rhs!(model.timestepper.rhs, model)
+    update!(m)
+    calc_explicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m)
 
-    # Update the solution
-    for j in eachindex(model.solution)
-        @inbounds ϕ, rhs = unpack(model, j)
+    # Take one forward Euler step
+    for j in eachindex(m.solution)
+        @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
         for i in eachindex(ϕ)
-            @inbounds ϕ[i] += Δt * rhs[i]
+            @inbounds ϕ[i] += Δt * rhsϕ[i]
         end
     end
 
-    update!(model.clock, Δt)
+    tick!(m.clock, Δt)
 
     return nothing
 end
 
+
 #
-# Backward Euler Timestepper
+# BackwardEuler timestepper
 #
 
-#=
-Could have
-
-struct DiffusiveEquation{K}
-    calc_rhs :: Function
-    calc_lhs :: Function
-    κ        :: K
-end
-
-and
-
-function calc_lhs!(lhs, Δt, model::AbstractModel{E}) <: where E <: DiffusiveEquation
-    calc_diffusive_lhs!(lhs, Δt, model.equation.κ, model)
-    return nothing
-end
-
-But perhaps this is too complicated.
-
-For now, our 'BackwardEulerTimestepper' can only treat diffusive terms
-implicitly.
-=#
-
-struct BackwardEulerTimestepper{K, R, L} <: Timestepper
-    calc_rhs!   :: Function
-    diffusivity :: K
-    rhs         :: R
-    lhs         :: L
-    function BackwardEulerTimestepper(calc_rhs!, diffusivity, solution, lhs)
+struct BackwardEulerTimestepper{R, L, ER, EK} <: Timestepper
+    eqn :: Equation{ER, EK}
+    rhs :: R
+    lhs :: L
+    function BackwardEulerTimestepper(eqn::Equation{R, K}, solution, lhs) where {R, K}
         rhs = deepcopy(solution)
         for fld in rhs
             set!(fld, 0)
         end
-        new{typeof(diffusivity), typeof(rhs), typeof(lhs)}(calc_rhs!, diffusivity, rhs, lhs)
+        new{typeof(rhs), typeof(lhs), R, K}(eqn, rhs, lhs)
     end
 end
 
@@ -166,16 +183,17 @@ function calc_diffusive_lhs!(lhs, Δt, K, m)
 end
 
 # Backward Euler timestepping for problems with diffusivity
-function iterate!(model::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimestepper
+function iterate!(m::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimestepper
 
     # Evaluate the right-hand-side of ∂ϕ∂t for the current time-step.
-    model.timestepper.calc_rhs!(model.timestepper.rhs, model)
-    calc_diffusive_lhs!(model.timestepper.lhs, Δt, model.timestepper.diffusivity, model)
+    update!(m)
+    calc_implicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m)
+    calc_diffusive_lhs!(m.timestepper.lhs, Δt, m.timestepper.eqn.K, m)
 
     # Update solution by inverting Tridiagonal lhs matrix
-    for (j, ϕ) in enumerate(model.solution)
-        @inbounds lhs = model.timestepper.lhs[j]
-        @inbounds rhs = model.timestepper.rhs[j]
+    for (j, ϕ) in enumerate(m.solution)
+        @inbounds lhs = m.timestepper.lhs[j]
+        @inbounds rhs = m.timestepper.rhs[j]
 
         for i in eachindex(rhs)
             @inbounds rhs[i] = ϕ[i] + Δt*rhs[i]
@@ -184,7 +202,19 @@ function iterate!(model::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimest
         ldiv!(data(ϕ), lhs, data(rhs))
     end
 
-    update!(model.clock, Δt)
+    tick!(m.clock, Δt)
 
   return nothing
+end
+
+function unpack(model::AbstractModel{TS},
+    i) where TS <: Union{ForwardEulerTimestepper, BackwardEulerTimestepper}
+
+      ϕ = model.solution[i]
+    rhs = model.timestepper.rhs[i]
+      R = model.timestepper.eqn.R[i]
+      K = model.timestepper.eqn.K[i]
+    bcs = model.bcs[i]
+
+    return ϕ, rhs, R, K, bcs
 end
