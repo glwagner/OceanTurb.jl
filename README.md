@@ -1,10 +1,9 @@
 # OceanTurb.jl
 
-[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://mit-license.org/)
+| **Documentation**             | **Build Status**                    | **License** |
+|:-----------------------------:|:-----------------------------------:|:-----------:|
+| [![docs][docs-img]][docs-url] | [![travis][travis-img]][travis-url] |[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://mit-license.org/)|
 
-| **Documentation**             | **Build Status** |
-|:-----------------------------:|:-----------------------------------:|
-| [![docs][docs-img]][docs-url] | [![travis][travis-img]][travis-url] |
 
 This code provides models that approximate the physics of the 
 turbulent surface boundary layer of the ocean.
