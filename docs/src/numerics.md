@@ -109,35 +109,18 @@ To integrate ocean surface boundary layer models forward in time,
 we implement various explicit and implicit-explicit time-stepping schemes.
 The function `iterate!(model, Δt, Nt)` steps a model forward in time.
 
-### Explicit time integration schemes
-
-Our explicit time-stepping schemes integrate partial differential equations
-of the form
+Timesteppers in `OceanTurb.jl` integrate equations of the form
 
 ```math
-\beq
-\d_t \Phi = R(\Phi) \c
-\label{explicitform}
+\beq \label{equationform}
+\d_t \Phi = \d_z K \d_z \Phi + R(\Phi) \c
 \eeq
 ```
-
-where ``\Phi`` is a variable like velocity, temperature, or salinity and ``R``
-is an arbitrary function representing any number of processes, including turbulent
-diffusion and internal forcing.
-
-### Implicit-explicit time integration schemes
-
-Our mixed implicit-explicit time-stepping schemes integrate partial differential equations
-of the form
-```math
-\beq \label{implicitdiffusion}
-\d_t \Phi - \d_z K \d_z \Phi = R(\Phi) \c
-\eeq
-```
-where ``K`` is a diffusivity that,  in general, depends on the model state
-and thus the time-step.
-These implicit-explicit schemes treat the diffusive term on the left
-of \eqref{implicitdiffusion} implicitly.
+where ``\Phi(z, t)`` is a variable like velocity, temperature, or salinity,
+``K`` is a diffusivity which is a general nonlinear function
+of ``\Phi``, ``z``, and external parameters,
+and ``R`` is an arbitrary function representing any number of processes,
+including the Coriolis force or external forcing.
 
 ## Time integration methods
 
@@ -149,11 +132,10 @@ We implement `iterate!` functions and types for:
 ### Forward Euler method
 
 The explicit forward Euler time integration scheme uses
-the temporal discretization \eqref{explicitform}:
 
 ```math
 \beq
-\Phi^{n+1} = \Phi^{n} + \Delta t \, R \left ( \Phi^n \right )
+\Phi^{n+1} = \Phi^{n} + \Delta t \, \big [ \left ( \d_z K^n \d_z \right ) \Phi^n + R \left ( \Phi^n \right ) \big ]
 \eeq
 ```
 
@@ -175,19 +157,19 @@ for ``\Phi^{n+1}``:
 
 ```math
 \beq
-L_{ij} \Phi^{n+1}_j = \left [ \Phi^n + \Delta t R \left ( \Phi^n \right ) \right ]_i
+L^n_{ij} \Phi^{n+1}_j = \left [ \Phi^n + \Delta t R \left ( \Phi^n \right ) \right ]_i
 \eeq
 ```
 
-where ``L_{ij}`` is a matrix, and the subscripts ``i`` or ``j`` denote grid points
+where ``L^n_{ij}`` is a matrix operator at time-step ``n``, and the subscripts ``i`` or ``j`` denote grid points
 ``i`` or ``j``.
 For the diffusive problems considered by our backward Euler solver, the matrix
-multiplication ``L_{ij} \Phi_j`` has the form
+multiplication ``L^n_{ij} \Phi_j^{n+1}`` has the form
 
 
 ```math
 \begin{align}
-L_{ij} &= \left [ \delta_{ij} - \Delta t \left (\d_z K \d_z \right )_{ij} \right ] \Phi_j \\
+L^n_{ij} \Phi_j^{n+1} &= \left [ 1 - \Delta t \left (\d_z K^n \d_z \right ) \right ]_{ij} \Phi_j^{n+1} \\
 
 &= \left [ \begin{matrix}
 
@@ -198,9 +180,9 @@ L_{ij} &= \left [ \delta_{ij} - \Delta t \left (\d_z K \d_z \right )_{ij} \right
 \ddots & \ddots & \ddots & \cdot & \cdot & \cdot \\
 
 \cdot
-  & - \Delta t \tfrac{K_i}{\Delta c_i \Delta f_i}
-  & 1 + \tfrac{\Delta t}{\Delta f_i} \left ( \tfrac{K_{i+1}}{\Delta c_{i+1}} + \tfrac{K_i}{\Delta c_i} \right )
-  & - \Delta t \tfrac{K_{i+1}}{\Delta c_{i+1} \Delta f_{i+1}} & \cdot & \cdot \\
+  & - \Delta t \tfrac{K^n_i}{\Delta c_i \Delta f_i}
+  & 1 + \tfrac{\Delta t}{\Delta f_i} \left ( \tfrac{K^n_{i+1}}{\Delta c_{i+1}} + \tfrac{K^n_i}{\Delta c_i} \right )
+  & - \Delta t \tfrac{K^n_{i+1}}{\Delta c_{i+1} \Delta f_{i+1}} & \cdot & \cdot \\
 
 \cdot & \cdot & \ddots & \ddots & \ddots & \cdot \\
 
@@ -208,11 +190,11 @@ L_{ij} &= \left [ \delta_{ij} - \Delta t \left (\d_z K \d_z \right )_{ij} \right
   & 1 + \Delta t \tfrac{K^n_N}{\Delta c_N \Delta f_N}
 \end{matrix} \right ]
 \left [ \begin{matrix}
-\Phi_1 \\[1.1ex]
+\Phi^{n+1}_1 \\[1.1ex]
 \vdots \\[1.1ex]
-\Phi_i \\[1.1ex]
+\Phi^{n+1}_i \\[1.1ex]
 \vdots \\[1.1ex]
-\Phi_N
+\Phi^{n+1}_N
 \end{matrix} \right ]
 \label{implicitoperatormatrix}
 \end{align}
@@ -222,12 +204,11 @@ To form the matrix operator in \eqref{implicitoperatormatrix}, we have used
 the second-order flux divergence finite difference operators in
 \eqref{fluxdivop}--\eqref{fluxdivop_bottom}.
 
-It is crucial to note that the diffusive operator that contributes to ``L_{ij}``
+It is crucial to note that the diffusive operator that contributes to ``L^n_{ij}``
 does not include fluxes across boundary faces.
-In particular, ``L_{ij}`` in \eqref{implicitoperatormatrix} enforces a
+In particular, ``L^n_{ij}`` in \eqref{implicitoperatormatrix} enforces a
 no-flux condition across the top and bottom faces.
 Accordingly, fluxes through boundary faces due either to Dirichlet (Value)
 boundary conditions or non-zero fluxes are accounted for
 by adding the contribution of the flux diverence across
 the top and bottom face to ``R \left ( \Phi \right )``.
-For example...
