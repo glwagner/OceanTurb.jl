@@ -16,10 +16,6 @@ Open julia, press `]` to enter package manager mode, and type
 pkg> add https://github.com/glwagner/OceanTurb.jl.git
 ```
 
-## Documentation
-
-* [**latest**](https://glwagner.github.io/OceanTurb.jl/latest)
-
 ## Example(s)
 
 Check our 
