@@ -1,5 +1,11 @@
 # OceanTurb.jl
 
+[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://mit-license.org/)
+
+| **Documentation**             | **Build Status** |
+|:-----------------------------:|:-----------------------------------:|
+| [![docs][docs-img]][docs-url] | [![travis][travis-img]][travis-url] |
+
 This code provides models that approximate the physics of the 
 turbulent surface boundary layer of the ocean.
 
@@ -36,3 +42,10 @@ Currently we have solvers for
 # Authors
 
 [Gregory Wagner](glwagner.github.io).
+
+
+[docs-img]: https://img.shields.io/badge/docs-latest-blue.svg
+[docs-url]: https://glwagner.github.io/OceanTurb.jl/latest/
+
+[travis-img]: https://travis-ci.org/glwagner/OceanTurb.jl.svg?branch=master
+[travis-url]: https://travis-ci.com/glwagner/OceanTurb.jl
