@@ -6,7 +6,7 @@
 
 
 This code provides models that approximate the physics of the 
-turbulent surface boundary layer of the ocean.
+ocean's turbulent surface boundary layer.
 
 ## Installation
 
