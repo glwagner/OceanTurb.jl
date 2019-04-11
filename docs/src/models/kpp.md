@@ -110,11 +110,11 @@ where the critical ``\Ri`` is ``\C{\Ri}{} = 0.3``. The operator ``\Delta`` is de
 
 ```math
 \beq
-\Delta \Phi(z) = -\frac{1}{\C{\ep}{} z} \int_{\C{\ep}{} z}^0 \Phi(z') \di z' - \Phi(z) \c
+\Delta \Phi(z) = -\frac{1}{\C{\SL}{} z} \int_{\C{\SL}{} z}^0 \Phi(z') \di z' - \Phi(z) \c
 \eeq
 ```
 
-where ``\C{\ep}{} = 0.1`` is the surface layer fraction.
+where ``\C{\SL}{} = 0.1`` is the surface layer fraction.
 The function ``\F{\K}{}(z)`` is
 
 ```math
@@ -152,36 +152,40 @@ In wind-driven turbulence under stable buoyancy forcing such that ``F_b < 0``, t
 
 ```math
 \beq
-\F{w}{\phi} = \frac{ \C{\tau}{} \uwind}{1 + \C{\mathrm{stab}}{} r_b d} \p
+\F{w}{\phi} = \frac{ \C{\tau}{} \uwind}{ \left ( 1 + \C{\mathrm{stab}}{} r_b d \right )^{\C{n}{}}} \p
 \eeq
 ```
 
-wherea ``\C{\tau}{} = 0.4`` is the Von Karman constant and ``\C{\mathrm{stab}}{} = 2.0``.
+where ``\C{\tau}{} = 0.4`` is the Von Karman constant, ``\C{\mathrm{stab}}{} = 2.0``, and ``\C{n}{}=1``.
 
-In wind-driven turbulence but under destabilizing buoyancy forcing, when ``\min \left [ \C{\ep}{}, d \right ] < \C{d}{\phi} r_\tau``,
+In wind-driven turbulence but under destabilizing buoyancy forcing, when ``\min \left [ \C{\SL}{}, d \right ] < \C{d}{\phi} r_\tau``,
 the turbulent velocity scale is
 
 ```math
 \beq
-\F{w}{\Phi} = \C{\kappa}{} \omega_\tau \left ( 1 + \C{\mathrm{unst}}{} r_b \min \left [ \C{\ep}{}, d \right ] \right )^{n_\Phi} \c
+\F{w}{\Phi} = \C{\tau}{} \omega_\tau \left ( 1 + \C{\mathrm{unst}}{} r_b \min \left [ \C{\SL}{}, d \right ] \right )^{\C{m\tau}{\Phi}} \c
 \eeq
 ```
 
-where ``n_U = 1/4`` for velocities, ``n_T = 1/2`` for tracers, ``\C{\mathrm{unst}}{} = 6.4``, the
+where ``\C{m\tau}{U}= 1/4``, ``\C{m\tau}{T} = 1/2``, ``\C{\mathrm{unst}}{} = 6.4``, the
 transition parameter for velocities is ``\C{d}{U} = 0.5``, and the transition parameter
 for tracers is ``\C{d}{T} = 2.5``.
 
-In convection-driven turbulence affected by wind mixing, when ``\min \left [ \C{\ep}{}, d \right ] >= \C{d}{\phi} r_\tau``,
+In convection-driven turbulence affected by wind mixing, when ``\min \left [ \C{\SL}{}, d \right ] >= \C{d}{\phi} r_\tau``,
 the turbulent velocity scale is
 
 ```math
 \beq
-\F{w}{\Phi} = \C{b}{\Phi} \omega_b \left ( \min \left [ \C{\ep}{}, d \right ] + \C{\tau}{\Phi} r_\tau \right )^{1/3} \c
+\F{w}{\Phi} = \C{b}{\Phi} \omega_b \left ( \min \left [ \C{\SL}{}, d \right ] + \C{\tau b}{\Phi} r_\tau \right )^{\C{mb}{\Phi}} \c
 \eeq
 ```
 
-where ``\C{b}{U} = \C{b}{V} = 0.215``, ``\C{b}{T} = \C{b}{S} = 2.53``, ``\C{\tau}{U} = \C{\tau}{V} = 0.0806``, and
-``\C{\tau}{T} = \C{\tau}{S} = 1.85``.
+where
+``\C{b}{U} = \C{b}{V} = 0.215``,
+``\C{b}{T} = \C{b}{S} = 2.53``,
+``\C{mb}{U} = \C{mb}{T}=1/3``,
+``\C{\tau b}{U} = \C{\tau b}{V} = 0.374``, and
+``\C{\tau b}{T} = \C{\tau b}{S} = -0.717``.
 
 
 ## Selected tests
@@ -192,7 +196,7 @@ See `/test/runtests.jl` for more tests.
 
 Some simple tests can be defined when the model state is ``U=V=S=0`` and ``T = \gamma z``.
 In this case the buoyancy becomes ``B = g \alpha \gamma z`` and the buoyancy gradient is ``B_z = g \alpha \gamma``.
-If we further take ``\C{\ep}{} \to 0`` and ``F_b > 0``, and note that the value of ``T``
+If we further take ``\C{\SL}{} \to 0`` and ``F_b > 0``, and note that the value of ``T``
 in the top grid cell is ``T_N = -\gamma \Delta z / 2``, where ``N`` is the number of
 grid points, we find that
 
@@ -255,43 +259,43 @@ and a velocity profile
 
 ```math
 \beq
-U(z) =  \left \{ \begin{matrix}
-  U_0 & \quad \text{for } z > -h \c \\
-  -U_0 & \quad \text{for } z < -h \c
+u(z) =  \left \{ \begin{matrix}
+  u_0 & \quad \text{for } z > -h \c \\
+  -u_0 & \quad \text{for } z < -h \c
   \end{matrix} \right .
 \eeq
 ```
 
-so that ``T(z=-h) = U(z=-h) = 0``.
-We then have ``\Delta T(-h) = T_0`` and ``\Delta U^2(-h) = U_0^2``, so that
+so that ``t(z=-h) = u(z=-h) = 0``.
+we then have ``\delta t(-h) = t_0`` and ``\delta u^2(-h) = u_0^2``, so that
 with ``g=\alpha=1``,
 
 ```math
 \beq
-\C{\Ri}{} = \frac{h T_0}{U_0^2} \p
+\c{\Ri}{} = \frac{h t_0}{u_0^2} \p
 \label{sheardepth}
 \eeq
 ```
-Setting ``h = 9``, ``\C{\Ri}{}=1``, ``T_0 = 1``, and ``U_0=3`` yields a consistent solution.
+setting ``h = 9``, ``\c{\ri}{}=1``, ``t_0 = 1``, and ``u_0=3`` yields a consistent solution.
 
-### Limiting cases for turbulent velocity scales
+### limiting cases for turbulent velocity scales
 
-Under zero momentum forcing, the turbulent vertical velocity scale is
+under zero momentum forcing, the turbulent vertical velocity scale is
 
 ```math
 \beq
-\F{w}{\Phi} = \C{b}{\Phi} \left ( \C{\ep}{} \right )^{1/3} | h F_b |^{1/3} \p
+\f{w}{\phi} = \c{b}{\phi} \left ( \c{\ep}{} \right )^{1/3} | h f_b |^{1/3} \p
 \label{buoyscaletest}
 \eeq
 ```
 
 we write the test in \eqref{buoyscaletest} using the depth in \eqref{analyticaldepth}
 
-Under zero buoyancy forcing, the turbulent velocity scale is
+under zero buoyancy forcing, the turbulent velocity scale is
 
 ```math
 \beq
-\F{w}{\Phi} = \C{\kappa}{} \omega_\tau \p
+\f{w}{\phi} = \c{\tau}{} \omega_\tau \p
 \label{windscaletest}
 \eeq
 ```
@@ -301,27 +305,27 @@ Under zero buoyancy forcing, the turbulent velocity scale is
 
 The default values for adjustable model parameters in KPP are
 
-|   Parameter             | Value   |
-|   :-------:             | :---:   |
-| ``\C{\Ri}{}``           | 0.3     |
-| ``\C{\SL}{}``           | 0.1     |
-| ``\C{\K}{}``            | 3.19    |
-| ``\C{\NL}{}``           | 6.33    |
-| ``\C{\tau}{}``          | 0.4     |
-| ``\C{\mathrm{stab}}{}`` | 2.0     |
-| ``\C{\mathrm{unst}}{}`` | 6.4     |
-| ``\C{b}{U}``            | 0.599   |
-| ``\C{b}{T}``            | 1.36    |
-| ``\C{d}{U}``            | 0.5     |
-| ``\C{d}{T}``            | 2.5     |
-| ``\C{n}{}``             | 1.0     |
-| ``\C{m\tau}{U}``        | 0.25    |
-| ``\C{m\tau}{T}``        | 0.5     |
-| ``\C{mb}{U}``           | 0.33    |
-| ``\C{mb}{T}``           | 0.33    |
-| ``K_{u0}``              | 10^{-5} |
-| ``K_{T0}``              | 10^{-5} |
-| ``K_{S0}``              | 10^{-5} |
+|   Parameter             | Value   | Description |
+|   :-------:             | :---:   | :---:       |
+| ``\C{\Ri}{}``           | 0.3     | Bulk Richardson number criterion |   
+| ``\C{\SL}{}``           | 0.1     | Surface layer fraction |
+| ``\C{\K}{}``            | 3.19    | Unresolved kinetic energy constant |
+| ``\C{\NL}{}``           | 6.33    | Non-local flux proportionality constant |
+| ``\C{\tau}{}``          | 0.4     | Wind mixing constant / von Karman parameter |
+| ``\C{\mathrm{stab}}{}`` | 2.0     | Proportionality constant for effect of stable buoyancy forcing on wind mixing |
+| ``\C{n}{}``             | 1.0     | Exponent for effect of stable buoyancy forcing on wind mixing |
+| ``\C{\mathrm{unst}}{}`` | 6.4     | Proportionality constant for effect of unstable buoyancy forcing on wind mixing |
+| ``\C{m\tau}{U}``        | 0.25    | Exponent for effect of unstable buoyancy forcing on wind mixing of momentum |
+| ``\C{m\tau}{T}``        | 0.5     | Exponent for effect of unstable buoyancy forcing on wind mixing of momentum |
+| ``\C{b}{U}``            | 0.599   | Convective mixing constant for momentum |
+| ``\C{b}{T}``            | 1.36    | Convective mixing constant for scalars |
+| ``\C{d}{U}``            | 0.5     | Transitional normalized depth for unstable mixing of momentum |
+| ``\C{d}{T}``            | 2.5     | Transitional normalized depth for unstable mixing of scalars |
+| ``\C{mb}{U}``           | 0.33    | Exponent for effect of wind on convective mixing of momentum |
+| ``\C{mb}{T}``           | 0.33    | Exponent for effect of wind on convective mixing of scalars |
+| ``K_{u0}``              | 10^{-5} | Interior/background turbulent diffusivity for momentum |
+| ``K_{T0}``              | 10^{-5} | Interior/background turbulent diffusivitry for temperature |
+| ``K_{S0}``              | 10^{-5} | Interior/background turbulent diffusivitry for salinity |
 
 Note: all parameters are greater than 0, and ``0 \ge \C{\SL}{} \ge 1``.
 

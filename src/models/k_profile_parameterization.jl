@@ -16,11 +16,6 @@ const nsol = 4
     Parameters(; kwargs...)
 
 Construct KPP parameters.
-
-    Args
-    ====
-    CSL : Surface layer fraction
-    etc.
 """
 struct Parameters{T} <: AbstractParameters
     CSL   :: T  # Surface layer fraction
@@ -70,13 +65,12 @@ function Parameters(T=Float64;
     Cmτ_T = 1/2,
     Cmb_U = 1/3,
     Cmb_T = 1/3,
-       K₀ = 1e-5, KU₀=K₀, KT₀=K₀, KS₀=K₀
-     # do not change:
+       K₀ = 1e-5, KU₀=K₀, KT₀=K₀, KS₀=K₀,
+     # These should not be changed under ordinary circumstances:
      CKE₀ = 1e-11,
-     )
-
-     Cτb_U = (Cτ / Cb_U)^(1/Cmb_U) * (1 + Cunst*Cd_U)^(Cmτ_U/Cmb_U) - Cd_U
+     Cτb_U = (Cτ / Cb_U)^(1/Cmb_U) * (1 + Cunst*Cd_U)^(Cmτ_U/Cmb_U) - Cd_U,
      Cτb_T = (Cτ / Cb_T)^(1/Cmb_T) * (1 + Cunst*Cd_T)^(Cmτ_T/Cmb_T) - Cd_T
+     )
 
      Parameters{T}(CSL, Cτ, CNL, Cstab, Cunst,
                    Cb_U, Cτb_U, Cb_T, Cτb_T, Cd_U, Cd_T,
