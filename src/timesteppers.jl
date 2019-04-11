@@ -57,16 +57,23 @@ function update!(m)
     return nothing
 end
 
-explicit_rhs_kernel(ϕ, Kϕ, Rϕ, m, i) = ∇K∇c(Kϕ(m, i+1), Kϕ(m, i), ϕ, i) + Rϕ(m, i)
-explicit_rhs_kernel(ϕ, Kϕ, ::Nothing, m, i) = ∇K∇c(Kϕ(m, i+1), Kϕ(m, i), ϕ, i)
+import Base: +, -, convert
 
-implicit_rhs_top(ϕ, Kϕ, Rϕ, m) = @inbounds ∇K∇c(Kϕ(m, m.grid.N+1), 0, ϕ, m.grid.N) + Rϕ(m, m.grid.N)
-implicit_rhs_top(ϕ, Kϕ, ::Nothing, m) = @inbounds ∇K∇c(Kϕ(m, m.grid.N+1), 0, ϕ, m.grid.N)
+# A whole bunch of nothing.
++(a::Number, ::Nothing) = a
+-(a::Number, ::Nothing) = a
+convert(::Type{T}, ::Nothing) where T<:Number = zero(T)
 
-implicit_rhs_bottom(ϕ, Kϕ, Rϕ, m) = @inbounds ∇K∇c(0, Kϕ(m, 1), ϕ, 1) + Rϕ(m, 1)
-implicit_rhs_bottom(ϕ, Kϕ, ::Nothing, m) = @inbounds ∇K∇c(0, Kϕ(m, 1), ϕ, 1)
+explicit_rhs_kernel(ϕ, K, R, m, i)         = ∇K∇c(K(m, i+1), K(m, i), ϕ, i) + R(m, i)
+explicit_rhs_kernel(ϕ, K, ::Nothing, m, i) = ∇K∇c(K(m, i+1), K(m, i), ϕ, i)
 
-implicit_rhs_kernel!(rhs, ϕ, R, m, i) = rhs[i] = R(m, i)
+implicit_rhs_top(ϕ, K, R, m)         = @inbounds ∇K∇c(K(m, m.grid.N+1), 0, ϕ, m.grid.N) + R(m, m.grid.N)
+implicit_rhs_top(ϕ, K, ::Nothing, m) = @inbounds ∇K∇c(K(m, m.grid.N+1), 0, ϕ, m.grid.N)
+
+implicit_rhs_bottom(ϕ, K, R, m)         = @inbounds ∇K∇c(0, K(m, 1), ϕ, 1) + R(m, 1)
+implicit_rhs_bottom(ϕ, K, ::Nothing, m) = @inbounds ∇K∇c(0, K(m, 1), ϕ, 1)
+
+implicit_rhs_kernel!(rhs, ϕ, R, m, i)         = rhs[i] = R(m, i)
 implicit_rhs_kernel!(rhs, ϕ, ::Nothing, m, i) = nothing
 
 "Evaluate the right-hand-side of ∂ϕ∂t for the current time-step."
