@@ -5,7 +5,8 @@
 | [![docs][docs-img]][docs-url] | [![travis][travis-img]][travis-url] |[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://mit-license.org/)|
 
 
-This code provides models that approximate the physics of the 
+`OceanTurb.jl` is julia software that solves one-dimensional 
+models that approximate the physics of the 
 ocean's turbulent surface boundary layer.
 
 ## Installation
@@ -15,7 +16,7 @@ Open julia, press `]` to enter package manager mode, and type
 ```julia
 pkg> add https://github.com/glwagner/OceanTurb.jl.git
 ```
-
+provides
 ## Example(s)
 
 Check our 
