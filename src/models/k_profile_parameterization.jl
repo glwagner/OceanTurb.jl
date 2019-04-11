@@ -42,11 +42,11 @@ struct Parameters{T} <: AbstractParameters
     CKE   :: T  # Unresolved turbulence parameter
     CKE₀  :: T  # Minimum unresolved turbulence kinetic energy
 
-       Cn :: T # exponent...
-    Cmτ_U :: T # exponent...
-    Cmτ_T :: T # exponent...
-    Cmb_U :: T # exponent...
-    Cmb_T :: T # exponent...
+       Cn :: T  # Exponent for effect of stable buoyancy forcing on wind mixing
+    Cmτ_U :: T  # Exponent for effect of unstable buoyancy forcing on wind mixing of U
+    Cmτ_T :: T  # Exponent for effect of unstable buoyancy forcing on wind mixing of T
+    Cmb_U :: T  # Exponent for effect of wind on convective mixing of U
+    Cmb_T :: T  # Exponent for effect of wind on convective mixing of T
 
     KU₀   :: T  # Interior viscosity for velocity
     KT₀   :: T  # Interior diffusivity for temperature
@@ -65,13 +65,14 @@ function Parameters(T=Float64;
      Cd_T = 2.5,
       CRi = 4.32,
       CKE = 0.3,
-     CKE₀ = 1e-11,
        Cn = 1.0,
     Cmτ_U = 1/4,
     Cmτ_T = 1/2,
     Cmb_U = 1/3,
     Cmb_T = 1/3,
        K₀ = 1e-5, KU₀=K₀, KT₀=K₀, KS₀=K₀
+     # do not change:
+     CKE₀ = 1e-11,
      )
 
      Cτb_U = (Cτ / Cb_U)^(1/Cmb_U) * (1 + Cunst*Cd_U)^(Cmτ_U/Cmb_U) - Cd_U
