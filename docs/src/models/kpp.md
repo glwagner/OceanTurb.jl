@@ -305,37 +305,37 @@ under zero buoyancy forcing, the turbulent velocity scale is
 
 The default values for adjustable model parameters in KPP are
 
-|   Parameter             | Value   | Description |
-|   :-------:             | :---:   | :---:       |
-| ``\C{\Ri}{}``           | 0.3     | Bulk Richardson number criterion |   
-| ``\C{\SL}{}``           | 0.1     | Surface layer fraction |
-| ``\C{\K}{}``            | 3.19    | Unresolved kinetic energy constant |
-| ``\C{\NL}{}``           | 6.33    | Non-local flux proportionality constant |
-| ``\C{\tau}{}``          | 0.4     | Wind mixing constant / von Karman parameter |
-| ``\C{\mathrm{stab}}{}`` | 2.0     | Proportionality constant for effect of stable buoyancy forcing on wind mixing |
-| ``\C{n}{}``             | 1.0     | Exponent for effect of stable buoyancy forcing on wind mixing |
-| ``\C{\mathrm{unst}}{}`` | 6.4     | Proportionality constant for effect of unstable buoyancy forcing on wind mixing |
-| ``\C{m\tau}{U}``        | 0.25    | Exponent for effect of unstable buoyancy forcing on wind mixing of momentum |
-| ``\C{m\tau}{T}``        | 0.5     | Exponent for effect of unstable buoyancy forcing on wind mixing of momentum |
-| ``\C{b}{U}``            | 0.599   | Convective mixing constant for momentum |
-| ``\C{b}{T}``            | 1.36    | Convective mixing constant for scalars |
-| ``\C{d}{U}``            | 0.5     | Transitional normalized depth for unstable mixing of momentum |
-| ``\C{d}{T}``            | 2.5     | Transitional normalized depth for unstable mixing of scalars |
-| ``\C{mb}{U}``           | 0.33    | Exponent for effect of wind on convective mixing of momentum |
-| ``\C{mb}{T}``           | 0.33    | Exponent for effect of wind on convective mixing of scalars |
-| ``K_{u0}``              | 10^{-5} | Interior/background turbulent diffusivity for momentum |
-| ``K_{T0}``              | 10^{-5} | Interior/background turbulent diffusivitry for temperature |
-| ``K_{S0}``              | 10^{-5} | Interior/background turbulent diffusivitry for salinity |
+|   Parameter             | Value       | Description |
+|   :-------:             | :---:       | :---:       |
+| ``\C{\Ri}{}``           | 0.3         | Bulk Richardson number criterion |   
+| ``\C{\SL}{}``           | 0.1         | Surface layer fraction |
+| ``\C{\K}{}``            | 3.19        | Unresolved kinetic energy constant |
+| ``\C{\NL}{}``           | 6.33        | Non-local flux proportionality constant |
+| ``\C{\tau}{}``          | 0.4         | Wind mixing constant / von Karman parameter |
+| ``\C{\mathrm{stab}}{}`` | 2.0         | Proportionality constant for effect of stable buoyancy forcing on wind mixing |
+| ``\C{n}{}``             | 1.0         | Exponent for effect of stable buoyancy forcing on wind mixing |
+| ``\C{\mathrm{unst}}{}`` | 6.4         | Proportionality constant for effect of unstable buoyancy forcing on wind mixing |
+| ``\C{m\tau}{U}``        | 0.25        | Exponent for effect of unstable buoyancy forcing on wind mixing of momentum |
+| ``\C{m\tau}{T}``        | 0.5         | Exponent for effect of unstable buoyancy forcing on wind mixing of momentum |
+| ``\C{b}{U}``            | 0.599       | Convective mixing constant for momentum |
+| ``\C{b}{T}``            | 1.36        | Convective mixing constant for scalars |
+| ``\C{d}{U}``            | 0.5         | Transitional normalized depth for unstable mixing of momentum |
+| ``\C{d}{T}``            | 2.5         | Transitional normalized depth for unstable mixing of scalars |
+| ``\C{mb}{U}``           | 0.33        | Exponent for effect of wind on convective mixing of momentum |
+| ``\C{mb}{T}``           | 0.33        | Exponent for effect of wind on convective mixing of scalars |
+| ``K_{u0}``              | ``10^{-5}`` | Interior/background turbulent diffusivity for momentum |
+| ``K_{T0}``              | ``10^{-5}`` | Interior/background turbulent diffusivity for temperature |
+| ``K_{S0}``              | ``10^{-5}`` | Interior/background turbulent diffusivity for salinity |
 
 Note: all parameters are greater than 0, and ``0 \ge \C{\SL}{} \ge 1``.
 
 The default values for 'non-adjustable' parameters in KPP are
 
-|   Parameter       | Value |
-|   :-------:       | :---: |
-| ``\C{\tau b}{U}`` | ----  |
-| ``\C{\tau b}{T}`` | ----  |
-| ``\C{\K_0}{}``    | 1e-11 |
+|   Parameter       | Value  | Description |
+|   :-------:       | :---:  | :-: |
+| ``\C{\tau b}{U}`` | 0.374  | |  
+| ``\C{\tau b}{T}`` | -0.717 | |
+| ``\C{\K_0}{}``    | 1e-11  | |
 
 
 # References
