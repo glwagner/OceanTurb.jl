@@ -17,7 +17,8 @@
 
 % Non-dimensional numbers
 \newcommand{\Ri}        {\mathrm{Ri}}
-\newcommand{\K}         {\mathrm{KE}}        
+\newcommand{\SL}        {\mathrm{SL}}
+\newcommand{\K}         {\mathcal{E}}
 
 \newcommand{\btau}      {\b{\tau}} % wind stress vector
 
@@ -27,6 +28,8 @@
 
 \newcommand{\uwind}     {\omega_{\tau}}
 \newcommand{\ubuoy}     {\omega_b}
+
+\newcommand{\NL}        {NL}
 ```
 
 The K-Profile-Parameterization, or "KPP", is proposed by
@@ -36,12 +39,12 @@ In KPP, vertical turbulent fluxes of a quantity ``\phi`` are parameterized as
 
 ```math
 \beq
-\overline{w \phi} = - K_\Phi \d_z \Phi + N_\phi \c
+\overline{w \phi} = - K_\phi \d_z \Phi + \NL_\phi \c
 \eeq
 ```
 
-where ``\Phi`` is the resolved or horizontally-averaged quantity, ``K_\Phi`` is a
-turbulent diffusivity, and ``N_\phi`` is a 'non-local' flux.
+where ``\Phi`` is the resolved or horizontally-averaged quantity, ``K_\phi`` is a
+turbulent diffusivity, and ``NL_\phi`` is a 'non-local' flux.
 
 The non-local flux and turbulent diffusivity are defined to vanish at the surface, and at the bottom of the 'mixing layer' ``h``, which roughly
 corresponds to the depth at which turbulent fluxes and turbulent kinetic energy
@@ -130,10 +133,10 @@ The non-local flux is defined only for ``T`` and ``S``, and is
 
 ```math
 \beq
-N_\Phi = \C{N}{} F_\Phi d (1 - d)^2 \c
+NL_\phi = \C{\NL}{} F_\phi d (1 - d)^2 \c
 \eeq
 ```
-where ``d = -z/h`` is a non-dimensional depth coordinate and ``\C{N}{} = 6.33``.
+where ``d = -z/h`` is a non-dimensional depth coordinate and ``\C{\NL}{} = 6.33``.
 
 ### Turbulent Diffusivity
 
@@ -141,19 +144,19 @@ The KPP diffusivity is defined
 
 ```math
 \beq
-K_\Phi = h \F{w}{\Phi} d ( 1 - d )^2 \c
+K_\phi = h \F{w}{\phi} d ( 1 - d )^2 \c
 \eeq
 ```
-where ``\F{w}{\Phi}`` is the turbulent velocity scale.
+where ``\F{w}{\phi}`` is the turbulent velocity scale.
 In wind-driven turbulence under stable buoyancy forcing such that ``F_b < 0``, the turbulent velocity scale is
 
 ```math
 \beq
-\F{w}{\Phi} = \frac{ \C{\kappa}{} \uwind}{1 + \C{\mathrm{stab}}{} r_b d} \p
+\F{w}{\phi} = \frac{ \C{\tau}{} \uwind}{1 + \C{\mathrm{stab}}{} r_b d} \p
 \eeq
 ```
 
-wherea ``\C{\kappa}{} = 0.4`` is the Von Karman constant and ``\C{\mathrm{stab}}{} = 2.0``.
+wherea ``\C{\tau}{} = 0.4`` is the Von Karman constant and ``\C{\mathrm{stab}}{} = 2.0``.
 
 In wind-driven turbulence but under destabilizing buoyancy forcing, when ``\min \left [ \C{\ep}{}, d \right ] < \C{d}{\phi} r_\tau``,
 the turbulent velocity scale is
@@ -296,11 +299,39 @@ Under zero buoyancy forcing, the turbulent velocity scale is
 
 # Table of model parameters
 
-The model parameters in KPP are
+The default values for adjustable model parameters in KPP are
 
-|   Parameter   | Value | Reference              |
-|   :-------:   | :---: | ---------              |
-| ``\C{\ep}{}`` | 0.1   | pretty much everywhere |
+|   Parameter             | Value   |
+|   :-------:             | :---:   |
+| ``\C{\Ri}{}``           | 0.3     |
+| ``\C{\SL}{}``           | 0.1     |
+| ``\C{\K}{}``            | 3.19    |
+| ``\C{\NL}{}``           | 6.33    |
+| ``\C{\tau}{}``          | 0.4     |
+| ``\C{\mathrm{stab}}{}`` | 2.0     |
+| ``\C{\mathrm{unst}}{}`` | 6.4     |
+| ``\C{b}{U}``            | 0.599   |
+| ``\C{b}{T}``            | 1.36    |
+| ``\C{d}{U}``            | 0.5     |
+| ``\C{d}{T}``            | 2.5     |
+| ``\C{n}{}``             | 1.0     |
+| ``\C{m\tau}{U}``        | 0.25    |
+| ``\C{m\tau}{T}``        | 0.5     |
+| ``\C{mb}{U}``           | 0.33    |
+| ``\C{mb}{T}``           | 0.33    |
+| ``K_{u0}``              | 10^{-5} |
+| ``K_{T0}``              | 10^{-5} |
+| ``K_{S0}``              | 10^{-5} |
+
+Note: all parameters are greater than 0, and ``0 \ge \C{\SL}{} \ge 1``.
+
+The default values for 'non-adjustable' parameters in KPP are
+
+|   Parameter       | Value |
+|   :-------:       | :---: |
+| ``\C{\tau b}{U}`` | ----  |
+| ``\C{\tau b}{T}`` | ----  |
+| ``\C{\K_0}{}``    | 1e-11 |
 
 
 # References

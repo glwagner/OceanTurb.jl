@@ -19,21 +19,21 @@ Construct KPP parameters.
 
     Args
     ====
-    Cε : Surface layer fraction
+    CSL : Surface layer fraction
     etc.
 """
 struct Parameters{T} <: AbstractParameters
-    Cε    :: T  # Surface layer fraction
-    Cκ    :: T  # Von Karman constant
-    CN    :: T  # Non-local flux proportionality constant
+    CSL   :: T  # Surface layer fraction
+    Cτ    :: T  # Von Karman constant
+    CNL   :: T  # Non-local flux proportionality constant
 
     Cstab :: T  # Stable buoyancy flux parameter for wind-driven turbulence
     Cunst :: T  # Unstable buoyancy flux parameter for wind-driven turbulence
 
     Cb_U  :: T  # Buoyancy flux parameter for convective turbulence
-    Cτ_U  :: T  # Wind stress parameter for convective turbulence
+    Cτb_U :: T  # Wind stress parameter for convective turbulence
     Cb_T  :: T  # Buoyancy flux parameter for convective turbulence
-    Cτ_T  :: T  # Wind stress parameter for convective turbulence
+    Cτb_T :: T  # Wind stress parameter for convective turbulence
 
     Cd_U  :: T  # Wind mixing regime threshold for momentum
     Cd_T  :: T  # Wind mixing regime threshold for tracers
@@ -42,32 +42,46 @@ struct Parameters{T} <: AbstractParameters
     CKE   :: T  # Unresolved turbulence parameter
     CKE₀  :: T  # Minimum unresolved turbulence kinetic energy
 
+       Cn :: T # exponent...
+    Cmτ_U :: T # exponent...
+    Cmτ_T :: T # exponent...
+    Cmb_U :: T # exponent...
+    Cmb_T :: T # exponent...
+
     KU₀   :: T  # Interior viscosity for velocity
     KT₀   :: T  # Interior diffusivity for temperature
     KS₀   :: T  # Interior diffusivity for salinity
 end
 
 function Parameters(T=Float64;
-       Cε = 0.1,
-       Cκ = 0.4,
-       CN = 6.33,
+      CSL = 0.1,
+       Cτ = 0.4,
+      CNL = 6.33,
     Cstab = 2.0,
     Cunst = 6.4,
      Cb_U = 0.599,
-     Cτ_U = 0.135,
      Cb_T = 1.36,
-     Cτ_T = -1.85,
      Cd_U = 0.5,
      Cd_T = 2.5,
       CRi = 4.32,
       CKE = 0.3,
      CKE₀ = 1e-11,
+       Cn = 1.0,
+    Cmτ_U = 1/4,
+    Cmτ_T = 1/2,
+    Cmb_U = 1/3,
+    Cmb_T = 1/3,
        K₀ = 1e-5, KU₀=K₀, KT₀=K₀, KS₀=K₀
      )
 
-     Parameters{T}(Cε, Cκ, CN, Cstab, Cunst,
-                   Cb_U, Cτ_U, Cb_T, Cτ_T, Cd_U, Cd_T,
-                   CRi, CKE, CKE₀, KU₀, KT₀, KS₀)
+     Cτb_U = (Cτ / Cb_U)^(1/Cmb_U) * (1 + Cunst*Cd_U)^(Cmτ_U/Cmb_U) - Cd_U
+     Cτb_T = (Cτ / Cb_T)^(1/Cmb_T) * (1 + Cunst*Cd_T)^(Cmτ_T/Cmb_T) - Cd_T
+
+     Parameters{T}(CSL, Cτ, CNL, Cstab, Cunst,
+                   Cb_U, Cτb_U, Cb_T, Cτb_T, Cd_U, Cd_T,
+                   CRi, CKE, CKE₀,
+                   Cn, Cmτ_U, Cmτ_T,Cmb_U, Cmb_T,
+                   KU₀, KT₀, KS₀)
 end
 
 # Shape functions (these shoul become parameters eventually).
@@ -153,11 +167,11 @@ d(m, i) = -m.grid.zf[i] / m.state.h
 #
 
 "Returns the surface_layer_average for mixing depth h = -zf[i]."
-function surface_layer_average(c, Cε, i)
+function surface_layer_average(c, CSL, i)
     if i > c.grid.N # Return surface value
         return onface(c, c.grid.N+1)
     else
-        iε = length(c)+1 - Cε*(length(c)+1 - i) # (fractional) face "index" of the surface layer
+        iε = length(c)+1 - CSL*(length(c)+1 - i) # (fractional) face "index" of the surface layer
         face = ceil(Int, iε)  # the next cell face above the fractional depth
         frac = face - iε # the fraction of the lowest cell in the surface layer.
         surface_layer_integral = convert(eltype(c), 0)
@@ -174,7 +188,7 @@ function surface_layer_average(c, Cε, i)
 
         h = -c.grid.zf[i] # depth
 
-        return surface_layer_integral / (Cε*h)
+        return surface_layer_integral / (CSL*h)
     end
 end
 
@@ -182,7 +196,7 @@ end
 Return Δc(hᵢ), the difference between the surface-layer average of c and its value at depth hᵢ, where
 i is a face index.
 """
-Δ(c, Cε, i) = surface_layer_average(c, Cε, i) - onface(c, i)
+Δ(c, CSL, i) = surface_layer_average(c, CSL, i) - onface(c, i)
 
 "Returns the parameterization for unresolved KE at face point i."
 function unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β, i)
@@ -194,14 +208,14 @@ end
 
 Returns the bulk Richardson number of `model` at face `i`.
 """
-function bulk_richardson_number(U, V, T, S, Fb, CKE, CKE₀, Cε, g, α, β, i)
+function bulk_richardson_number(U, V, T, S, Fb, CKE, CKE₀, CSL, g, α, β, i)
     h = -U.grid.zf[i]
     # (h - hε) * ΔB
-    h⁺ΔB = h * (1 - 0.5Cε) * g * (α*Δ(T, Cε, i) - β*Δ(S, Cε, i))
+    h⁺ΔB = h * (1 - 0.5CSL) * g * (α*Δ(T, CSL, i) - β*Δ(S, CSL, i))
 
     Bz = ∂B∂z(T, S, g, α, β, i)
     unresolved_KE = unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β, i)
-    KE = Δ(U, Cε, i)^2 + Δ(V, Cε, i)^2 + unresolved_KE
+    KE = Δ(U, CSL, i)^2 + Δ(V, CSL, i)^2 + unresolved_KE
 
     if KE == 0 && h⁺ΔB == 0 # Alistar Adcroft's theorem
         return 0
@@ -212,7 +226,7 @@ end
 
 bulk_richardson_number(m, i) = bulk_richardson_number(
     m.solution.U, m.solution.V, m.solution.T, m.solution.S,
-    m.state.Fb, m.parameters.CKE, m.parameters.CKE₀, m.parameters.Cε, m.constants.g,
+    m.state.Fb, m.parameters.CKE, m.parameters.CKE₀, m.parameters.CSL, m.constants.g,
     m.constants.α, m.constants.β, i)
 
 """
@@ -265,17 +279,17 @@ isforced(model) = ωτ(model) > 0 || ωb(model) > 0
 ωb(m::Model) = ωb(m.state.Fb, m.state.h)
 
 "Return truncated, non-dimensional depth coordinate."
-dϵ(m::Model, d) = min(m.parameters.Cε, d)
+dϵ(m::Model, d) = min(m.parameters.CSL, d)
 
 "Return the vertical velocity scale at depth d for a stable boundary layer."
-w_scale_stable(Cκ, Cstab, ωτ, ωb, d) = Cκ * ωτ / (1 + Cstab * d * (ωb/ωτ)^3)
+w_scale_stable(Cτ, Cstab, ωτ, ωb, Cn, d) = Cτ * ωτ / (1 + Cstab * d * (ωb/ωτ)^3)^Cn
 
 "Return the vertical velocity scale at scaled depth dϵ for an unstable boundary layer."
-function w_scale_unstable(Cd, Cκ, Cunst, Cb, Cτ, ωτ, ωb, dϵ, n)
+function w_scale_unstable(Cd, Cτ, Cunst, Cb, Cτb, ωτ, ωb, Cmτ, Cmb, dϵ)
     if dϵ < Cd * (ωτ/ωb)^3
-        return Cκ * ωτ * ( 1 + Cunst * dϵ * (ωb/ωτ)^3 )^n
+        return Cτ * ωτ * ( 1 + Cunst * dϵ * (ωb/ωτ)^3 )^Cmτ
     else
-        return Cb * ωb * ( dϵ + Cτ * (ωτ/ωb)^3 )^(1/3)
+        return Cb * ωb * ( dϵ + Cτb * (ωτ/ωb)^3 )^Cmb
     end
 end
 
@@ -286,11 +300,16 @@ function w_scale_U(m, i)
         return 0
     else
         if isunstable(m)
-            return w_scale_unstable(m.parameters.Cd_U, m.parameters.Cκ, m.parameters.Cunst,
-                                    m.parameters.Cb_U, m.parameters.Cτ_U,
-                                    ωτ(m), ωb(m), min(m.parameters.Cε, d(m, i)), nU)
+            return w_scale_unstable(m.parameters.Cd_U, m.parameters.Cτ, m.parameters.Cunst,
+                                    m.parameters.Cb_U, m.parameters.Cτb_U,
+                                    ωτ(m), ωb(m),
+                                    m.parameters.Cmτ_U, m.parameters.Cmb_U,
+                                    min(m.parameters.CSL, d(m, i))
+                                    )
         else
-            return w_scale_stable(m.parameters.Cκ, m.parameters.Cstab, ωτ(m), ωb(m), d(m, i))
+            return w_scale_stable(m.parameters.Cτ, m.parameters.Cstab, ωτ(m), ωb(m),
+                                  m.parameters.Cn, d(m, i)
+                                  )
         end
     end
 end
@@ -301,11 +320,16 @@ function w_scale_T(m, i)
         return 0
     else
         if isunstable(m)
-            return w_scale_unstable(m.parameters.Cd_T, m.parameters.Cκ, m.parameters.Cunst,
-                                    m.parameters.Cb_T, m.parameters.Cτ_T,
-                                    ωτ(m), ωb(m), min(m.parameters.Cε, d(m, i)), nT)
+            return w_scale_unstable(m.parameters.Cd_T, m.parameters.Cτ, m.parameters.Cunst,
+                                    m.parameters.Cb_T, m.parameters.Cτb_T,
+                                    ωτ(m), ωb(m),
+                                    m.parameters.Cmτ_T, m.parameters.Cmb_T,
+                                    min(m.parameters.CSL, d(m, i))
+                                    )
         else
-            return w_scale_stable(m.parameters.Cκ, m.parameters.Cstab, ωτ(m), ωb(m), d(m, i))
+            return w_scale_stable(m.parameters.Cτ, m.parameters.Cstab, ωτ(m), ωb(m),
+                                  m.parameters.Cn, d(m, i)
+                                  )
         end
     end
 end
@@ -318,9 +342,9 @@ const w_scale_S = w_scale_T
 #
 
 """
-    N(CN, flux, d, shape=default_shape)
+    N(CNL, flux, d, shape=default_shape)
 
-Returns the nonlocal flux, N = CN*flux*shape(d),
+Returns the nonlocal flux, N = CNL*flux*shape(d),
 where `flux` is the flux of some quantity out of the surface,
 `shape` is a shape function, and `d` is a non-dimensional depth coordinate
 that increases from 0 at the surface to 1 at the bottom of the mixing layer.
@@ -330,18 +354,18 @@ a positive surface flux implies negative surface flux divergence,
 which implies a reduction to the quantity in question.
 For example, positive heat flux out of the surface implies cooling.
 """
-N(CN, flux, d, shape=default_shape_N) = 0 < d < 1 ? -CN*flux*shape(d) : 0
+N(CNL, flux, d, shape=default_shape_N) = 0 < d < 1 ? -CNL*flux*shape(d) : 0
 
-function ∂N∂z(CN, Fϕ, m, i)
+function ∂N∂z(CNL, Fϕ, m, i)
     if isunstable(m)
-        return (N(CN, Fϕ, d(m, i+1)) - N(CN, Fϕ, d(m, i))) / Δf(m.grid, i)
+        return (N(CNL, Fϕ, d(m, i+1)) - N(CNL, Fϕ, d(m, i))) / Δf(m.grid, i)
     else
         return 0
     end
 end
 
-∂NT∂z(m, i) = ∂N∂z(m.parameters.CN, m.state.Fθ, m, i)
-∂NS∂z(m, i) = ∂N∂z(m.parameters.CN, m.state.Fs, m, i)
+∂NT∂z(m, i) = ∂N∂z(m.parameters.CNL, m.state.Fθ, m, i)
+∂NS∂z(m, i) = ∂N∂z(m.parameters.CNL, m.state.Fs, m, i)
 
 #
 # Equation specification
