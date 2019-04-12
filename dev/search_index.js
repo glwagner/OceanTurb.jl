@@ -157,7 +157,7 @@ var documenterSearchIndex = {"docs": [
     "page": "The K-Profile-Parameterization (KPP)",
     "title": "The K-Profile-Parameterization (KPP)",
     "category": "section",
-    "text": "newcommandc          \nnewcommandp          \nnewcommandd         partial\nnewcommandr1      mathrm1\nnewcommandb1      boldsymbol1\nnewcommandee        mathrme\nnewcommanddi         mathrmd\nnewcommandep        epsilon\n\nnewcommandbeq       beginequation\nnewcommandeeq       endequation\nnewcommandbeqs      begingather\nnewcommandeeqs      endgather\n\n Non-dimensional numbers\nnewcommandRi        mathrmRi\nnewcommandK         mathrmKE        \n\nnewcommandbtau      btau  wind stress vector\n\n Model functions and constants\nrenewcommandF2      Upsilon^1_2\nrenewcommandC2      C^1_2\n\nnewcommanduwind     omega_tau\nnewcommandubuoy     omega_bThe K-Profile-Parameterization, or \"KPP\", is proposed by Large et al (1994) as a model for convection- and wind-driven mixing in the upper ocean. In KPP, vertical turbulent fluxes of a quantity phi are parameterized asbeq\noverlinew phi = - K_Phi d_z Phi + N_phi c\neeqwhere Phi is the resolved or horizontally-averaged quantity, K_Phi is a turbulent diffusivity, and N_phi is a \'non-local\' flux.The non-local flux and turbulent diffusivity are defined to vanish at the surface, and at the bottom of the \'mixing layer\' h, which roughly corresponds to the depth at which turbulent fluxes and turbulent kinetic energy decay to zero."
+    "text": "newcommandc          \nnewcommandp          \nnewcommandd         partial\nnewcommandr1      mathrm1\nnewcommandb1      boldsymbol1\nnewcommandee        mathrme\nnewcommanddi         mathrmd\nnewcommandep        epsilon\n\nnewcommandbeq       beginequation\nnewcommandeeq       endequation\nnewcommandbeqs      begingather\nnewcommandeeqs      endgather\n\n Non-dimensional numbers\nnewcommandRi        mathrmRi\nnewcommandSL        mathrmSL\nnewcommandK         mathcalE\n\nnewcommandbtau      btau  wind stress vector\n\n Model functions and constants\nrenewcommandF2      Upsilon^1_2\nrenewcommandC2      C^1_2\n\nnewcommanduwind     omega_tau\nnewcommandubuoy     omega_b\n\nnewcommandNL        NLThe K-Profile-Parameterization, or \"KPP\", is proposed by Large et al (1994) as a model for convection- and wind-driven mixing in the upper ocean. In KPP, vertical turbulent fluxes of a quantity phi are parameterized asbeq\noverlinew phi = - K_phi d_z Phi + NL_phi c\neeqwhere Phi is the resolved or horizontally-averaged quantity, K_phi is a turbulent diffusivity, and NL_phi is a \'non-local\' flux.The non-local flux and turbulent diffusivity are defined to vanish at the surface, and at the bottom of the \'mixing layer\' h, which roughly corresponds to the depth at which turbulent fluxes and turbulent kinetic energy decay to zero."
 },
 
 {
@@ -173,7 +173,7 @@ var documenterSearchIndex = {"docs": [
     "page": "The K-Profile-Parameterization (KPP)",
     "title": "The mixing layer depth, h",
     "category": "section",
-    "text": "The mixing layer depth h is defined implicitly via the bulk Richardson number criterionbeq labelbulk_ri\nCRi = frach left ( 1 - tfrac12 Cep right ) Delta B(-h) Delta bU(-h)^2 + FK(-h) p\neeqwhere the critical Ri is CRi = 03. The operator Delta is definedbeq\nDelta Phi(z) = -frac1Cep z int_Cep z^0 Phi(z) di z - Phi(z) c\neeqwhere Cep = 01 is the surface layer fraction. The function FK(z) isbeq  labelunresolved_ke\nFK(z) = CK (-z)^43 sqrt max left  0 B_z(z) right   max left  0 F_b right ^13 + CK_0 p\neeqThe unresolved kinetic energy constant is CK = 432 and the minimum unresolved kinetic energy is CK_0 = 10^-11. To solve \\eqref{bulk_ri} for h, we evaluate the right side of \\eqref{bulk_ri} for z  0 at increasing depths until the right side rises above the critical CRi. We then linearly interpolate to find h."
+    "text": "The mixing layer depth h is defined implicitly via the bulk Richardson number criterionbeq labelbulk_ri\nCRi = frach left ( 1 - tfrac12 Cep right ) Delta B(-h) Delta bU(-h)^2 + FK(-h) p\neeqwhere the critical Ri is CRi = 03. The operator Delta is definedbeq\nDelta Phi(z) = -frac1CSL z int_CSL z^0 Phi(z) di z - Phi(z) c\neeqwhere CSL = 01 is the surface layer fraction. The function FK(z) isbeq  labelunresolved_ke\nFK(z) = CK (-z)^43 sqrt max left  0 B_z(z) right   max left  0 F_b right ^13 + CK_0 p\neeqThe unresolved kinetic energy constant is CK = 432 and the minimum unresolved kinetic energy is CK_0 = 10^-11. To solve \\eqref{bulk_ri} for h, we evaluate the right side of \\eqref{bulk_ri} for z  0 at increasing depths until the right side rises above the critical CRi. We then linearly interpolate to find h."
 },
 
 {
@@ -181,7 +181,7 @@ var documenterSearchIndex = {"docs": [
     "page": "The K-Profile-Parameterization (KPP)",
     "title": "Non-local flux",
     "category": "section",
-    "text": "The non-local flux is defined only for T and S, and isbeq\nN_Phi = CN F_Phi d (1 - d)^2 c\neeqwhere d = -zh is a non-dimensional depth coordinate and CN = 633."
+    "text": "The non-local flux is defined only for T and S, and isbeq\nNL_phi = CNL F_phi d (1 - d)^2 c\neeqwhere d = -zh is a non-dimensional depth coordinate and CNL = 633."
 },
 
 {
@@ -189,7 +189,7 @@ var documenterSearchIndex = {"docs": [
     "page": "The K-Profile-Parameterization (KPP)",
     "title": "Turbulent Diffusivity",
     "category": "section",
-    "text": "The KPP diffusivity is definedbeq\nK_Phi = h FwPhi d ( 1 - d )^2 c\neeqwhere FwPhi is the turbulent velocity scale. In wind-driven turbulence under stable buoyancy forcing such that F_b  0, the turbulent velocity scale isbeq\nFwPhi = frac Ckappa uwind1 + Cmathrmstab r_b d p\neeqwherea Ckappa = 04 is the Von Karman constant and Cmathrmstab = 20.In wind-driven turbulence but under destabilizing buoyancy forcing, when min left  Cep d right   Cdphi r_tau, the turbulent velocity scale isbeq\nFwPhi = Ckappa omega_tau left ( 1 + Cmathrmunst r_b min left  Cep d right  right )^n_Phi c\neeqwhere n_U = 14 for velocities, n_T = 12 for tracers, Cmathrmunst = 64, the transition parameter for velocities is CdU = 05, and the transition parameter for tracers is CdT = 25.In convection-driven turbulence affected by wind mixing, when min left  Cep d right  = Cdphi r_tau, the turbulent velocity scale isbeq\nFwPhi = CbPhi omega_b left ( min left  Cep d right  + CtauPhi r_tau right )^13 c\neeqwhere CbU = CbV = 0215, CbT = CbS = 253, CtauU = CtauV = 00806, and CtauT = CtauS = 185."
+    "text": "The KPP diffusivity is definedbeq\nK_phi = h Fwphi d ( 1 - d )^2 c\neeqwhere Fwphi is the turbulent velocity scale. In wind-driven turbulence under stable buoyancy forcing such that F_b  0, the turbulent velocity scale isbeq\nFwphi = frac Ctau uwind left ( 1 + Cmathrmstab r_b d right )^Cn p\neeqwhere Ctau = 04 is the Von Karman constant, Cmathrmstab = 20, and Cn=1.In wind-driven turbulence but under destabilizing buoyancy forcing, when min left  CSL d right   Cdphi r_tau, the turbulent velocity scale isbeq\nFwPhi = Ctau omega_tau left ( 1 + Cmathrmunst r_b min left  CSL d right  right )^CmtauPhi c\neeqwhere CmtauU= 14, CmtauT = 12, Cmathrmunst = 64, the transition parameter for velocities is CdU = 05, and the transition parameter for tracers is CdT = 25.In convection-driven turbulence affected by wind mixing, when min left  CSL d right  = Cdphi r_tau, the turbulent velocity scale isbeq\nFwPhi = CbPhi omega_b left ( min left  CSL d right  + Ctau bPhi r_tau right )^CmbPhi c\neeqwhere CbU = CbV = 0215, CbT = CbS = 253, CmbU = CmbT=13, Ctau bU = Ctau bV = 0374, and Ctau bT = Ctau bS = -0717."
 },
 
 {
@@ -205,7 +205,7 @@ var documenterSearchIndex = {"docs": [
     "page": "The K-Profile-Parameterization (KPP)",
     "title": "Linear temperature profile and no velocity field",
     "category": "section",
-    "text": "Some simple tests can be defined when the model state is U=V=S=0 and T = gamma z. In this case the buoyancy becomes B = g alpha gamma z and the buoyancy gradient is B_z = g alpha gamma. If we further take Cep to 0 and F_b  0, and note that the value of T in the top grid cell is T_N = -gamma Delta z  2, where N is the number of grid points, we find thatbeq\nDelta T(-h) = gamma h - T_N c\neeqandbeq\nDelta B(-h) = g alpha gamma h - B_N p\neeqThe unresolved kinetic energy function isbeq\nFK(-h) = CK h^43 sqrtg alpha gamma F_b^13 p\neeqThe bulk Richardson number criterion then becomesbeginalign\nCRi = frach Delta B(-h)FK(-h) c \n          = fracg alpha gamma h^2 - h B_NCK h^43 sqrtg alpha gamma F_b^13 c \n          = fracg alpha gamma h - B_NCK sqrtg alpha gamma left ( h F_b right )^13 c \nendalignModifying the temperature profile so that T_N = B_N = 0 allows us to analytically calculate the mixed layer depth:beq\nh = left ( CRi CK right )^32 sqrtF_b left ( g alpha gamma right )^-34 p\nlabelanalyticaldepth\neeq"
+    "text": "Some simple tests can be defined when the model state is U=V=S=0 and T = gamma z. In this case the buoyancy becomes B = g alpha gamma z and the buoyancy gradient is B_z = g alpha gamma. If we further take CSL to 0 and F_b  0, and note that the value of T in the top grid cell is T_N = -gamma Delta z  2, where N is the number of grid points, we find thatbeq\nDelta T(-h) = gamma h - T_N c\neeqandbeq\nDelta B(-h) = g alpha gamma h - B_N p\neeqThe unresolved kinetic energy function isbeq\nFK(-h) = CK h^43 sqrtg alpha gamma F_b^13 p\neeqThe bulk Richardson number criterion then becomesbeginalign\nCRi = frach Delta B(-h)FK(-h) c \n          = fracg alpha gamma h^2 - h B_NCK h^43 sqrtg alpha gamma F_b^13 c \n          = fracg alpha gamma h - B_NCK sqrtg alpha gamma left ( h F_b right )^13 c \nendalignModifying the temperature profile so that T_N = B_N = 0 allows us to analytically calculate the mixed layer depth:beq\nh = left ( CRi CK right )^32 sqrtF_b left ( g alpha gamma right )^-34 p\nlabelanalyticaldepth\neeq"
 },
 
 {
@@ -213,15 +213,15 @@ var documenterSearchIndex = {"docs": [
     "page": "The K-Profile-Parameterization (KPP)",
     "title": "Linear temperature profile and linear shear",
     "category": "section",
-    "text": "Consider a piecewise-constant temperature profilebeq\nT(z) =  left  beginmatrix\n  T_0  quad textfor  z  -h c \n  -T_0  quad textfor  z  -h c\n  endmatrix right \neeqand a velocity profilebeq\nU(z) =  left  beginmatrix\n  U_0  quad textfor  z  -h c \n  -U_0  quad textfor  z  -h c\n  endmatrix right \neeqso that T(z=-h) = U(z=-h) = 0. We then have Delta T(-h) = T_0 and Delta U^2(-h) = U_0^2, so that with g=alpha=1,beq\nCRi = frach T_0U_0^2 p\nlabelsheardepth\neeqSetting h = 9, CRi=1, T_0 = 1, and U_0=3 yields a consistent solution."
+    "text": "Consider a piecewise-constant temperature profilebeq\nT(z) =  left  beginmatrix\n  T_0  quad textfor  z  -h c \n  -T_0  quad textfor  z  -h c\n  endmatrix right \neeqand a velocity profilebeq\nu(z) =  left  beginmatrix\n  u_0  quad textfor  z  -h c \n  -u_0  quad textfor  z  -h c\n  endmatrix right \neeqso that t(z=-h) = u(z=-h) = 0. we then have delta t(-h) = t_0 and delta u^2(-h) = u_0^2, so that with g=alpha=1,beq\ncRi = frach t_0u_0^2 p\nlabelsheardepth\neeqsetting h = 9, cri=1, t_0 = 1, and u_0=3 yields a consistent solution."
 },
 
 {
-    "location": "models/kpp/#Limiting-cases-for-turbulent-velocity-scales-1",
+    "location": "models/kpp/#limiting-cases-for-turbulent-velocity-scales-1",
     "page": "The K-Profile-Parameterization (KPP)",
-    "title": "Limiting cases for turbulent velocity scales",
+    "title": "limiting cases for turbulent velocity scales",
     "category": "section",
-    "text": "Under zero momentum forcing, the turbulent vertical velocity scale isbeq\nFwPhi = CbPhi left ( Cep right )^13  h F_b ^13 p\nlabelbuoyscaletest\neeqwe write the test in \\eqref{buoyscaletest} using the depth in \\eqref{analyticaldepth}Under zero buoyancy forcing, the turbulent velocity scale isbeq\nFwPhi = Ckappa omega_tau p\nlabelwindscaletest\neeq"
+    "text": "under zero momentum forcing, the turbulent vertical velocity scale isbeq\nfwphi = cbphi left ( cep right )^13  h f_b ^13 p\nlabelbuoyscaletest\neeqwe write the test in \\eqref{buoyscaletest} using the depth in \\eqref{analyticaldepth}under zero buoyancy forcing, the turbulent velocity scale isbeq\nfwphi = ctau omega_tau p\nlabelwindscaletest\neeq"
 },
 
 {
@@ -229,7 +229,7 @@ var documenterSearchIndex = {"docs": [
     "page": "The K-Profile-Parameterization (KPP)",
     "title": "Table of model parameters",
     "category": "section",
-    "text": "The model parameters in KPP areParameter Value Reference\nCep 0.1 pretty much everywhere"
+    "text": "The default values for adjustable model parameters in KPP areParameter Value Description\nCRi 0.3 Bulk Richardson number criterion\nCSL 0.1 Surface layer fraction\nCK 3.19 Unresolved kinetic energy constant\nCNL 6.33 Non-local flux proportionality constant\nCtau 0.4 Wind mixing constant / von Karman parameter\nCmathrmstab 2.0 Proportionality constant for effect of stable buoyancy forcing on wind mixing\nCn 1.0 Exponent for effect of stable buoyancy forcing on wind mixing\nCmathrmunst 6.4 Proportionality constant for effect of unstable buoyancy forcing on wind mixing\nCmtauU 0.25 Exponent for effect of unstable buoyancy forcing on wind mixing of momentum\nCmtauT 0.5 Exponent for effect of unstable buoyancy forcing on wind mixing of momentum\nCbU 0.599 Convective mixing constant for momentum\nCbT 1.36 Convective mixing constant for scalars\nCdU 0.5 Transitional normalized depth for unstable mixing of momentum\nCdT 2.5 Transitional normalized depth for unstable mixing of scalars\nCmbU 0.33 Exponent for effect of wind on convective mixing of momentum\nCmbT 0.33 Exponent for effect of wind on convective mixing of scalars\nK_u0 10^-5 Interior/background turbulent diffusivity for momentum\nK_T0 10^-5 Interior/background turbulent diffusivity for temperature\nK_S0 10^-5 Interior/background turbulent diffusivity for salinityNote: all parameters are greater than 0, and 0 ge CSL ge 1.The default values for \'non-adjustable\' parameters in KPP areParameter Value Description\nCtau bU 0.374 \nCtau bT -0.717 \nCK_0 1e-11 "
 },
 
 {
