@@ -44,4 +44,4 @@ Currently we have solvers for
 [docs-url]: https://glwagner.github.io/OceanTurb.jl/latest/
 
 [travis-img]: https://travis-ci.org/glwagner/OceanTurb.jl.svg?branch=master
-[travis-url]: https://travis-ci.com/glwagner/OceanTurb.jl
+[travis-url]: https://travis-ci.org/glwagner/OceanTurb.jl
