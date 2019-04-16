@@ -24,7 +24,7 @@ function Model(; N=10, L=1.0, K=0.1,
 
     solution = Solution(CellField(grid))
     K = Accessory(Kc)
-    R = Accessory(nothing)
+    R = Accessory(Rc) #nothing)
     eqn = Equation(R, K)
     lhs = LeftHandSide(solution)
     timestepper = Timestepper(stepper, eqn, solution, lhs)
@@ -36,7 +36,7 @@ end
 # Equation specification
 #
 
-Rc(m, i) = nothing
+Rc(m, i) = 0.0
 Kc(m, i) = m.parameters.K
 
 end # module
