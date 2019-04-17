@@ -58,8 +58,8 @@ function Parameters(T=Float64;
      Cb_T = 1.36,
      Cd_U = 0.5,
      Cd_T = 2.5,
-      CRi = 4.32,
-      CKE = 0.3,
+      CRi = 0.3,
+      CKE = 4.32,
        Cn = 1.0,
     Cmτ_U = 1/4,
     Cmτ_T = 1/2,
@@ -81,8 +81,8 @@ end
 
 # Shape functions (these shoul become parameters eventually).
 # 'd' is a non-dimensional depth coordinate.
-default_shape_N(d) = d*(1-d)^2
-default_shape_K(d) = d*(1-d)^2
+default_shape_N(d) = 0 < d < 1 ? d*(1-d)^2 : 0
+const default_shape_K = default_shape_N
 
 mutable struct State{T} <: FieldVector{6, T}
     Fu :: T
@@ -143,14 +143,7 @@ end
 #
 
 ## ** The K-Profile-Parameterization! **
-function K_KPP(h, w_scale, d, shape=default_shape_K)
-    if 0 < d < 1
-        return max(0, h * w_scale * shape(d))
-    else
-        return 0.0
-    end
-end
-
+K_KPP(h, w_scale, d, shape=default_shape_K) = 0 < d < 1 ? max(0, h * w_scale * shape(d)) : 0
 d(m, i) = -m.grid.zf[i] / m.state.h
 
 "Return the buoyancy gradient at face point i."
@@ -263,24 +256,27 @@ end
 
 "Return true if the boundary layer is unstable and convecting."
 isunstable(model) = model.state.Fb > 0
-isforced(model) = ωτ(model) > 0 || ωb(model) > 0
+
+"Return true if the boundary layer is forced."
+isforced(model) = model.state.Fu != 0 || model.state.Fv != 0 || model.state.Fb != 0
 
 "Return the turbuent velocity scale associated with wind stress."
 ωτ(Fu, Fv) = (Fu^2 + Fv^2)^(1/4)
-ωτ(m::Model) = ωτ(m.state.Fu, m.state.Fv)
+ωτ(m::AbstractModel) = ωτ(m.state.Fu, m.state.Fv)
 
 "Return the turbuent velocity scale associated with convection."
 ωb(Fb, h) = abs(h * Fb)^(1/3)
-ωb(m::Model) = ωb(m.state.Fb, m.state.h)
+ωb(m::AbstractModel) = ωb(m.state.Fb, m.state.h)
 
 "Return truncated, non-dimensional depth coordinate."
-dϵ(m::Model, d) = min(m.parameters.CSL, d)
+dϵ(m::AbstractModel, d) = min(m.parameters.CSL, d)
 
 "Return the vertical velocity scale at depth d for a stable boundary layer."
-w_scale_stable(Cτ, Cstab, ωτ, ωb, Cn, d) = Cτ * ωτ / (1 + Cstab * d * (ωb/ωτ)^3)^Cn
+w_scale_stable(Cτ, Cstab, Cn, ωτ, ωb, d) = Cτ * ωτ / (1 + Cstab * d * (ωb/ωτ)^3)^Cn
 
 "Return the vertical velocity scale at scaled depth dϵ for an unstable boundary layer."
-function w_scale_unstable(Cd, Cτ, Cunst, Cb, Cτb, ωτ, ωb, Cmτ, Cmb, dϵ)
+function w_scale_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
+    dϵ = min(CSL, d)
     if dϵ < Cd * (ωτ/ωb)^3
         return Cτ * ωτ * ( 1 + Cunst * dϵ * (ωb/ωτ)^3 )^Cmτ
     else
@@ -288,44 +284,48 @@ function w_scale_unstable(Cd, Cτ, Cunst, Cb, Cτb, ωτ, ωb, Cmτ, Cmb, dϵ)
     end
 end
 
+function w_scale_unstable_U(m, i)
+    return w_scale_unstable(m.parameters.CSL, m.parameters.Cd_U, m.parameters.Cτ, m.parameters.Cunst,
+                            m.parameters.Cb_U, m.parameters.Cτb_U,
+                            m.parameters.Cmτ_U, m.parameters.Cmb_U,
+                            ωτ(m), ωb(m), d(m, i)
+                            )
+end
+
+function w_scale_unstable_T(m, i)
+    return w_scale_unstable(m.parameters.CSL, m.parameters.Cd_T, m.parameters.Cτ, m.parameters.Cunst,
+                            m.parameters.Cb_T, m.parameters.Cτb_T,
+                            m.parameters.Cmτ_T, m.parameters.Cmb_T,
+                            ωτ(m), ωb(m), d(m, i)
+                            )
+end
+
+function w_scale_stable(m, i)
+    return w_scale_stable(m.parameters.Cτ, m.parameters.Cstab, m.parameters.Cn,
+                          ωτ(m), ωb(m), d(m, i)
+                          )
+end
 
 "Return the vertical velocity scale for momentum at face point i."
 function w_scale_U(m, i)
     if !isforced(m)
         return 0
+    elseif isunstable(m)
+        return w_scale_unstable_U(m, i)
     else
-        if isunstable(m)
-            return w_scale_unstable(m.parameters.Cd_U, m.parameters.Cτ, m.parameters.Cunst,
-                                    m.parameters.Cb_U, m.parameters.Cτb_U,
-                                    ωτ(m), ωb(m),
-                                    m.parameters.Cmτ_U, m.parameters.Cmb_U,
-                                    min(m.parameters.CSL, d(m, i))
-                                    )
-        else
-            return w_scale_stable(m.parameters.Cτ, m.parameters.Cstab, ωτ(m), ωb(m),
-                                  m.parameters.Cn, d(m, i)
-                                  )
-        end
+        return w_scale_stable(m, i)
     end
 end
+
 
 "Return the vertical velocity scale for tracers at face point i."
 function w_scale_T(m, i)
     if !isforced(m)
         return 0
+    elseif isunstable(m)
+        return w_scale_unstable_T(m, i)
     else
-        if isunstable(m)
-            return w_scale_unstable(m.parameters.Cd_T, m.parameters.Cτ, m.parameters.Cunst,
-                                    m.parameters.Cb_T, m.parameters.Cτb_T,
-                                    ωτ(m), ωb(m),
-                                    m.parameters.Cmτ_T, m.parameters.Cmb_T,
-                                    min(m.parameters.CSL, d(m, i))
-                                    )
-        else
-            return w_scale_stable(m.parameters.Cτ, m.parameters.Cstab, ωτ(m), ωb(m),
-                                  m.parameters.Cn, d(m, i)
-                                  )
-        end
+        return w_scale_stable(m, i)
     end
 end
 
@@ -349,7 +349,7 @@ a positive surface flux implies negative surface flux divergence,
 which implies a reduction to the quantity in question.
 For example, positive heat flux out of the surface implies cooling.
 """
-N(CNL, flux, d, shape=default_shape_N) = 0 < d < 1 ? -CNL*flux*shape(d) : 0
+N(CNL, flux, d, shape=default_shape_N) = CNL * flux * shape(d)
 
 function ∂N∂z(CNL, Fϕ, m, i)
     if isunstable(m)
