@@ -111,7 +111,7 @@ function update_state!(m)
     return nothing
 end
 
-struct Model{TS, G, T} <: AbstractModel{TS, G, T}
+mutable struct Model{TS, G, T} <: AbstractModel{TS, G, T}
     @add_standard_model_fields
     parameters :: Parameters{T}
     constants  :: Constants{T}
