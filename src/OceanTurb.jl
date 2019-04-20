@@ -27,6 +27,7 @@ export # This file, core functionality:
     @pair_typed_solution,
     @add_standard_model_fields,
     @add_clock_grid_timestepper,
+    run_until!,
 
     # grids.jl
     Grid,
