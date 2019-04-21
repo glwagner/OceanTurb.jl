@@ -156,52 +156,59 @@ get_gradient(c₀, Δf, κ, model, bc::BoundaryCondition{<:Gradient}) = getbc(mo
 get_gradient(c₀, Δf, κ, model, bc::BoundaryCondition{<:Flux}) = -getbc(model, bc) / κ
 
 function get_gradient(cᴺ, Δf, κ, model, bc::BoundaryCondition{<:Value})
-    c_bndry = getbc(model, bc)
-    return 2 * (c_bndry - cᴺ) / Δf
+    return 2 * (getbc(model, bc) - cᴺ) / Δf
 end
 
 """
-    update_top_ghost_cell!(c, κ, model, bc)
+    fill_top_ghost_cell!(c, κ, model, bc)
 
-Update the top ghost cell of c given the boundary condition `bc`, `model`, and
-diffusivity `kappa`. `kappa` is used only if a flux boundary condition
-is specified.
+Update the top ghost cell of `c` given boundary condition `bc`, `model`, and
+diffusivity `kappa`
 """
-function update_top_ghost_cell!(c, κ, model, bc)
-    ∂c∂z = get_gradient(c[c.grid.N], Δf(c.grid, c.grid.N), κ, model, bc)
-    c[c.grid.N+1] = linear_extrapolation(c[c.grid.N], ∂c∂z, Δc(c.grid, c.grid.N+1))
+function fill_top_ghost_cell!(c, κ, model, bc)
+    @inbounds begin
+        c[c.grid.N+1] = linear_extrapolation(
+            c[c.grid.N],
+            get_gradient(c[c.grid.N], Δf(c.grid, c.grid.N), κ, model, bc),
+            Δc(c.grid, c.grid.N+1))
+    end
     return nothing
 end
 
 """
-    update_bottom_ghost_cell!(c, κ, model, bc)
+    fill_bottom_ghost_cell!(c, κ, model, bc)
 
 Update the bottom ghost cell of c given the boundary condition `bc`, `model`, and
 diffusivity `kappa`. `kappa` is used only if a flux boundary condition
 is specified.
 """
-function update_bottom_ghost_cell!(c, κ, model, bc)
-    ∂c∂z = get_gradient(c[1], -Δf(c.grid, 1), κ, model, bc)
-    c[0] = linear_extrapolation(c[1], ∂c∂z, -Δc(c.grid, 1))
+function fill_bottom_ghost_cell!(c, κ, model, bc)
+    @inbounds begin
+        c[0] = linear_extrapolation(c[1],
+                                    get_gradient(c[1], -Δf(c.grid, 1), κ, model, bc),
+                                    -Δc(c.grid, 1))
+    end
     return nothing
 end
 
 """
-    update_ghost_cells!(c, κ, model, bc)
+    fill_ghost_cells!(c, κ, model, bc)
 
 Update the top and bottom ghost cells of `c` for `model`.
 """
-function update_ghost_cells!(c, κbottom, κtop, model, fieldbcs)
-    update_bottom_ghost_cell!(c, κbottom, model, fieldbcs.bottom)
-    update_top_ghost_cell!(c, κtop, model, fieldbcs.top)
+function fill_ghost_cells!(c, κbottom, κtop, model, fieldbcs)
+    fill_bottom_ghost_cell!(c, κbottom, model, fieldbcs.bottom)
+    fill_top_ghost_cell!(c, κtop, model, fieldbcs.top)
     return nothing
 end
 
 # Convenience methods for pre-computed fluxes
 get_gradient(κ, flux) = - flux / κ
 
-function update_top_ghost_cell_flux!(c, κ, flux)
-    ∂c∂z = get_gradient(κ, flux)
-    c[c.grid.N+1] = linear_extrapolation(c[c.grid.N], ∂c∂z, Δc(c.grid, c.grid.N+1))
+function fill_top_ghost_cell_flux!(c, κ, flux)
+    @inbounds begin
+        c[c.grid.N+1] = linear_extrapolation(c[c.grid.N], get_gradient(κ, flux),
+                                             Δc(c.grid, c.grid.N+1))
+    end
     return nothing
 end

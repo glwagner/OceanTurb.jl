@@ -52,7 +52,7 @@ function update!(m)
     m.timestepper.eqn.update!(m)
     for j in eachindex(m.solution)
         @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
-        @inbounds update_ghost_cells!(ϕ, Kϕ(m, 1), Kϕ(m, m.grid.N+1), m, bcsϕ)
+        fill_ghost_cells!(ϕ, Kϕ(m, 1), Kϕ(m, m.grid.N+1), m, bcsϕ)
     end
     return nothing
 end
@@ -103,12 +103,7 @@ function calc_implicit_rhs!(rhs, eqn, m)
     return nothing
 end
 
-# Forward Euler timestepping
-function iterate!(m::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
-
-    update!(m)
-    calc_explicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m)
-
+function forward_euler_update!(m, Δt)
     # Take one forward Euler step
     for j in eachindex(m.solution)
         @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
@@ -116,9 +111,15 @@ function iterate!(m::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
             @inbounds ϕ[i] += Δt * rhsϕ[i]
         end
     end
+    return nothing
+end
 
+# Forward Euler timestepping
+function iterate!(m::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
+    update!(m)
+    calc_explicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m)
+    forward_euler_update!(m, Δt)
     tick!(m.clock, Δt)
-
     return nothing
 end
 
@@ -214,7 +215,7 @@ function iterate!(m::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimesteppe
   return nothing
 end
 
-function unpack(model::AbstractModel{TS},
+Base.@propagate_inbounds function unpack(model::AbstractModel{TS},
     i) where TS <: Union{ForwardEulerTimestepper, BackwardEulerTimestepper}
 
       ϕ = model.solution[i]
