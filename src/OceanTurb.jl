@@ -95,7 +95,6 @@ export # This file, core functionality:
     Diffusion,
     KPP,
     PacanowskiPhilander,
-    ContinuousAdjustment,
     EDMF
 
 using
@@ -199,7 +198,6 @@ end
 include("models/diffusion.jl")
 include("models/k_profile_parameterization.jl")
 include("models/pacanowski_philander.jl")
-include("models/continuous_convective_adjustment.jl")
 include("models/eddy_diffusivity_mass_flux.jl")
 
 end # module
