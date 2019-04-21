@@ -11,6 +11,10 @@ struct FakeSolution <: FieldVector{1, Array{AbstractFloat, 1}}
     c :: Array{Float64, 1}
 end
 
+struct BadFakeSolution <: FieldVector{1, Array{AbstractFloat, 1}}
+    c :: AbstractArray
+end
+
 struct AnotherFakeSolution <: FieldVector{1, Array{AbstractFloat, 1}}
     c :: Array{Float64, 1}
     d :: Array{Float32, 1}
@@ -88,7 +92,6 @@ end
 
 function manyfakerhs!(solution, n)
     for i = 1:n
-        #OceanTurb.calc_explicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m)
         for j in eachindex(solution)
             ϕ = solution[j]
             for i in eachindex(ϕ)
@@ -117,6 +120,19 @@ for N in Ns
     for stepper in (:ForwardEuler,)
         c = rand(N)
         solution = FakeSolution(c)
+        for nt in nts
+            @printf "stepper: % 16s, N: % 6d, nt: % 6d" stepper N nt
+            manyfakerhs!(solution, nt)
+            @time manyfakerhs!(solution, nt)
+        end
+    end
+end
+
+@printf "\nTesting a bad fake calc rhs...\n"
+for N in Ns
+    for stepper in (:ForwardEuler,)
+        c = rand(N)
+        solution = BadFakeSolution(c)
         for nt in nts
             @printf "stepper: % 16s, N: % 6d, nt: % 6d" stepper N nt
             manyfakerhs!(solution, nt)
