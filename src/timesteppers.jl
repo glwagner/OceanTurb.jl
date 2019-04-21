@@ -59,11 +59,6 @@ end
 
 import Base: +, -, convert
 
-# A whole bunch of nothing.
-+(a::Number, ::Nothing) = a
--(a::Number, ::Nothing) = a
-convert(::Type{T}, ::Nothing) where T<:Number = zero(T)
-
 explicit_rhs_kernel(ϕ, K, R, m, i)         = ∇K∇c(K(m, i+1), K(m, i), ϕ, i) + R(m, i)
 explicit_rhs_kernel(ϕ, K, ::Nothing, m, i) = ∇K∇c(K(m, i+1), K(m, i), ϕ, i)
 
@@ -78,7 +73,7 @@ implicit_rhs_kernel!(rhs, ϕ, ::Nothing, m, i) = nothing
 
 "Evaluate the right-hand-side of ∂ϕ∂t for the current time-step."
 function calc_explicit_rhs!(rhs, eqn, m)
-    for (j, rhsϕ) in enumerate(rhs)
+    for j in eachindex(m.solution)
         @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
         for i in eachindex(rhsϕ)
             @inbounds rhsϕ[i] = explicit_rhs_kernel(ϕ, Kϕ, Rϕ, m, i)
