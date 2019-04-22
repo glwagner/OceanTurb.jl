@@ -369,6 +369,30 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "man/functions/#OceanTurb.fill_bottom_ghost_cell!-NTuple{4,Any}",
+    "page": "Functions",
+    "title": "OceanTurb.fill_bottom_ghost_cell!",
+    "category": "method",
+    "text": "fill_bottom_ghost_cell!(c, κ, model, bc)\n\nUpdate the bottom ghost cell of c given the boundary condition bc, model, and diffusivity kappa. kappa is used only if a flux boundary condition is specified.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.fill_ghost_cells!-NTuple{5,Any}",
+    "page": "Functions",
+    "title": "OceanTurb.fill_ghost_cells!",
+    "category": "method",
+    "text": "fill_ghost_cells!(c, κ, model, bc)\n\nUpdate the top and bottom ghost cells of c for model.\n\n\n\n\n\n"
+},
+
+{
+    "location": "man/functions/#OceanTurb.fill_top_ghost_cell!-NTuple{4,Any}",
+    "page": "Functions",
+    "title": "OceanTurb.fill_top_ghost_cell!",
+    "category": "method",
+    "text": "fill_top_ghost_cell!(c, κ, model, bc)\n\nUpdate the top ghost cell of c given boundary condition bc, model, and diffusivity kappa\n\n\n\n\n\n"
+},
+
+{
     "location": "man/functions/#OceanTurb.iter-Tuple{AbstractModel}",
     "page": "Functions",
     "title": "OceanTurb.iter",
@@ -438,30 +462,6 @@ var documenterSearchIndex = {"docs": [
     "title": "OceanTurb.set_top_bc!",
     "category": "method",
     "text": "Set the top boundary condition for fld in model.\n\n\n\n\n\n"
-},
-
-{
-    "location": "man/functions/#OceanTurb.update_bottom_ghost_cell!-NTuple{4,Any}",
-    "page": "Functions",
-    "title": "OceanTurb.update_bottom_ghost_cell!",
-    "category": "method",
-    "text": "update_bottom_ghost_cell!(c, κ, model, bc)\n\nUpdate the bottom ghost cell of c given the boundary condition bc, model, and diffusivity kappa. kappa is used only if a flux boundary condition is specified.\n\n\n\n\n\n"
-},
-
-{
-    "location": "man/functions/#OceanTurb.update_ghost_cells!-NTuple{5,Any}",
-    "page": "Functions",
-    "title": "OceanTurb.update_ghost_cells!",
-    "category": "method",
-    "text": "update_ghost_cells!(c, κ, model, bc)\n\nUpdate the top and bottom ghost cells of c for model.\n\n\n\n\n\n"
-},
-
-{
-    "location": "man/functions/#OceanTurb.update_top_ghost_cell!-NTuple{4,Any}",
-    "page": "Functions",
-    "title": "OceanTurb.update_top_ghost_cell!",
-    "category": "method",
-    "text": "update_top_ghost_cell!(c, κ, model, bc)\n\nUpdate the top ghost cell of c given the boundary condition bc, model, and diffusivity kappa. kappa is used only if a flux boundary condition is specified.\n\n\n\n\n\n"
 },
 
 {
