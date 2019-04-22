@@ -109,3 +109,12 @@ end
     grid        :: G
     timestepper :: TS
 end
+
+function run_until!(model, dt, tfinal)
+    nt = floor(Int, tfinal/dt)
+    iterate!(model, dt, nt)
+
+    last_dt = time(model) - tfinal
+    iterate!(model, last_dt)
+    return nothing
+end

@@ -52,17 +52,12 @@ function update!(m)
     m.timestepper.eqn.update!(m)
     for j in eachindex(m.solution)
         @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
-        @inbounds update_ghost_cells!(ϕ, Kϕ(m, 1), Kϕ(m, m.grid.N+1), m, bcsϕ)
+        fill_ghost_cells!(ϕ, Kϕ(m, 1), Kϕ(m, m.grid.N+1), m, bcsϕ)
     end
     return nothing
 end
 
 import Base: +, -, convert
-
-# A whole bunch of nothing.
-+(a::Number, ::Nothing) = a
--(a::Number, ::Nothing) = a
-convert(::Type{T}, ::Nothing) where T<:Number = zero(T)
 
 explicit_rhs_kernel(ϕ, K, R, m, i)         = ∇K∇c(K(m, i+1), K(m, i), ϕ, i) + R(m, i)
 explicit_rhs_kernel(ϕ, K, ::Nothing, m, i) = ∇K∇c(K(m, i+1), K(m, i), ϕ, i)
@@ -78,7 +73,7 @@ implicit_rhs_kernel!(rhs, ϕ, ::Nothing, m, i) = nothing
 
 "Evaluate the right-hand-side of ∂ϕ∂t for the current time-step."
 function calc_explicit_rhs!(rhs, eqn, m)
-    for (j, rhsϕ) in enumerate(rhs)
+    for j in eachindex(m.solution)
         @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
         for i in eachindex(rhsϕ)
             @inbounds rhsϕ[i] = explicit_rhs_kernel(ϕ, Kϕ, Rϕ, m, i)
@@ -103,12 +98,7 @@ function calc_implicit_rhs!(rhs, eqn, m)
     return nothing
 end
 
-# Forward Euler timestepping
-function iterate!(m::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
-
-    update!(m)
-    calc_explicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m)
-
+function forward_euler_update!(m, Δt)
     # Take one forward Euler step
     for j in eachindex(m.solution)
         @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
@@ -116,9 +106,15 @@ function iterate!(m::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
             @inbounds ϕ[i] += Δt * rhsϕ[i]
         end
     end
+    return nothing
+end
 
+# Forward Euler timestepping
+function iterate!(m::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
+    update!(m)
+    calc_explicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m)
+    forward_euler_update!(m, Δt)
     tick!(m.clock, Δt)
-
     return nothing
 end
 
@@ -214,7 +210,7 @@ function iterate!(m::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimesteppe
   return nothing
 end
 
-function unpack(model::AbstractModel{TS},
+Base.@propagate_inbounds function unpack(model::AbstractModel{TS},
     i) where TS <: Union{ForwardEulerTimestepper, BackwardEulerTimestepper}
 
       ϕ = model.solution[i]

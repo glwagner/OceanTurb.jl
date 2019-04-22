@@ -27,6 +27,7 @@ export # This file, core functionality:
     @pair_typed_solution,
     @add_standard_model_fields,
     @add_clock_grid_timestepper,
+    run_until!,
 
     # grids.jl
     Grid,
@@ -86,15 +87,14 @@ export # This file, core functionality:
     set_flux_bcs!,
     set_bcs!,
     getbc,
-    update_top_ghost_cell!,
-    update_bottom_ghost_cell!,
-    update_ghost_cells!,
+    fill_top_ghost_cell!,
+    fill_bottom_ghost_cell!,
+    fill_ghost_cells!,
 
     # Ocean turbulence models
     Diffusion,
     KPP,
     PacanowskiPhilander,
-    ContinuousAdjustment,
     EDMF
 
 using
@@ -198,7 +198,6 @@ end
 include("models/diffusion.jl")
 include("models/k_profile_parameterization.jl")
 include("models/pacanowski_philander.jl")
-include("models/continuous_convective_adjustment.jl")
 include("models/eddy_diffusivity_mass_flux.jl")
 
 end # module

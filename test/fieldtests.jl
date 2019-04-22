@@ -120,7 +120,7 @@ function test_ghost_cell_value(T)
     top_bc = ValueBoundaryCondition(c_top)
     bottom_bc = ValueBoundaryCondition(c_bottom)
     fieldbcs = FieldBoundaryConditions(top=top_bc, bottom=bottom_bc)
-    update_ghost_cells!(c, 0, 0, model, fieldbcs)
+    fill_ghost_cells!(c, 0, 0, model, fieldbcs)
 
     onface(c, 1) ≈ c_bottom && onface(c, grid.N+1) ≈ c_top
 end
@@ -135,7 +135,7 @@ function test_ghost_cell_gradient(T)
     bottom_bc = GradientBoundaryCondition(cz_bottom)
     fieldbcs = FieldBoundaryConditions(top=top_bc, bottom=bottom_bc)
 
-    update_ghost_cells!(c, 0, 0, model, fieldbcs)
+    fill_ghost_cells!(c, 0, 0, model, fieldbcs)
 
     ∂z(c, 1) ≈ cz_bottom && ∂z(c, grid.N+1) ≈ cz_top
 end
@@ -152,7 +152,7 @@ function test_ghost_cell_flux(T)
     fieldbcs = FieldBoundaryConditions(top=top_bc, bottom=bottom_bc)
 
     κ = T(0.47)
-    update_ghost_cells!(c, κ, κ, model, fieldbcs)
+    fill_ghost_cells!(c, κ, κ, model, fieldbcs)
 
     (OceanTurb.flux(0, κ, c, 1) ≈ Fc_bottom
         && OceanTurb.flux(0, κ, c, grid.N+1) ≈ Fc_top)
