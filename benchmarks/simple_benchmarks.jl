@@ -24,6 +24,36 @@ struct AnotherFakeSolution <: FieldVector{1, Array{AbstractFloat, 1}}
 end
 
 
+function build_solution(name, fieldnames)
+    nfields = length(fieldnames)
+    fields = [ :( $(fieldnames[i]) :: A ) for i = 1:nfields ]
+
+    sol_name = Symbol(name, :Solution)
+    signature = Expr(:curly, sol_name, :A)
+
+    if nfields == 1
+        constructor = quote
+            function $sol_name(a::A) where A <: AbstractArray
+                new{A}(a)
+            end
+        end
+    else
+        constructor = ""
+    end
+
+    return quote
+        import StaticArrays: FieldVector
+
+        struct $signature <: AbstractSolution{$(nfields), AbstractArray}
+            $(fields...)
+            $constructor
+        end
+    end
+end
+
+macro solution(name, fieldnames...)
+    esc(build_solution(name, fieldnames))
+end
 
 
 # Measure memory allocation
