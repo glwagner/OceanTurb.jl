@@ -112,7 +112,7 @@ abstract type AbstractParameters end
 abstract type AbstractEquation end
 abstract type Grid{T, A<:AbstractArray} end
 abstract type Timestepper end
-abstract type AbstractField{A<:AbstractArray, G<:Grid} end
+abstract type AbstractField{A<:AbstractArray, G<:Grid, T} end
 abstract type AbstractSolution{N, T} <: FieldVector{N, T} end
 abstract type AbstractModel{T, G, TS} end  # Explain: what is a `Model`?
 
