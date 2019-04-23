@@ -136,7 +136,7 @@ struct BackwardEulerTimestepper{R, L, ER, EK} <: Timestepper
     end
 end
 
-function Tridiagonal(fld::Field)
+function Tridiagonal(fld::AbstractField)
     T = eltype(fld)
     A = arraytype(fld)
     N = length(fld)
