@@ -33,24 +33,23 @@ that lives on `grid`. Defaults to `Array`.
 New data types (for example, grids that exist on GPUs) must
 implement new array types.
 """
-arraytype(grid::Grid{T}) where T = Array{T,1} # default array type
+arraytype(grid::Grid{T}) where T = Array{T, 1} # default array type
 
 """
-    UniformGrid([A, T], L, N)
+    UniformGrid([T], L, N)
 
 Construct a 1D finite-volume grid with type `T` and array type `A`,
 with `N` cells on the domain `z = [0, L]`.
 A `Grid` has two type parameters: an element type `T`,
-and and an array type `A`. `T` and `A` default to `Float64` and `Array{T,1}`,
-respectively.
+and and a range type `R`. `T` defaults to Float64.
 """
-struct UniformGrid{T, A} <: Grid{T, A}
+struct UniformGrid{T, R} <: Grid{T, R}
   N  :: Int
   L  :: T
   Δc :: T
   Δf :: T
-  zc :: A
-  zf :: A
+  zc :: R
+  zf :: R
 end
 
 function UniformGrid(T, N, L)

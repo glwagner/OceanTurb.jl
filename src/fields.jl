@@ -33,28 +33,28 @@ There are two types of fields:
 =#
 import Base: +, *, -, setindex!, getindex, eachindex, lastindex, similar, eltype, length
 
+default_arraytype(T) = Array{T, 1}
+
+struct CellField{A, G, T} <: AbstractField{A, G, T}
+    data :: OffsetArray{T, 1, A}
+    grid :: G
+end
+
+struct FaceField{A, G, T} <: AbstractField{A, G, T}
+    data :: A
+    grid :: G
+end
+
+arraytype(::AbstractField{A}) where A = A
+eltype(::AbstractField{A}) where A = eltype(A)
+
+#
+# (legacy) Field Location and Constructors
+#
+
 abstract type FieldLocation end
 struct Cell <: FieldLocation end
 struct Face <: FieldLocation end
-
-struct Field{L, A, G} <: AbstractField{A, G}
-    data :: A
-    grid :: G
-    function Field(Location, data, grid)
-        new{Location, typeof(data), typeof(grid)}(data, grid)
-    end
-end
-
-const CellField = Field{Cell}
-const FaceField = Field{Face}
-
-arraytype(::CellField{A}) where A <: OffsetArray{T, D, innerA} where {T, D, innerA} = innerA
-arraytype(::FaceField{A}) where A = A
-eltype(::Field{L, A}) where {L, A} = eltype(A)
-
-#
-# Field Constructors
-#
 
 Field(::Type{Face}, grid) = FaceField(grid)
 Field(::Type{Cell}, grid) = CellField(grid)
@@ -66,7 +66,7 @@ Return a `Field{Face}` on `grid` with its data initialized to 0.
 """
 function FaceField(A::DataType, grid)
     data = convert(A, fill(0, face_size(grid)))
-    Field(Face, data, grid)
+    FaceField{typeof(data), typeof(grid), eltype(data)}(data, grid)
 end
 
 """
@@ -77,11 +77,11 @@ Return a `Field{Cell}` on `grid` with its data initialized to 0.
 function CellField(A::DataType, grid)
     data = convert(A, fill(0, cell_size(grid)))
     offset_data = OffsetArray(data, 0:grid.N+1)
-    Field(Cell, offset_data, grid)
+    CellField{typeof(data), typeof(grid), eltype(data)}(offset_data, grid)
 end
 
-CellField(grid) = CellField(arraytype(grid), grid)
-FaceField(grid) = FaceField(arraytype(grid), grid)
+CellField(grid) = CellField(default_arraytype(eltype(grid)), grid)
+FaceField(grid) = FaceField(default_arraytype(eltype(grid)), grid)
 
 """
     CellField(data, grid)
@@ -138,7 +138,7 @@ boundaryindices(c::CellField) = (1, c.grid.N)
 # Sugary sweet: access indices of c.data by indexing into c.
 getindex(c::AbstractField, inds...) = getindex(c.data, inds...)
 setindex!(c::AbstractField, d, inds...) = setindex!(c.data, d, inds...)
-setindex!(c::AbstractField, d::Field, inds...) = setindex!(c.data, d.data, inds...)
+setindex!(c::AbstractField, d::AbstractField, inds...) = setindex!(c.data, d.data, inds...)
 
 set!(c::AbstractField, data::Number) = fill!(c.data, data)
 set!(c::AbstractField{Ac, G}, d::AbstractField{Ad, G}) where {Ac, Ad, G} = c.data .= convert(Ac, d.data)
@@ -212,7 +212,7 @@ for op in (:+, :-, :*)
         $op(f::AbstractField, num::Number) = $op(num, f)
 
         # Binary two-field operations
-        function $op(f1::Field{L}, f2::Field{L}) where L
+        function $op(f1::F, f2::F) where {F <: AbstractField}
             f3 = similar(f1)
             @. f3.data = $op(f1.data, f2.data)
             f3

@@ -85,16 +85,16 @@ function test_set_scalar_field(loc, T)
 end
 
 function test_set_array_field(loc, T)
-    grid = UniformGrid(T, 2, 2.0)
-    f = Field(loc, grid)
+    g = UniformGrid(T, 2, 2.0)
+    f = Field(loc, g)
     data = rand(1:10, length(f))
     set!(f, data)
     f.data[1:length(f)] == data
 end
 
 function test_set_function_field(loc, T)
-    grid = UniformGrid(T, 2, 2.0)
-    f = Field(loc, grid)
+    g = UniformGrid(T, 2, 2.0)
+    f = Field(loc, g)
     fcn(z) = z^2
     z = nodes(f)
     set!(f, fcn)
