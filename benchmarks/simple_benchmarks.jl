@@ -7,8 +7,11 @@ steppers = (:ForwardEuler,)
 nts = (1000,)
 nups = (100,)
 
-struct FakeSolution <: FieldVector{1, Array{AbstractFloat, 1}}
-    c :: Array{Float64, 1}
+struct FakeSolution{T} <: FieldVector{1, AbstractArray}
+    c :: Array{T, 1}
+    function FakeSolution(a::Array{T, 1}) where T <: AbstractFloat
+        new{T}(a)
+    end
 end
 
 struct BadFakeSolution <: FieldVector{1, Array{AbstractFloat, 1}}
