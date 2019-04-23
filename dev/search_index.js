@@ -409,7 +409,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "man/functions/#OceanTurb.oncell-Tuple{Field{Face,A,G} where G where A,Any}",
+    "location": "man/functions/#OceanTurb.oncell-Tuple{FaceField,Any}",
     "page": "Functions",
     "title": "OceanTurb.oncell",
     "category": "method",
@@ -417,7 +417,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "man/functions/#OceanTurb.onface-Tuple{Field{Cell,A,G} where G where A,Any}",
+    "location": "man/functions/#OceanTurb.onface-Tuple{CellField,Any}",
     "page": "Functions",
     "title": "OceanTurb.onface",
     "category": "method",
@@ -481,7 +481,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "man/functions/#OceanTurb.∂z!-Tuple{Field{Cell,A,G} where G where A,Field{Face,A,G} where G where A}",
+    "location": "man/functions/#OceanTurb.∂z!-Tuple{CellField,FaceField}",
     "page": "Functions",
     "title": "OceanTurb.∂z!",
     "category": "method",
@@ -489,7 +489,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "man/functions/#OceanTurb.∂z!-Tuple{Field{Face,A,G} where G where A,Field{Cell,A,G} where G where A}",
+    "location": "man/functions/#OceanTurb.∂z!-Tuple{FaceField,CellField}",
     "page": "Functions",
     "title": "OceanTurb.∂z!",
     "category": "method",
@@ -513,7 +513,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "man/functions/#OceanTurb.∂z-Tuple{Field{Cell,A,G} where G where A,Any}",
+    "location": "man/functions/#OceanTurb.∂z-Tuple{CellField,Any}",
     "page": "Functions",
     "title": "OceanTurb.∂z",
     "category": "method",
@@ -521,7 +521,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "man/functions/#OceanTurb.∂z-Tuple{Field{Cell,A,G} where G where A}",
+    "location": "man/functions/#OceanTurb.∂z-Tuple{CellField}",
     "page": "Functions",
     "title": "OceanTurb.∂z",
     "category": "method",
@@ -529,7 +529,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "man/functions/#OceanTurb.∂z-Tuple{Field{Face,A,G} where G where A,Any}",
+    "location": "man/functions/#OceanTurb.∂z-Tuple{FaceField,Any}",
     "page": "Functions",
     "title": "OceanTurb.∂z",
     "category": "method",
