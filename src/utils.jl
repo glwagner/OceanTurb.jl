@@ -28,7 +28,7 @@ macro def(name, definition)
     end
 end
 
-function build_solution(fieldnames, fieldtypes=[Field for name in fieldnames]; name=Symbol(""))
+function build_solution(fieldnames, fieldtypes=[CellField for name in fieldnames]; name=Symbol(""))
     nfields = length(fieldnames)
     solfields = [ :( $(fieldnames[i]) :: $(fieldtypes[i]) ) for i = 1:nfields ]
     bcfields =  [ :( $(fieldnames[i]) :: FieldBoundaryConditions ) for i = 1:nfields ]
