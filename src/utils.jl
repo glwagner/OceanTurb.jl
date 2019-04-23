@@ -28,9 +28,9 @@ macro def(name, definition)
     end
 end
 
-function build_solution(fieldnames, fieldtypes=[CellField for name in fieldnames]; name=Symbol(""))
+function build_solution(fieldnames, fieldtypes=[:CellField for name in fieldnames]; name=Symbol(""))
     nfields = length(fieldnames)
-    solfields = [ :( $(fieldnames[i]) :: $(fieldtypes[i]) ) for i = 1:nfields ]
+    solfields = [ :( $(fieldnames[i]) :: $(Expr(:curly, fieldtypes[i], :A, :G, :T))) for i = 1:nfields ]
     bcfields =  [ :( $(fieldnames[i]) :: FieldBoundaryConditions ) for i = 1:nfields ]
     opfields =  [ :( $(fieldnames[i]) :: Function ) for i = 1:nfields ]
     accfields = [ :( $(fieldnames[i]) :: T ) for i = 1:nfields ]
@@ -38,6 +38,7 @@ function build_solution(fieldnames, fieldtypes=[CellField for name in fieldnames
 
     sol_name = Symbol(name, :Solution)
     bc_name = Symbol(name, :BoundaryConditions)
+    sol_signature = Expr(:curly, sol_name, :A, :G, :T)
     acc_signature = Expr(:curly, Symbol(name, :Accessory), :T)
     lhs_signature = Expr(:curly, Symbol(name, :LeftHandSide), :T, :A)
 
@@ -46,7 +47,7 @@ function build_solution(fieldnames, fieldtypes=[CellField for name in fieldnames
         import LinearAlgebra: Tridiagonal
         import OceanTurb: build_lhs
 
-        struct $sol_name <: AbstractSolution{$(nfields), Field}
+        struct $sol_signature <: AbstractSolution{$(nfields), Field}
             $(solfields...)
         end
 
