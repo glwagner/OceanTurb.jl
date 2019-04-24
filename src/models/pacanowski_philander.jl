@@ -52,7 +52,7 @@ function Model(; N=10, L=1.0,
 
     solution = Solution((CellField(grid) for i=1:nsol)...)
     K = Accessory{Function}(KU, KV, KT, KS)
-    R = Accessory{Any}(RU, RV, nothing, nothing)
+    R = Accessory{Function}(RU, RV, RT, RS)
     eqn = Equation(R, K)
     lhs = OceanTurb.build_lhs(solution)
 
@@ -98,5 +98,7 @@ const KS = KT
 
 RU(m, i) =   m.constants.f * m.solution.V[i]
 RV(m, i) = - m.constants.f * m.solution.U[i]
+RT(m, i) = 0
+RS(m, i) = 0
 
 end # module
