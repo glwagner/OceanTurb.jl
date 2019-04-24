@@ -2,6 +2,12 @@
 # Define tests
 # --
 
+function fill_ghost_cells!(c, κtop, κbottom, model, fieldbcs)
+    fill_bottom_ghost_cell!(fieldbcs.bottom, c, κbottom, model)
+    fill_top_ghost_cell!(fieldbcs.top, c, κtop, model, c.grid.N)
+    return nothing
+end
+
 function test_cell_field_construction(T, N, L)
     grid = UniformGrid(T, N, L)
     c = CellField(grid)
