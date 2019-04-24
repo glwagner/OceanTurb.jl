@@ -102,10 +102,10 @@ Update the top flux conditions and mixing depth for `model`
 and store in `model.state`.
 """
 function update_state!(m)
-    m.state.Fu = - m.parameters.KU₀ * m.bcs.U.top.gradient(top(m.solution.U), top(Δf), m.parameters.KU₀, m)
-    m.state.Fv = - m.parameters.KU₀ * m.bcs.V.top.gradient(top(m.solution.V), top(Δf), m.parameters.KU₀, m)
-    m.state.Fθ = - m.parameters.KT₀ * m.bcs.T.top.gradient(top(m.solution.T), top(Δf), m.parameters.KT₀, m)
-    m.state.Fs = - m.parameters.KS₀ * m.bcs.S.top.gradient(top(m.solution.S), top(Δf), m.parameters.KS₀, m)
+    m.state.Fu = getbc(m, m.bcs.U.top)
+    m.state.Fv = getbc(m, m.bcs.V.top)
+    m.state.Fθ = getbc(m, m.bcs.T.top)
+    m.state.Fs = getbc(m, m.bcs.S.top)
     m.state.Fb = m.constants.g * (m.constants.α * m.state.Fθ - m.constants.β * m.state.Fs)
     m.state.h  = mixing_depth(m)
     return nothing
