@@ -29,9 +29,6 @@ end
 
 propertynames(::NonVectorFakeSolution) = (:c, :d)
 
-
-
-
 function build_solution(name, fieldnames)
     nfields = length(fieldnames)
     fields = [ :( $(fieldnames[i]) :: A ) for i = 1:nfields ]
@@ -65,16 +62,7 @@ end
 
 function manyrhs!(m, n)
     for i = 1:n
-        #OceanTurb.calc_explicit_rhs!(m.btimestepper.rhs, m.btimestepper.eqn, m)
-        for j in eachindex(m.solution)
-            @inbounds ϕ = m.solution[j]
-            #ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = OceanTurb.unpack(m, j)
-            for i in eachindex(ϕ)
-                @inbounds ϕ.data[i] = rand()
-                #rhsϕ[i] = OceanTurb.explicit_rhs_kernel(ϕ, Kϕ, Rϕ, m, i)
-                #m.btimestepper.rhs[j][i] = OceanTurb.explicit_rhs_kernel(ϕ, Kϕ, Rϕ, m, i)
-            end
-        end
+        OceanTurb.calc_explicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m)
     end
     return nothing
 end
@@ -128,41 +116,6 @@ for N in Ns
     end
 end
 
-#=
-@printf "\nTesting a fake calc rhs...\n"
-for N in Ns
-    c = rand(N)
-    solution = FakeSolution(c)
-    for nt in nts
-        @printf "N: % 6d, nt: % 6d" N nt
-        manyfakerhs!(solution, nt)
-        @btime manyfakerhs!($solution, $nt)
-    end
-end
-
-@printf "\nTesting a fake calc rhs of arrays...\n"
-for N in Ns
-    c = rand(N)
-    solution = [c]
-    for nt in nts
-        @printf "N: % 6d, nt: % 6d" N nt
-        manyfakerhs!(solution, nt)
-        @btime manyfakerhs!($solution, $nt)
-    end
-end
-
-@printf "\nTesting a bad fake calc rhs...\n"
-for N in Ns
-    c = rand(N)
-    solution = BadFakeSolution(c)
-    for nt in nts
-        @printf "N: % 6d, nt: % 6d" N nt
-        manyfakerhs!(solution, nt)
-        @btime manyfakerhs!($solution, $nt)
-    end
-end
-=#
-
 @printf "\nTesting another fake calc rhs...\n"
 for N in Ns
     fc(z) = rand()
@@ -195,8 +148,11 @@ end
 
 @printf "\nTesting another fake calc rhs of arrays...\n"
 for N in Ns
-    c = rand(Float64, N)
-    d = rand(Float32, N)
+    fc(z) = rand()
+    fd(z) = rand()
+    g = UniformGrid(N, 1.0)
+    c = FaceField(fc, g)
+    d = CellField(fd, g)
     solution = [c, d]
     for nt in nts
         @printf "N: % 6d, nt: % 6d" N nt
