@@ -48,8 +48,8 @@ GradientBoundaryCondition(bc) = BoundaryCondition(Gradient, bc)
 
 
 mutable struct FieldBoundaryConditions
-    bottom::BoundaryCondition
-    top::BoundaryCondition
+    bottom :: BoundaryCondition
+    top    :: BoundaryCondition
 end
 
 #
