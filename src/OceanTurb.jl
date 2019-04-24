@@ -22,7 +22,7 @@ export # This file, core functionality:
     pressenter,
     @zeros,
     @solution,
-    @named_solution,
+    @prefixed_solution,
     @typed_solution,
     @pair_typed_solution,
     @add_standard_model_fields,
