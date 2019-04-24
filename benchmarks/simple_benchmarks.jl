@@ -1,91 +1,68 @@
 using Pkg; Pkg.activate("..")
 
-using OceanTurb, Printf, StaticArrays
+using OceanTurb, Printf, StaticArrays, BenchmarkTools
 
-Ns = (100, 1000,)
+Ns = (100,)
 steppers = (:ForwardEuler,)
-nts = (1000,)
-nups = (100,)
+nts = (100,)
 
-struct FakeSolution <: FieldVector{1, Array{AbstractFloat, 1}}
-    c :: Array{Float64, 1}
+struct FakeSolution{T} <: FieldVector{1, AbstractArray}
+    c :: Array{T, 1}
+    function FakeSolution(a::Array{T, 1}) where T <: AbstractFloat
+        new{T}(a)
+    end
 end
 
 struct BadFakeSolution <: FieldVector{1, Array{AbstractFloat, 1}}
     c :: AbstractArray
 end
 
-struct AnotherFakeSolution <: FieldVector{1, Array{AbstractFloat, 1}}
-    c :: Array{Float64, 1}
-    d :: Array{Float32, 1}
+struct AnotherFakeSolution{T} <: FieldVector{2, AbstractField}
+    c :: T
+    d :: T
 end
 
+struct NonVectorFakeSolution{A, G, T}
+    c :: FaceField{A, G, T}
+    d :: FaceField{A, G, T}
+end
 
+propertynames(::NonVectorFakeSolution) = (:c, :d)
 
+function build_solution(name, fieldnames)
+    nfields = length(fieldnames)
+    fields = [ :( $(fieldnames[i]) :: A ) for i = 1:nfields ]
 
-# Measure memory allocation
-#=
-@printf "\nTesting model instantiation...\n"
-for stepper in steppers
-    for N in Ns
-        @printf "stepper: % 16s, N: % 6d" stepper N
-        @time model = Diffusion.Model(N=N, stepper=stepper)
+    sol_name = Symbol(name, :Solution)
+    signature = Expr(:curly, sol_name, :A)
+
+    if nfields == 1
+        constructor = quote
+            function $sol_name(a::A) where A <: AbstractArray
+                new{A}(a)
+            end
+        end
+    else
+        constructor = ""
     end
-end
 
-function manyupdates!(m, n)
-    for i = 1:n
-        OceanTurb.update!(m)
-    end
-    return nothing
-end
+    return quote
+        import StaticArrays: FieldVector
 
-@printf "\nTesting updates...\n"
-for N in Ns
-    for stepper in steppers
-        model = Diffusion.Model(N=N, stepper=stepper)
-        manyupdates!(model, 1)
-        for nt in nts
-            @printf "stepper: % 16s, N: % 6d, nt: % 6d" stepper N nt
-            @time manyupdates!(model, nt)
+        struct $signature <: AbstractSolution{$(nfields), AbstractArray}
+            $(fields...)
+            $constructor
         end
     end
 end
 
-function manyunpacks!(m, n)
-    for j in eachindex(m.solution)
-        for i = 1:n
-            @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = OceanTurb.unpack(m, j)
-        end
-    end
-    return nothing
+macro solution(name, fieldnames...)
+    esc(build_solution(name, fieldnames))
 end
-
-@printf "\nTesting unpack...\n"
-for N in Ns
-    for stepper in steppers
-        model = Diffusion.Model(N=N, stepper=stepper)
-        manyunpacks!(model, 1)
-        for nt in nts
-            @printf "stepper: % 16s, N: % 6d, nt: % 6d" stepper N nt
-            @time manyunpacks!(model, nt)
-        end
-    end
-end
-=#
 
 function manyrhs!(m, n)
     for i = 1:n
-        #OceanTurb.calc_explicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m)
-        for j in eachindex(m.solution)
-            ϕ = m.solution[j]
-            #ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = OceanTurb.unpack(m, j)
-            for i in eachindex(ϕ)
-                @inbounds ϕ.data[i] = 0.0
-                #rhsϕ[i] = OceanTurb.explicit_rhs_kernel(ϕ, Kϕ, Rϕ, m, i)
-                #m.timestepper.rhs[j][i] = OceanTurb.explicit_rhs_kernel(ϕ, Kϕ, Rϕ, m, i)
-            end
-        end
+        OceanTurb.calc_explicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m)
     end
     return nothing
 end
@@ -93,15 +70,39 @@ end
 function manyfakerhs!(solution, n)
     for i = 1:n
         for j in eachindex(solution)
-            ϕ = solution[j]
+            @inbounds ϕ = data(solution[j])
             for i in eachindex(ϕ)
-                @inbounds ϕ[i] = 0.0
+                @inbounds ϕ[i] = rand()
             end
         end
     end
     return nothing
 end
 
+function manyfakerhs!(solution::Array, n)
+    for i = 1:n
+        for j in eachindex(solution)
+            @inbounds ϕ = solution[j]
+            for i in eachindex(ϕ)
+                @inbounds ϕ[i] = rand()
+            end
+        end
+    end
+    return nothing
+end
+
+function manyfakerhs_fieldloop!(solution, n)
+    for i = 1:n
+        for fld in propertynames(solution)
+            ϕfld = getproperty(solution, fld)
+            ϕ = data(ϕfld)
+            for i in eachindex(ϕ)
+                @inbounds ϕ[i] = rand()
+            end
+        end
+    end
+    return nothing
+end
 
 @printf "\nTesting calc rhs...\n"
 for N in Ns
@@ -110,67 +111,52 @@ for N in Ns
         for nt in nts
             @printf "stepper: % 16s, N: % 6d, nt: % 6d" stepper N nt
             manyrhs!(model, nt)
-            @time manyrhs!(model, nt)
-        end
-    end
-end
-
-@printf "\nTesting a fake calc rhs...\n"
-for N in Ns
-    for stepper in (:ForwardEuler,)
-        c = rand(N)
-        solution = FakeSolution(c)
-        for nt in nts
-            @printf "stepper: % 16s, N: % 6d, nt: % 6d" stepper N nt
-            manyfakerhs!(solution, nt)
-            @time manyfakerhs!(solution, nt)
-        end
-    end
-end
-
-@printf "\nTesting a bad fake calc rhs...\n"
-for N in Ns
-    for stepper in (:ForwardEuler,)
-        c = rand(N)
-        solution = BadFakeSolution(c)
-        for nt in nts
-            @printf "stepper: % 16s, N: % 6d, nt: % 6d" stepper N nt
-            manyfakerhs!(solution, nt)
-            @time manyfakerhs!(solution, nt)
+            @btime manyrhs!($model, $nt)
         end
     end
 end
 
 @printf "\nTesting another fake calc rhs...\n"
 for N in Ns
-    for stepper in (:ForwardEuler,)
-        c = rand(N)
-        d = rand(N)
-        solution = AnotherFakeSolution(c, d)
-        for nt in nts
-            @printf "stepper: % 16s, N: % 6d, nt: % 6d" stepper N nt
-            manyfakerhs!(solution, nt)
-            @time manyfakerhs!(solution, nt)
-        end
+    fc(z) = rand()
+    fd(z) = rand()
+    g = UniformGrid(N, 1.0)
+    c = CellField(fc, g)
+    d = CellField(fd, g)
+    solution = AnotherFakeSolution(c, d)
+    for nt in nts
+        @printf "N: % 6d, nt: % 6d" N nt
+        manyfakerhs!(solution, nt)
+        @btime manyfakerhs!($solution, $nt)
     end
 end
 
-
-
-
-
-#=
-@printf "\nTesting timestepping...\n"
+@printf "\nTesting loop of flds for another fake calc rhs...\n"
 for N in Ns
-    for stepper in steppers
-        model = Diffusion.Model(N=N, stepper=stepper)
-        iterate!(model, 0.1)
-
-        # Measure memory allocation
-        for nt in nts
-            @printf "stepper: % 16s, N: % 6d, nt: % 6d" stepper N nt
-            @time iterate!(model, 0.1, nt)
-        end
+    fc(z) = rand()
+    fd(z) = rand()
+    g = UniformGrid(N, 1.0)
+    c = FaceField(fc, g)
+    d = FaceField(fd, g)
+    solution = NonVectorFakeSolution(c, d)
+    for nt in nts
+        @printf "N: % 6d, nt: % 6d" N nt
+        manyfakerhs_fieldloop!(solution, nt)
+        @btime manyfakerhs_fieldloop!($solution, $nt)
     end
 end
-=#
+
+@printf "\nTesting another fake calc rhs of arrays...\n"
+for N in Ns
+    fc(z) = rand()
+    fd(z) = rand()
+    g = UniformGrid(N, 1.0)
+    c = FaceField(fc, g)
+    d = CellField(fd, g)
+    solution = [c, d]
+    for nt in nts
+        @printf "N: % 6d, nt: % 6d" N nt
+        manyfakerhs!(solution, nt)
+        @btime manyfakerhs!($solution, $nt)
+    end
+end
