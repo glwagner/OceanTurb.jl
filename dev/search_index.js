@@ -329,14 +329,6 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "man/functions/#OceanTurb.ZeroFluxBoundaryConditions-Tuple{}",
-    "page": "Functions",
-    "title": "OceanTurb.ZeroFluxBoundaryConditions",
-    "category": "method",
-    "text": "Returns FieldBoundaryConditions with zero flux at top and bottom.\n\n\n\n\n\n"
-},
-
-{
     "location": "man/functions/#OceanTurb.arraytype-Union{Tuple{Grid{T,A} where A<:AbstractArray}, Tuple{T}} where T",
     "page": "Functions",
     "title": "OceanTurb.arraytype",
@@ -345,7 +337,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "man/functions/#OceanTurb.fill_bottom_ghost_cell!-Tuple{Any,Any,Any,BoundaryCondition}",
+    "location": "man/functions/#OceanTurb.fill_bottom_ghost_cell!-NTuple{4,Any}",
     "page": "Functions",
     "title": "OceanTurb.fill_bottom_ghost_cell!",
     "category": "method",
@@ -353,15 +345,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "man/functions/#OceanTurb.fill_ghost_cells!-NTuple{5,Any}",
-    "page": "Functions",
-    "title": "OceanTurb.fill_ghost_cells!",
-    "category": "method",
-    "text": "fill_ghost_cells!(c, κ, model, bc)\n\nUpdate the top and bottom ghost cells of c for model.\n\n\n\n\n\n"
-},
-
-{
-    "location": "man/functions/#OceanTurb.fill_top_ghost_cell!-Tuple{Any,Any,Any,BoundaryCondition}",
+    "location": "man/functions/#OceanTurb.fill_top_ghost_cell!-NTuple{5,Any}",
     "page": "Functions",
     "title": "OceanTurb.fill_top_ghost_cell!",
     "category": "method",
