@@ -59,7 +59,7 @@ function build_accessories(names; prefix=Symbol(""))
         import LinearAlgebra: Tridiagonal
         import OceanTurb: build_lhs
 
-        struct $bcs_signature
+        struct $bcs_signature <: FieldVector{$(nfields), FieldBoundaryConditions}
             $(bcsfields...)
         end
 

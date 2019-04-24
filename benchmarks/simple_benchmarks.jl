@@ -27,6 +27,7 @@ struct NonVectorFakeSolution{A, G, T}
     d :: FaceField{A, G, T}
 end
 
+propertynames(::AnotherFakeSolution) = (:c, :d)
 propertynames(::NonVectorFakeSolution) = (:c, :d)
 
 function build_solution(name, fieldnames)
@@ -67,6 +68,7 @@ function manyrhs!(m, n)
     return nothing
 end
 
+#=
 function manyfakerhs!(solution, n)
     for i = 1:n
         for j in eachindex(solution)
@@ -78,6 +80,21 @@ function manyfakerhs!(solution, n)
     end
     return nothing
 end
+=#
+
+function manyfakerhs!(solution, n)
+    for i = 1:n
+        for fld in propertynames(solution)
+            ϕfld = getproperty(solution, fld)
+            ϕ = data(ϕfld)
+            for i in eachindex(ϕ)
+                @inbounds ϕ[i] = rand()
+            end
+        end
+    end
+    return nothing
+end
+
 
 function manyfakerhs!(solution::Array, n)
     for i = 1:n

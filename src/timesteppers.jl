@@ -52,24 +52,26 @@ function update!(m)
     m.timestepper.eqn.update!(m)
     for (j, ϕname) in enumerate(propertynames(m.solution))
            ϕ = getproperty(m.solution, ϕname)
-          Kϕ = m.timestepper.eqn.K[j]
-        bcsϕ = getproperty(m.bcs, ϕname)
-        fill_ghost_cells!(ϕ, Kϕ(m, 1), Kϕ(m, m.grid.N+1), m, bcsϕ)
+           @inbounds begin
+               Kϕ = m.timestepper.eqn.K[j]
+               bcsϕ = m.bcs[j]
+               fill_ghost_cells!(ϕ, Kϕ(m, 1), Kϕ(m, m.grid.N+1), m, bcsϕ)
+           end
     end
     return nothing
 end
 
-explicit_rhs_kernel(ϕ, K, R, m, i)         = ∇K∇c(K(m, i+1), K(m, i), ϕ, i) + R(m, i)
-explicit_rhs_kernel(ϕ, K, ::Nothing, m, i) = ∇K∇c(K(m, i+1), K(m, i), ϕ, i)
+explicit_rhs_kernel(ϕ, K, R, m, i)         = @inbounds ∇K∇c(K(m, i+1), K(m, i), ϕ, i) + R(m, i)
+explicit_rhs_kernel(ϕ, K, ::Nothing, m, i) = @inbounds ∇K∇c(K(m, i+1), K(m, i), ϕ, i)
 
-implicit_rhs_top(ϕ, K, R, m)         = @inbounds ∇K∇c(K(m, m.grid.N+1), 0, ϕ, m.grid.N) + R(m, m.grid.N)
-implicit_rhs_top(ϕ, K, ::Nothing, m) = @inbounds ∇K∇c(K(m, m.grid.N+1), 0, ϕ, m.grid.N)
+@inbounds implicit_rhs_top(ϕ, K, R, m)         = @inbounds ∇K∇c(K(m, m.grid.N+1), 0, ϕ, m.grid.N) + R(m, m.grid.N)
+@inbounds implicit_rhs_top(ϕ, K, ::Nothing, m) = @inbounds ∇K∇c(K(m, m.grid.N+1), 0, ϕ, m.grid.N)
 
-implicit_rhs_bottom(ϕ, K, R, m)         = @inbounds ∇K∇c(0, K(m, 1), ϕ, 1) + R(m, 1)
-implicit_rhs_bottom(ϕ, K, ::Nothing, m) = @inbounds ∇K∇c(0, K(m, 1), ϕ, 1)
+@inbounds implicit_rhs_bottom(ϕ, K, R, m)         = @inbounds ∇K∇c(0, K(m, 1), ϕ, 1) + R(m, 1)
+@inbounds implicit_rhs_bottom(ϕ, K, ::Nothing, m) = @inbounds ∇K∇c(0, K(m, 1), ϕ, 1)
 
-implicit_rhs_kernel!(rhs, ϕ, R, m, i)         = rhs[i] = R(m, i)
-implicit_rhs_kernel!(rhs, ϕ, ::Nothing, m, i) = nothing
+@inbounds implicit_rhs_kernel!(rhs, ϕ, R, m, i)         = rhs[i] = R(m, i)
+@inbounds implicit_rhs_kernel!(rhs, ϕ, ::Nothing, m, i) = nothing
 
 "Evaluate the right-hand-side of ∂ϕ∂t for the current time-step."
 function calc_explicit_rhs!(rhs, eqn, m)

@@ -2,6 +2,7 @@ module Diffusion
 
 using LinearAlgebra, OceanTurb
 import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top
+import Base: @propagate_inbounds
 
 # Just one field: "c"
 @solution c
@@ -36,7 +37,7 @@ end
 # Equation specification
 #
 
-Rc(m, i) = 0.0
-Kc(m, i) = m.parameters.K
+@inline Rc(m, i) = 0.0
+@inline Kc(m, i) = m.parameters.K
 
 end # module

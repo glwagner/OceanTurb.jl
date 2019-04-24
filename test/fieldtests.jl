@@ -140,7 +140,6 @@ function test_ghost_cell_gradient(T)
     ∂z(c, 1) ≈ cz_bottom && ∂z(c, grid.N+1) ≈ cz_top
 end
 
-
 function test_ghost_cell_flux(T)
     model = DummyModel()
     grid = UniformGrid(T, 3, 3.0)
