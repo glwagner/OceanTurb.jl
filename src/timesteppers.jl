@@ -48,7 +48,7 @@ struct ForwardEulerTimestepper{R, ER, EK} <: Timestepper
     end
 end
 
-function prepare!(bcs, K, solution, update_eqn!, m)
+function prepare!(bcs, K, solution, update_eqn!, N, m)
     update_eqn!(m)
     for j in eachindex(solution)
         @inbounds begin
@@ -56,7 +56,8 @@ function prepare!(bcs, K, solution, update_eqn!, m)
             Kϕ = K[j]
             bcsϕ = bcs[j]
         end
-        @inbounds fill_ghost_cells!(ϕ, Kϕ(m, 1), Kϕ(m, m.grid.N+1), m, bcsϕ)
+        fill_bottom_ghost_cell!(bcsϕ.bottom, ϕ, Kϕ(m, 1), m)
+        fill_top_ghost_cell!(bcsϕ.top, ϕ, Kϕ(m, N+1), m, N)
     end
     return nothing
 end
@@ -124,7 +125,7 @@ end
 
 # Forward Euler timestepping
 function iterate!(m::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
-    prepare!(m.bcs, m.timestepper.eqn.K, m.solution, m.timestepper.eqn.update!, m)
+    prepare!(m.bcs, m.timestepper.eqn.K, m.solution, m.timestepper.eqn.update!, m.grid.N, m)
     calc_explicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m.solution, m)
     forward_euler_update!(m.timestepper.rhs, m.solution, Δt)
     tick!(m.clock, Δt)
@@ -218,7 +219,7 @@ end
 
 # Backward Euler timestepping for problems with diffusivity
 function iterate!(m::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimestepper
-    prepare!(m.bcs, m.timestepper.eqn.K, m.solution, m.timestepper.eqn.update!, m)
+    prepare!(m.bcs, m.timestepper.eqn.K, m.solution, m.timestepper.eqn.update!, m.grid.N, m)
     calc_implicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m.solution, m)
     calc_diffusive_lhs!(Δt, m.timestepper.lhs, m.timestepper.eqn.K, m.solution, m)
     backward_euler_update!(m.timestepper.rhs, m.timestepper.lhs, m.solution, Δt)
