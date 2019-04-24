@@ -19,10 +19,10 @@ end
 Step `model` forward in time by one time-step with step-size `Δt`.
 """
 function iterate!(model, Δt, nt)
-  for step = 1:nt
-      iterate!(model, Δt)
-  end
-  return nothing
+    for step = 1:nt
+        iterate!(model, Δt)
+    end
+    return nothing
 end
 
 "Update the clock after one iteration."
@@ -50,14 +50,14 @@ end
 
 function update!(m)
     m.timestepper.eqn.update!(m)
-    for j in eachindex(m.solution)
-        @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
+    for (j, ϕname) in enumerate(propertynames(m.solution))
+           ϕ = getproperty(m.solution, ϕname)
+          Kϕ = m.timestepper.eqn.K[j]
+        bcsϕ = getproperty(m.bcs, ϕname)
         fill_ghost_cells!(ϕ, Kϕ(m, 1), Kϕ(m, m.grid.N+1), m, bcsϕ)
     end
     return nothing
 end
-
-import Base: +, -, convert
 
 explicit_rhs_kernel(ϕ, K, R, m, i)         = ∇K∇c(K(m, i+1), K(m, i), ϕ, i) + R(m, i)
 explicit_rhs_kernel(ϕ, K, ::Nothing, m, i) = ∇K∇c(K(m, i+1), K(m, i), ϕ, i)
@@ -73,8 +73,9 @@ implicit_rhs_kernel!(rhs, ϕ, ::Nothing, m, i) = nothing
 
 "Evaluate the right-hand-side of ∂ϕ∂t for the current time-step."
 function calc_explicit_rhs!(rhs, eqn, m)
-    for j in eachindex(m.solution)
-        @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
+    for (j, ϕname) in enumerate(propertynames(m.solution))
+        @inbounds ϕ, rhsϕ, Rϕ, Kϕ = unpack(j, ϕname, m)
+        rhsϕ = data(rhsϕ)
         for i in eachindex(rhsϕ)
             @inbounds rhsϕ[i] = explicit_rhs_kernel(ϕ, Kϕ, Rϕ, m, i)
         end
@@ -84,11 +85,11 @@ end
 
 function calc_implicit_rhs!(rhs, eqn, m)
     N = m.grid.N
-    for (j, rhsϕ) in enumerate(rhs)
-        @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
+    for (j, ϕname) in enumerate(propertynames(m.solution))
+        @inbounds ϕ, rhsϕ, Rϕ, Kϕ = unpack(j, ϕname, m)
 
         for i in interiorindices(rhsϕ)
-            @inbounds implicit_rhs_kernel!(rhsϕ, ϕ, Rϕ, m, i)
+            @inbounds implicit_rhs_kernel!(data(rhsϕ), ϕ, Rϕ, m, i)
         end
 
         @inbounds rhsϕ[N] = implicit_rhs_top(ϕ, Kϕ, Rϕ, m)
@@ -100,10 +101,11 @@ end
 
 function forward_euler_update!(m, Δt)
     # Take one forward Euler step
-    for j in eachindex(m.solution)
-        @inbounds ϕ, rhsϕ, Rϕ, Kϕ, bcsϕ = unpack(m, j)
+    for (j, ϕname) in enumerate(propertynames(m.solution))
+        @inbounds ϕ, rhsϕ, Rϕ, Kϕ = unpack(j, ϕname, m)
+        ϕ = data(ϕ)
         for i in eachindex(ϕ)
-            @inbounds ϕ[i] += Δt * rhsϕ[i]
+            @inbounds ϕ[i] += Δt * data(rhsϕ)[i]
         end
     end
     return nothing
@@ -158,9 +160,9 @@ flux_div_op(m, K::Number, face, cell) = K / Δc(m.grid, face) / Δf(m.grid, cell
 
 # Build backward Euler operator for diffusive problems
 function calc_diffusive_lhs!(lhs, Δt, K, m)
-    for j in eachindex(m.solution)
+    for (j, ϕname) in enumerate(propertynames(m.solution))
+        ϕ = getproperty(m.solution, ϕname)
         @inbounds begin
-            ϕ = m.solution[j]
             Kϕ = K[j]
             L = lhs[j]
         end
@@ -194,15 +196,16 @@ function iterate!(m::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimesteppe
     calc_diffusive_lhs!(m.timestepper.lhs, Δt, m.timestepper.eqn.K, m)
 
     # Update solution by inverting Tridiagonal lhs matrix
-    for (j, ϕ) in enumerate(m.solution)
+    for (j, ϕname) in enumerate(propertynames(m.solution))
         @inbounds lhs = m.timestepper.lhs[j]
-        @inbounds rhs = m.timestepper.rhs[j]
+        rhs = data(getproperty(m.timestepper.rhs, ϕname))
+        ϕ = data(getproperty(m.solution, ϕname))
 
         for i in eachindex(rhs)
             @inbounds rhs[i] = ϕ[i] + Δt*rhs[i]
         end
 
-        ldiv!(data(ϕ), lhs, data(rhs))
+        ldiv!(ϕ, lhs, rhs)
     end
 
     tick!(m.clock, Δt)
@@ -210,14 +213,10 @@ function iterate!(m::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimesteppe
   return nothing
 end
 
-Base.@propagate_inbounds function unpack(model::AbstractModel{TS},
-    i) where TS <: Union{ForwardEulerTimestepper, BackwardEulerTimestepper}
-
-      ϕ = model.solution[i]
-    rhs = model.timestepper.rhs[i]
-      R = model.timestepper.eqn.R[i]
-      K = model.timestepper.eqn.K[i]
-    bcs = model.bcs[i]
-
-    return ϕ, rhs, R, K, bcs
+@propagate_inbounds function unpack(j, ϕname, model)
+      ϕ = getproperty(model.solution, ϕname)
+    rhs = getproperty(model.timestepper.rhs, ϕname)
+      R = model.timestepper.eqn.R[j]
+      K = model.timestepper.eqn.K[j]
+    return ϕ, rhs, R, K
 end
