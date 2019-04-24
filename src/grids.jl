@@ -67,7 +67,7 @@ end
 UniformGrid(N=3, L=1) = UniformGrid(Float64, N, L)
 
 "Return the cell spacing at index i."
-Δc(grid::UniformGrid, i) = grid.Δc
+@inline Δc(grid::UniformGrid, i) = grid.Δc
 
 "Return the face spacing at index i."
-Δf(grid::UniformGrid, i) = grid.Δf
+@inline Δf(grid::UniformGrid, i) = grid.Δf
