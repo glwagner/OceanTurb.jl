@@ -11,7 +11,7 @@ import OceanTurb: oncell
 import .KPP: ∂B∂z
 
 const nsol = 5
-@named_solution ZeroPlume U V T S e
+@prefixed_solution ZeroPlume U V T S e
 
 struct Parameters{T} <: AbstractParameters
          Cε :: T  # Surface layer fraction
