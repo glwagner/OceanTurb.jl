@@ -12,8 +12,12 @@ struct Parameters{T} <: AbstractParameters
 end
 
 struct Model{P, TS, G, T} <: AbstractModel{TS, G, T}
-    @add_standard_model_fields
-    parameters::P
+    clock       :: Clock{T}
+    grid        :: G
+    timestepper :: TS
+    solution    :: Solution
+    bcs         :: BoundaryConditions
+    parameters  :: P
 end
 
 function Model(; N=10, L=1.0, K=0.1,
