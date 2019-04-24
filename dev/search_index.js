@@ -329,30 +329,6 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "man/functions/#OceanTurb.FluxBoundaryCondition-Tuple{Any}",
-    "page": "Functions",
-    "title": "OceanTurb.FluxBoundaryCondition",
-    "category": "method",
-    "text": "FluxBoundaryCondition(boundary, flux)\n\nConstruct a boundary condition that specifies a field\'s flux of some field on a boundary.\n\n\n\n\n\n"
-},
-
-{
-    "location": "man/functions/#OceanTurb.GradientBoundaryCondition-Tuple{Any}",
-    "page": "Functions",
-    "title": "OceanTurb.GradientBoundaryCondition",
-    "category": "method",
-    "text": "GradientBoundaryCondition(boundary, gradient)\n\nConstruct a boundary condition that specifies a field\'s gradient on a boundary.\n\n\n\n\n\n"
-},
-
-{
-    "location": "man/functions/#OceanTurb.ValueBoundaryCondition-Tuple{Any}",
-    "page": "Functions",
-    "title": "OceanTurb.ValueBoundaryCondition",
-    "category": "method",
-    "text": "ValueBoundaryCondition(boundary, value)\n\nConstruct a boundary condition that specifies a field\'s value of some field on a boundary.\n\n\n\n\n\n"
-},
-
-{
     "location": "man/functions/#OceanTurb.ZeroFluxBoundaryConditions-Tuple{}",
     "page": "Functions",
     "title": "OceanTurb.ZeroFluxBoundaryConditions",
@@ -369,7 +345,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "man/functions/#OceanTurb.fill_bottom_ghost_cell!-NTuple{4,Any}",
+    "location": "man/functions/#OceanTurb.fill_bottom_ghost_cell!-Tuple{Any,Any,Any,BoundaryCondition}",
     "page": "Functions",
     "title": "OceanTurb.fill_bottom_ghost_cell!",
     "category": "method",
@@ -385,7 +361,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "man/functions/#OceanTurb.fill_top_ghost_cell!-NTuple{4,Any}",
+    "location": "man/functions/#OceanTurb.fill_top_ghost_cell!-Tuple{Any,Any,Any,BoundaryCondition}",
     "page": "Functions",
     "title": "OceanTurb.fill_top_ghost_cell!",
     "category": "method",
@@ -430,38 +406,6 @@ var documenterSearchIndex = {"docs": [
     "title": "OceanTurb.set!",
     "category": "method",
     "text": "set!(solution, kwargs...)\n\nSet the fields of a solution. For example, use\n\nT0 = rand(4) S0(z) = exp(-z^2/10) set!(solution, T=T0, S=S0)\n\nTo set solution.T and solution.S to T0 and S0.\n\n\n\n\n\n"
-},
-
-{
-    "location": "man/functions/#OceanTurb.set_bcs!-Tuple{Any,Any,Tuple}",
-    "page": "Functions",
-    "title": "OceanTurb.set_bcs!",
-    "category": "method",
-    "text": "set_bcs!(model, fld, bcs::Tuple)\n\nSet boundary conditions on fld as  bcs = (bottom_bc, top_bc)\n\nset_bcs!(model; kwargs...)\n\nSet boundary conditions, where the keywords are fields of model.solution and their arguments are tuples of (bottom, top) boundary condition.\n\n\n\n\n\n"
-},
-
-{
-    "location": "man/functions/#OceanTurb.set_bottom_bc!-Tuple{Any,Any,Any}",
-    "page": "Functions",
-    "title": "OceanTurb.set_bottom_bc!",
-    "category": "method",
-    "text": "Set the bottom boundary condition for fld in model.\n\n\n\n\n\n"
-},
-
-{
-    "location": "man/functions/#OceanTurb.set_flux_bcs!-Tuple{Any}",
-    "page": "Functions",
-    "title": "OceanTurb.set_flux_bcs!",
-    "category": "method",
-    "text": "set_flux_bcs!(model, fld, bcs::Tuple)\n\nSet flux boundary conditions on fld as  bcs = (bottom_bc, top_bc)\n\nset_flux_bcs!(model; kwargs...)\n\nSet flux boundary conditions for model.\n\n\n\n\n\n"
-},
-
-{
-    "location": "man/functions/#OceanTurb.set_top_bc!-Tuple{Any,Any,Any}",
-    "page": "Functions",
-    "title": "OceanTurb.set_top_bc!",
-    "category": "method",
-    "text": "Set the top boundary condition for fld in model.\n\n\n\n\n\n"
 },
 
 {
