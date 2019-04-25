@@ -95,6 +95,8 @@ end
 
 State(T=Float64) = State{T}(0, 0, 0, 0, 0, 0)
 
+Fb(g, α, β, Fθ, Fs) = g * (α*Fθ - β*Fs)
+
 """
     update_state!(model)
 
@@ -106,7 +108,7 @@ function update_state!(m)
     m.state.Fv = getbc(m, m.bcs.V.top)
     m.state.Fθ = getbc(m, m.bcs.T.top)
     m.state.Fs = getbc(m, m.bcs.S.top)
-    m.state.Fb = m.constants.g * (m.constants.α * m.state.Fθ - m.constants.β * m.state.Fs)
+    m.state.Fb = Fb(m.constants.g, m.constants.α, m.constants.β, m.state.Fθ, m.state.Fs)
     m.state.h  = mixing_depth(m)
     return nothing
 end
@@ -226,14 +228,14 @@ function mixing_depth(m)
     # Descend through grid until Ri rises above critical value
     ih₁ = m.grid.N + 1 # start at top.
     Ri₁ = bulk_richardson_number(m, ih₁) # should be 0.
-    while ih₁ > 1 && Ri₁ < m.parameters.CRi
+    while ih₁ > 2 && Ri₁ < m.parameters.CRi
         ih₁ -= 1 # descend
         Ri₁ = bulk_richardson_number(m, ih₁)
     end
 
     # Edge cases:
     # 1. Mixing depth is 0 or whole domain:
-    if ih₁ == 1 || ih₁ == m.grid.N+1
+    if (Ri₁ < m.parameters.CRi && ih₁ == 1) || ih₁ == length(m.grid)+1
         z★ = m.grid.zf[ih₁]
 
     # 2. Ri is infinite somewhere inside the domain.
@@ -351,16 +353,16 @@ For example, positive heat flux out of the surface implies cooling.
 """
 N(CNL, flux, d, shape=default_shape_N) = CNL * flux * shape(d)
 
-function ∂N∂z(CNL, Fϕ, m, i)
+function ∂N∂z(CNL, Fϕ, d, Δf, m)
     if isunstable(m)
-        return (N(CNL, Fϕ, d(m, i+1)) - N(CNL, Fϕ, d(m, i))) / Δf(m.grid, i)
+        return (N(CNL, Fϕ, d) - N(CNL, Fϕ, d)) / Δf
     else
         return 0
     end
 end
 
-∂NT∂z(m, i) = ∂N∂z(m.parameters.CNL, m.state.Fθ, m, i)
-∂NS∂z(m, i) = ∂N∂z(m.parameters.CNL, m.state.Fs, m, i)
+∂NT∂z(m, i) = @inbounds ∂N∂z(m.parameters.CNL, m.state.Fθ, d(m, i), Δf(m.grid, i), m)
+∂NS∂z(m, i) = @inbounds ∂N∂z(m.parameters.CNL, m.state.Fs, d(m, i), Δf(m.grid, i), m)
 
 #
 # Equation specification
@@ -372,9 +374,12 @@ KT(m, i) = K_KPP(m.state.h, w_scale_T(m, i), d(m, i)) + m.parameters.KT₀
 KS(m, i) = K_KPP(m.state.h, w_scale_S(m, i), d(m, i)) + m.parameters.KS₀
 const KV = KU
 
-RU(m, i) =   m.constants.f * m.solution.V[i]
-RV(m, i) = - m.constants.f * m.solution.U[i]
-RT(m, i) = - ∂NT∂z(m, i)
-RS(m, i) = - ∂NS∂z(m, i)
+@inline RU(f, V, i) = @inbounds  f*V[i]
+@inline RV(f, U, i) = @inbounds -f*U[i]
+
+@inline RU(m, i) = RU(m.constants.f, m.solution.V, i)
+@inline RV(m, i) = RV(m.constants.f, m.solution.U, i)
+@inline RT(m, i) = -∂NT∂z(m, i)
+@inline RS(m, i) = -∂NS∂z(m, i)
 
 end # module
