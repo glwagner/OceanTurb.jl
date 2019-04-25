@@ -4,10 +4,7 @@ using
     OceanTurb,
     LinearAlgebra
 
-import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top, Constants
-
-const nU = 1/4 # exponent for momentum turbulent velocity scale
-const nT = 1/2 # exponent for tracer turbulent velocity scale
+import OceanTurb: Constants
 
 const nsol = 4
 @solution U V T S
