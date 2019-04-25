@@ -62,10 +62,10 @@ function prepare!(bcs, K, solution, update_eqn!, N, m)
     return nothing
 end
 
-explicit_rhs_kernel(ϕ, K, R, m, i) = ∇K∇c(K(m, i+1), K(m, i), ϕ, i) + R(m, i)
-implicit_rhs_top(ϕ, K, R, m) = ∇K∇c(K(m, m.grid.N+1), 0, ϕ, m.grid.N) + R(m, m.grid.N)
-implicit_rhs_bottom(ϕ, K, R, m) = ∇K∇c(0, K(m, 1), ϕ, 1) + R(m, 1)
-implicit_rhs_kernel!(rhs, ϕ, R, m, i) = rhs[i] = R(m, i)
+@inline explicit_rhs_kernel(ϕ, K, R, m, i) = ∇K∇c(K(m, i+1), K(m, i), ϕ, i) + R(m, i)
+@inline implicit_rhs_top(ϕ, K, R, m) = ∇K∇c(K(m, m.grid.N+1), 0, ϕ, m.grid.N) + R(m, m.grid.N)
+@inline implicit_rhs_bottom(ϕ, K, R, m) = ∇K∇c(0, K(m, 1), ϕ, 1) + R(m, 1)
+@propagate_inbounds implicit_rhs_kernel!(rhs, ϕ, R, m, i) = rhs[i] = R(m, i)
 
 "Evaluate the right-hand-side of ∂ϕ∂t for the current time-step."
 function calc_explicit_rhs!(rhs, eqn, solution, m)
