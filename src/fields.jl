@@ -137,9 +137,9 @@ interiorindices(f::FaceField) = 2:f.grid.N
 boundaryindices(c::CellField) = (1, c.grid.N)
 
 # Sugary sweet: access indices of c.data by indexing into c.
-@propagate_inbounds getindex(c::AbstractField, inds...) = getindex(c.data, inds...)
-@propagate_inbounds setindex!(c::AbstractField, d, inds...) = setindex!(c.data, d, inds...)
-@propagate_inbounds setindex!(c::AbstractField, d::AbstractField, inds...) = setindex!(c.data, d.data, inds...)
+getindex(c::AbstractField, inds...) = getindex(c.data, inds...)
+setindex!(c::AbstractField, d, inds...) = setindex!(c.data, d, inds...)
+setindex!(c::AbstractField, d::AbstractField, inds...) = setindex!(c.data, d.data, inds...)
 
 set!(c::AbstractField, data::Number) = fill!(c.data, data)
 set!(c::AbstractField{Ac, G}, d::AbstractField{Ad, G}) where {Ac, Ad, G} = c.data .= convert(Ac, d.data)
@@ -225,8 +225,8 @@ end
 # Differential operators and such for fields
 #
 
-Δc(c::AbstractField, i_face) = Δc(c.grid, i_face)
-Δf(c::AbstractField, i_cell) = Δf(c.grid, i_cell)
+@inline Δc(c::AbstractField, i_face) = Δc(c.grid, i_face)
+@inline Δf(c::AbstractField, i_cell) = Δf(c.grid, i_cell)
 
 """
     ∂z(a, i)
@@ -239,7 +239,7 @@ and the derviative of a `Field{Face}` is computed at cell points.
 ∂z(a, i) = throw("∂z is not defined for arbitrary fields.")
 
 "Return ∂c/∂z at face index i."
-@propagate_inbounds ∂z(c::CellField, i) = (c.data[i] - c.data[i-1]) / Δc(c.grid, i)
+@propagate_inbounds ∂z(c::CellField, i) = @inbounds (c.data[i] - c.data[i-1]) / Δc(c, i)
 
 "Return ∂c/∂z at face index i."
 @propagate_inbounds ∂z(c::FaceField, i) = (c.data[i+1] - c.data[i]) / Δc(c, i)
@@ -295,7 +295,7 @@ top_flux(K, c, c_bndry, Δf)    = -2K*(  c_bndry  -  top(c) ) / Δf # -K*∂c/�
 ∇K∇c_bottom(K₂, K₁, c, bc, model) = ∇K∇c_bottom(K₂, c, -K₁*getbc(model, bc))
 
 "Return the total flux (advective + diffusive) across face i."
-@propagate_inbounds flux(w, κ, c, i) = w * onface(c, i) - κ * ∂z(c, i)
+flux(w, κ, c, i) = @inbounds w * onface(c, i) - κ * ∂z(c, i)
 top_flux_div(wtop, κtop, c) = @inbounds -flux(wtop, κtop, c, c.grid.N) / Δf(c, c.grid.N)
 bottom_flux_div(wbottom, κbottom, c) = @inbounds flux(wbottom, κbottom, c, 1) / Δf(c, 1)
 
