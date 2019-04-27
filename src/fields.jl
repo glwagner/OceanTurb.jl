@@ -123,6 +123,8 @@ nodes(f::FaceField) = f.grid.zf
 length(c::CellField) = c.grid.N
 length(f::FaceField) = f.grid.N + 1
 
+height(c::AbstractField) = height(c.grid)
+
 # All indices
 eachindex(c::CellField) = 1:c.grid.N
 eachindex(f::FaceField) = 1:f.grid.N + 1
@@ -133,13 +135,16 @@ lastindex(f::FaceField) = f.grid.N + 1
 # Interior indices, omitting boundary-adjacent values
 interiorindices(c::CellField) = 2:c.grid.N - 1
 interiorindices(f::FaceField) = 2:f.grid.N
-
 boundaryindices(c::CellField) = (1, c.grid.N)
 
 # Sugary sweet: access indices of c.data by indexing into c.
 getindex(c::AbstractField, inds...) = getindex(c.data, inds...)
 setindex!(c::AbstractField, d, inds...) = setindex!(c.data, d, inds...)
 setindex!(c::AbstractField, d::AbstractField, inds...) = setindex!(c.data, d.data, inds...)
+
+#
+# Ways to specify a field's data
+#
 
 set!(c::AbstractField, data::Number) = fill!(c.data, data)
 set!(c::AbstractField{Ac, G}, d::AbstractField{Ad, G}) where {Ac, Ad, G} = c.data .= convert(Ac, d.data)
@@ -192,6 +197,51 @@ function integral(c::CellField)
         @inbounds total += c[i] * Δf(c.grid, i)
     end
     return total
+end
+
+function integrate_range(c::CellField, i₁::Int, i₂::Int)
+    total = 0
+    for i = i₁:i₂
+        @inbounds total += c[i] * Δf(c.grid, i)
+    end
+    return total
+end
+
+function integral(c::CellField, z₋, z₊=0)
+
+    @assert z₊ > c.grid.zf[1] "Integration region lies outside the domain."
+    @assert z₊ > z₋ "Invalid integration range: upper limit greater than lower limit."
+
+    # Find region bounded by the face ≤ z₊ and the face ≤ z₁
+    i₁ = searchsortedfirst(c.grid.zf, z₋) - 1
+    i₂ = searchsortedfirst(c.grid.zf, z₊) - 1
+
+    if i₂ ≠ i₁
+        # Calculate interior integral, recalling that the
+        # top interior cell has index i₂-2.
+        total = integrate_range(c, i₁+1, i₂-1)
+
+        # Add contribution to integral from fractional bottom part,
+        # if that region is a part of the grid.
+        if i₁ > 0
+            total += c[i₁] * (c.grid.zf[i₁+1] - z₋)
+        end
+
+        # Add contribution to integral from fractional top part
+        total += c[i₂] * (z₊ - c.grid.zf[i₂])
+    else
+        total = c[i₁] * (z₊ - z₋)
+    end
+
+    return total
+end
+
+function set!(c1::CellField{A1, G2}, c2::CellField{A2, G2}) where {A1, G1, A2, G2}
+    @assert height(c1) == height(c2) "Physical domains differ between the two fields."
+    for i in eachindex(c1)
+        @inbounds c1[i] = integral(c2, c1.grid.zf[i], c1.grid.zf[i+1]) / Δf(c1, i)
+    end
+    return nothing
 end
 
 similar(c::CellField) = CellField(c.grid)

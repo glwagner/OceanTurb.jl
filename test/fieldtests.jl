@@ -114,6 +114,12 @@ function test_integral(T)
     integral(c) / grid.L == 2
 end
 
+function test_integral_range(T, N, L, z₋, z₊)
+    grid = UniformGrid(T, N, L)
+    c = CellField(ones(N), grid)
+    integral(c, z₋, z₊) == z₊ - z₋
+end
+
 
 struct DummyModel end
 
