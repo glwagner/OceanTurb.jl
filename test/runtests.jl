@@ -36,7 +36,7 @@ end
 @testset "Fields" begin
     include("fieldtests.jl")
     nz, Lz = 3, 4.2
-    for T in (Float64, Float32, Float16)
+    for T in (Float64,)
         @test test_cell_field_construction(T, nz, Lz)
         @test test_face_field_construction(T, nz, Lz)
         @test test_cell_∂z(T)
@@ -49,6 +49,10 @@ end
             @test test_set_function_field(loc, T)
         end
         @test test_integral(T)
+        @test test_integral_range(T, 10, 10, -5, -3)
+        @test test_integral_range(T, 10, 10, -5.1, -4.5)
+        @test test_integral_range(T, 17, 3, -2.5, -1.3)
+        @test test_integral_range(T, 3, 30, -2.5, -1.3)
         @test test_ghost_cell_value(T)
         @test test_ghost_cell_gradient(T)
         @test test_ghost_cell_flux(T)
