@@ -283,7 +283,6 @@ w_scale_stable(Cτ, Cstab, Cn, ωτ, ωb, d) = Cτ * ωτ / (1 + Cstab * d * (ω
 "Return the vertical velocity scale at scaled depth dϵ for an unstable boundary layer."
 function w_scale_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
     dϵ = min(CSL, d)
-    dϵ < 0.0 && @show dϵ d
     if dϵ < Cd * (ωτ/ωb)^3
         return Cτ * ωτ * (1 + Cunst * dϵ * (ωb/ωτ)^3)^Cmτ
     else
