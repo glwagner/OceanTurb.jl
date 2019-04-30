@@ -100,6 +100,7 @@ export # This file, core functionality:
     EDMF
 
 using
+    Statistics,
     StaticArrays,
     OffsetArrays,
     LinearAlgebra

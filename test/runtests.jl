@@ -56,6 +56,8 @@ end
         @test test_ghost_cell_value(T)
         @test test_ghost_cell_gradient(T)
         @test test_ghost_cell_flux(T)
+        @test test_absolute_error(T)
+        @test test_relative_error(T)
     end
     @test test_field_indexing()
 end
