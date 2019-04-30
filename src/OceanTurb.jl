@@ -28,6 +28,7 @@ export # This file, core functionality:
     @add_standard_model_fields,
     @add_clock_grid_timestepper,
     run_until!,
+    absolute_error,
 
     # grids.jl
     Grid,

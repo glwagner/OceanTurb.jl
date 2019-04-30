@@ -132,3 +132,13 @@ function run_until!(model, dt, tfinal)
     iterate!(model, last_dt)
     return nothing
 end
+
+function absolute_error(c::CellField, d::CellField)
+    if length(c) != length(d)
+        d_c = CellField(c.grid)
+        set!(d_c, d)
+    else
+        d_c = d
+    end
+    return mean((c.data .- d_c.data).^2)
+end
