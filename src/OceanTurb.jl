@@ -28,7 +28,6 @@ export # This file, core functionality:
     @add_standard_model_fields,
     @add_clock_grid_timestepper,
     run_until!,
-    absolute_error,
 
     # grids.jl
     Grid,
@@ -62,6 +61,8 @@ export # This file, core functionality:
     integral,
     top_flux_div,
     bottom_flux_div,
+    absolute_error,
+    relative_error,
 
     # timesteppers.jl
     Equation,

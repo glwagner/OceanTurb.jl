@@ -385,12 +385,14 @@ Return the interpolation of `f` onto cell point `i`.
 @propagate_inbounds oncell(c::CellField, i) = c[i]
 
 "Compute the absolute error between `c` and `d`."
-function absolute_error(c::CellField, d::CellField)
+function absolute_error(c::CellField, d::CellField; p=2)
     if length(c) != length(d)
         d_c = CellField(c.grid)
         set!(d_c, d)
     else
         d_c = d
     end
-    return mean((c.data .- d_c.data).^2)
+    return mean((c.data .- d_c.data).^p)
 end
+
+relative_error(c::CellField, d::CellField; p=2) = absolute_error(c, d; p=p) / mean(d.data.^p)
