@@ -232,7 +232,7 @@ function mixing_depth(m)
 
     # Edge cases:
     # 1. Mixing depth is 0 or whole domain:
-    if (Ri₁ < m.parameters.CRi && ih₁ == 1) || ih₁ == length(m.grid)+1
+    if (Ri₁ > m.parameters.CRi && ih₁ == 1) || ih₁ == length(m.grid)+1
         z★ = m.grid.zf[ih₁]
 
     # 2. Ri is infinite somewhere inside the domain.
@@ -276,15 +276,17 @@ w_scale_stable(Cτ, Cstab, Cn, ωτ, ωb, d) = Cτ * ωτ / (1 + Cstab * d * (ω
 "Return the vertical velocity scale at scaled depth dϵ for an unstable boundary layer."
 function w_scale_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
     dϵ = min(CSL, d)
+    dϵ < 0.0 && @show dϵ
     if dϵ < Cd * (ωτ/ωb)^3
-        return Cτ * ωτ * ( 1 + Cunst * dϵ * (ωb/ωτ)^3 )^Cmτ
+        return Cτ * ωτ * max(0, 1 + Cunst * dϵ * (ωb/ωτ)^3)^Cmτ
     else
-        return Cb * ωb * ( dϵ + Cτb * (ωτ/ωb)^3 )^Cmb
+        return Cb * ωb * max(0, dϵ + Cτb * (ωτ/ωb)^3)^Cmb
     end
 end
 
 function w_scale_unstable_U(m, i)
-    return w_scale_unstable(m.parameters.CSL, m.parameters.Cd_U, m.parameters.Cτ, m.parameters.Cunst,
+    return w_scale_unstable(m.parameters.CSL, m.parameters.Cd_U,
+                            m.parameters.Cτ, m.parameters.Cunst,
                             m.parameters.Cb_U, m.parameters.Cτb_U,
                             m.parameters.Cmτ_U, m.parameters.Cmb_U,
                             ωτ(m), ωb(m), d(m, i)
@@ -292,7 +294,8 @@ function w_scale_unstable_U(m, i)
 end
 
 function w_scale_unstable_T(m, i)
-    return w_scale_unstable(m.parameters.CSL, m.parameters.Cd_T, m.parameters.Cτ, m.parameters.Cunst,
+    return w_scale_unstable(m.parameters.CSL, m.parameters.Cd_T,
+                            m.parameters.Cτ, m.parameters.Cunst,
                             m.parameters.Cb_T, m.parameters.Cτb_T,
                             m.parameters.Cmτ_T, m.parameters.Cmb_T,
                             ωτ(m), ωb(m), d(m, i)
