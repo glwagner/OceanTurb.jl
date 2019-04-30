@@ -222,29 +222,36 @@ bulk_richardson_number(m, i) = bulk_richardson_number(
 Calculate the mixing depth 'h' for `model`.
 """
 function mixing_depth(m)
-    # Descend through grid until Ri rises above critical value
     ih₁ = m.grid.N + 1 # start at top.
     Ri₁ = bulk_richardson_number(m, ih₁) # should be 0.
-    while ih₁ > 2 && Ri₁ < m.parameters.CRi
+
+    # Descend through grid until Ri rises above critical value
+    while ih₁ > 1 && Ri₁ < m.parameters.CRi
         ih₁ -= 1 # descend
         Ri₁ = bulk_richardson_number(m, ih₁)
     end
 
     # Edge cases:
-    # 1. Mixing depth is 0 or whole domain:
-    if (Ri₁ < m.parameters.CRi && ih₁ == 1) || ih₁ == length(m.grid)+1
+    # 1. Mixing depth is 0:
+    if ih₁ == m.grid.N + 1
         z★ = m.grid.zf[ih₁]
 
-    # 2. Ri is infinite somewhere inside the domain.
+    # 2. Mixing depth is whole domain because Ri is always less than CRi:
+    elseif ih₁ == 1 && Ri₁ < m.parameters.CRi
+        z★ = m.grid.zf[ih₁]
+
+    # 3. Ri is infinite somewhere inside the domain.
     elseif !isfinite(Ri₁)
         z★ = m.grid.zc[ih₁]
 
     # Main case: mixing depth is in the interior.
-    else
-        ΔRi = bulk_richardson_number(m, ih₁+1) - Ri₁ # linearly interpolate to find h.
+    else # Ri₁ > CRi
+        ΔRi = bulk_richardson_number(m, ih₁+1) - Ri₁ # <0 linearly interpolate to find h.
         # x = x₀ + Δx * (y-y₀) / Δy
         z★ = m.grid.zf[ih₁] + Δf(m.grid, ih₁) * (m.parameters.CRi - Ri₁) / ΔRi
     end
+
+    -z★ < 0 && @warn "mixing depth $(-z★) is negative"
 
     return -z★ # "depth" is negative height.
 end
@@ -277,14 +284,15 @@ w_scale_stable(Cτ, Cstab, Cn, ωτ, ωb, d) = Cτ * ωτ / (1 + Cstab * d * (ω
 function w_scale_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
     dϵ = min(CSL, d)
     if dϵ < Cd * (ωτ/ωb)^3
-        return Cτ * ωτ * ( 1 + Cunst * dϵ * (ωb/ωτ)^3 )^Cmτ
+        return Cτ * ωτ * (1 + Cunst * dϵ * (ωb/ωτ)^3)^Cmτ
     else
-        return Cb * ωb * ( dϵ + Cτb * (ωτ/ωb)^3 )^Cmb
+        return Cb * ωb * (dϵ + Cτb * (ωτ/ωb)^3)^Cmb
     end
 end
 
 function w_scale_unstable_U(m, i)
-    return w_scale_unstable(m.parameters.CSL, m.parameters.Cd_U, m.parameters.Cτ, m.parameters.Cunst,
+    return w_scale_unstable(m.parameters.CSL, m.parameters.Cd_U,
+                            m.parameters.Cτ, m.parameters.Cunst,
                             m.parameters.Cb_U, m.parameters.Cτb_U,
                             m.parameters.Cmτ_U, m.parameters.Cmb_U,
                             ωτ(m), ωb(m), d(m, i)
@@ -292,7 +300,8 @@ function w_scale_unstable_U(m, i)
 end
 
 function w_scale_unstable_T(m, i)
-    return w_scale_unstable(m.parameters.CSL, m.parameters.Cd_T, m.parameters.Cτ, m.parameters.Cunst,
+    return w_scale_unstable(m.parameters.CSL, m.parameters.Cd_T,
+                            m.parameters.Cτ, m.parameters.Cunst,
                             m.parameters.Cb_T, m.parameters.Cτb_T,
                             m.parameters.Cmτ_T, m.parameters.Cmb_T,
                             ωτ(m), ωb(m), d(m, i)
