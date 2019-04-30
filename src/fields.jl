@@ -31,8 +31,8 @@ There are two types of fields:
   1. Fields defined at cell centers with dimension `N+2`: `Field{Cell}`
   2. Fields defined at cell interfaces with dimension `N+1`: `Field{Face}`
 =#
-import Base: +, *, -, setindex!, getindex, eachindex, lastindex, similar, eltype, length,
-             @propagate_inbounds
+import Base: +, *, -, ^, setindex!, getindex, eachindex, lastindex, similar,
+             eltype, length, @propagate_inbounds
 
 default_arraytype(T) = Array{T, 1}
 
@@ -270,6 +270,8 @@ for op in (:+, :-, :*)
         end
     end
 end
+
+^(b::Number, c::AbstractField) = c.data.^2
 
 #
 # Differential operators and such for fields
