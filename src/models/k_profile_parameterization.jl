@@ -285,9 +285,9 @@ function w_scale_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d
     dϵ = min(CSL, d)
     dϵ < 0.0 && @show dϵ d
     if dϵ < Cd * (ωτ/ωb)^3
-        return Cτ * ωτ * max(0, 1 + Cunst * dϵ * (ωb/ωτ)^3)^Cmτ
+        return Cτ * ωτ * (1 + Cunst * dϵ * (ωb/ωτ)^3)^Cmτ
     else
-        return Cb * ωb * max(0, dϵ + Cτb * (ωτ/ωb)^3)^Cmb
+        return Cb * ωb * (dϵ + Cτb * (ωτ/ωb)^3)^Cmb
     end
 end
 
