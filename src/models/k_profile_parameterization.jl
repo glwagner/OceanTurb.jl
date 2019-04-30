@@ -222,29 +222,36 @@ bulk_richardson_number(m, i) = bulk_richardson_number(
 Calculate the mixing depth 'h' for `model`.
 """
 function mixing_depth(m)
-    # Descend through grid until Ri rises above critical value
     ih₁ = m.grid.N + 1 # start at top.
     Ri₁ = bulk_richardson_number(m, ih₁) # should be 0.
-    while ih₁ > 2 && Ri₁ < m.parameters.CRi
+
+    # Descend through grid until Ri rises above critical value
+    while ih₁ > 1 && Ri₁ < m.parameters.CRi
         ih₁ -= 1 # descend
         Ri₁ = bulk_richardson_number(m, ih₁)
     end
 
     # Edge cases:
-    # 1. Mixing depth is 0 or whole domain:
-    if (Ri₁ > m.parameters.CRi && ih₁ == 1) || ih₁ == length(m.grid)+1
+    # 1. Mixing depth is 0:
+    if ih₁ == m.grid.N + 1
         z★ = m.grid.zf[ih₁]
 
-    # 2. Ri is infinite somewhere inside the domain.
+    # 2. Mixing depth is whole domain because Ri is always less than CRi:
+    elseif ih₁ == 1 && Ri₁ < m.parameters.CRi
+        z★ = m.grid.zf[ih₁]
+
+    # 3. Ri is infinite somewhere inside the domain.
     elseif !isfinite(Ri₁)
         z★ = m.grid.zc[ih₁]
 
     # Main case: mixing depth is in the interior.
-    else
-        ΔRi = bulk_richardson_number(m, ih₁+1) - Ri₁ # linearly interpolate to find h.
+    else # Ri₁ > CRi
+        ΔRi = bulk_richardson_number(m, ih₁+1) - Ri₁ # <0 linearly interpolate to find h.
         # x = x₀ + Δx * (y-y₀) / Δy
         z★ = m.grid.zf[ih₁] + Δf(m.grid, ih₁) * (m.parameters.CRi - Ri₁) / ΔRi
     end
+
+    -z★ < 0 && @warn "mixing depth $(-z★) is negative"
 
     return -z★ # "depth" is negative height.
 end
@@ -276,7 +283,7 @@ w_scale_stable(Cτ, Cstab, Cn, ωτ, ωb, d) = Cτ * ωτ / (1 + Cstab * d * (ω
 "Return the vertical velocity scale at scaled depth dϵ for an unstable boundary layer."
 function w_scale_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
     dϵ = min(CSL, d)
-    dϵ < 0.0 && @show dϵ
+    dϵ < 0.0 && @show dϵ d
     if dϵ < Cd * (ωτ/ωb)^3
         return Cτ * ωτ * max(0, 1 + Cunst * dϵ * (ωb/ωτ)^3)^Cmτ
     else
