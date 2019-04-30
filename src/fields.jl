@@ -271,7 +271,11 @@ for op in (:+, :-, :*)
     end
 end
 
-^(b::Number, c::AbstractField) = c.data.^2
+function ^(c::AbstractField, b::Number)
+    d = similar(c)
+    set!(d, c.data.^b)
+    return d
+end
 
 #
 # Differential operators and such for fields
