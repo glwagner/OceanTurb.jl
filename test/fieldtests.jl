@@ -170,14 +170,14 @@ function test_ghost_cell_flux(T)
 end
 
 function test_absolute_error(T)
-    grid = UniformGrid(T, 3, 3.0)
+    grid = UniformGrid(T, 3, 3)
     c = CellField([0, 0, 0], grid)
     d = CellField([2, 2, 2], grid)
-    absolute_error(c, d) == 4
+    absolute_error(c, d) == 2
 end
 
 function test_relative_error(T)
-    grid = UniformGrid(T, 3, 3.0)
+    grid = UniformGrid(T, 3, 1)
     c = CellField([0, 0, 0], grid)
     d = CellField([2, 2, 2], grid)
     relative_error(c, d) == 1

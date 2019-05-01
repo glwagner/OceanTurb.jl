@@ -34,6 +34,8 @@ There are two types of fields:
 import Base: +, *, -, ^, setindex!, getindex, eachindex, lastindex, similar,
              eltype, length, @propagate_inbounds
 
+import Statistics: mean
+
 default_arraytype(T) = Array{T, 1}
 
 struct CellField{A, G, T} <: AbstractField{A, G, T}
@@ -191,13 +193,26 @@ function set_default_bcs!(c)
     return nothing
 end
 
-function integral(c::CellField)
-    total = 0
+function integral(fn::Function, c::CellField)
+    total = zero(eltype(c))
     for i in eachindex(c)
-        @inbounds total += c[i] * Δf(c.grid, i)
+        @inbounds total += fn(c[i]) * Δf(c, i)
     end
     return total
 end
+
+integral(c::CellField) = integral(x->x, c)
+
+"""
+    mean([f], c::CellField)
+
+Compute the mean of the field `c` over its domain,
+applying the function `f` to each element.
+`f` is the identity function f(x) = x by default.
+"""
+mean(fn::Function, c::CellField) = integral(fn, c) / height(c)
+mean(c::CellField) = mean(x->x, c)
+
 
 function integrate_range(c::CellField, i₁::Int, i₂::Int)
     total = 0
@@ -384,15 +399,27 @@ Return the interpolation of `f` onto cell point `i`.
 @propagate_inbounds oncell(f::FaceField, i) = 0.5*(f.data[i+1] + f.data[i])
 @propagate_inbounds oncell(c::CellField, i) = c[i]
 
-"Compute the absolute error between `c` and `d`."
-function absolute_error(c::CellField, d::CellField; p=2)
+"""
+    absolute_error(c, d, p=2)
+
+Compute the absolute error between `c` and `d` with norm `p`, defined as
+
+error = (L^{-1} \int (c-d)^p dz)^(1/p) .
+"""
+function absolute_error(c::CellField, d::CellField, p=2)
     if length(c) != length(d)
-        d_c = CellField(c.grid)
-        set!(d_c, d)
+        𝒹 = similar(c)
+        set!(𝒹, d)
     else
-        d_c = d
+        𝒹 = d
     end
-    return mean((c.data .- d_c.data).^p)
+
+    total = zero(eltype(c))
+    for i in eachindex(c)
+        @inbounds total += (c[i] - 𝒹[i])^p * Δf(c, i)
+    end
+
+    return  ( total / height(c) )^(1/p)
 end
 
-relative_error(c::CellField, d::CellField; p=2) = absolute_error(c, d; p=p) / mean(d.data.^p)
+relative_error(c::CellField, d::CellField, p=2) = absolute_error(c, d, p) / mean(x -> x^p, d)^(1/p)
