@@ -168,3 +168,17 @@ function test_ghost_cell_flux(T)
     (OceanTurb.flux(0, κ, c, 1) ≈ Fc_bottom
         && OceanTurb.flux(0, κ, c, grid.N+1) ≈ Fc_top)
 end
+
+function test_absolute_error(T)
+    grid = UniformGrid(T, 3, 3)
+    c = CellField([0, 0, 0], grid)
+    d = CellField([2, 2, 2], grid)
+    absolute_error(c, d) == 2
+end
+
+function test_relative_error(T)
+    grid = UniformGrid(T, 3, 1)
+    c = CellField([0, 0, 0], grid)
+    d = CellField([2, 2, 2], grid)
+    relative_error(c, d) == 1
+end

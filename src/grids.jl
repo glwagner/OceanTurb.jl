@@ -52,7 +52,7 @@ struct UniformGrid{T, R} <: Grid{T, R}
   zf :: R
 end
 
-function UniformGrid(T, N, L)
+function UniformGrid(T, N::Int, L::Number)
   Δ = convert(T, L/N)
   L = convert(T, L)
   half_Δ = convert(T, 0.5Δ)

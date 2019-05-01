@@ -61,6 +61,8 @@ export # This file, core functionality:
     integral,
     top_flux_div,
     bottom_flux_div,
+    absolute_error,
+    relative_error,
 
     # timesteppers.jl
     Equation,
@@ -98,6 +100,7 @@ export # This file, core functionality:
     EDMF
 
 using
+    Statistics,
     StaticArrays,
     OffsetArrays,
     LinearAlgebra
