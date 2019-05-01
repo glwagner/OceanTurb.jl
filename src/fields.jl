@@ -404,7 +404,7 @@ Return the interpolation of `f` onto cell point `i`.
 
 Compute the absolute error between `c` and `d` with norm `p`, defined as
 
-error = (L^{-1} \int (c-d)^p dz)^(1/p) .
+error = (L^{-1} int (c-d)^p dz)^(1/p) .
 """
 function absolute_error(c::CellField, d::CellField, p=2)
     if length(c) != length(d)
