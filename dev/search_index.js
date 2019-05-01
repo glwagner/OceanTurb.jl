@@ -329,6 +329,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "man/functions/#OceanTurb.absolute_error",
+    "page": "Functions",
+    "title": "OceanTurb.absolute_error",
+    "category": "function",
+    "text": "absolute_error(c, d, p=2)\n\nCompute the absolute error between c and d with norm p, defined as\n\nerror = (L^{-1} int (c-d)^p dz)^(1/p) .\n\n\n\n\n\n"
+},
+
+{
     "location": "man/functions/#OceanTurb.arraytype-Union{Tuple{Grid{T,A} where A<:AbstractArray}, Tuple{T}} where T",
     "page": "Functions",
     "title": "OceanTurb.arraytype",
