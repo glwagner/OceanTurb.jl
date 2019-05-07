@@ -15,25 +15,13 @@ import .KPP: ∂B∂z
 const nsol = 4
 @solution U V T S
 
-struct Parameters{T} <: AbstractParameters
-    Cν₀ :: T
-    Cν₁ :: T
-    Cκ₀ :: T
-    Cκ₁ :: T
-    Cc  :: T
-    Cn  :: T
-end
-
-function Parameters(T=Float64;
-    ν₀ = 1e-4,
-    ν₁ = 1e-2,
-    κ₀ = 1e-5,
-    κ₁ = 1e-2,
-    c  = 5,
-    n  = 2
-    )
-
-    Parameters{T}(ν₀, ν₁, κ₀, κ₁, c, n)
+Base.@kwdef struct Parameters{T} <: AbstractParameters
+    Cν₀ :: T = 1e-4
+    Cν₁ :: T = 1e-2
+    Cκ₀ :: T = 1e-5
+    Cκ₁ :: T = 1e-2
+    Cc  :: T = 5.0
+    Cn  :: T = 2.0
 end
 
 struct Model{TS, G, T} <: AbstractModel{TS, G, T}

@@ -13,36 +13,20 @@ import .KPP: ∂B∂z
 const nsol = 5
 @prefixed_solution ZeroPlume U V T S e
 
-struct Parameters{T} <: AbstractParameters
-         Cε :: T  # Surface layer fraction
-         Cκ :: T  # Von Karman constant
-         CK :: T  # Minimum unresolved turbulence kinetic energy
+Base.@kwdef struct Parameters{T} <: AbstractParameters
+         Cε :: T = 2.0    # Surface layer fraction
+         Cκ :: T = 0.41   # Von Karman constant
+         CK :: T = 0.1    # Minimum unresolved turbulence kinetic energy
 
-    Ca_stab :: T  # Stable buoyancy flux parameter for wind-driven turbulence
-    Ca_unst :: T  # Unstable buoyancy flux parameter for wind-driven turbulence
+    Ca_stab :: T = 2.7    # Stable buoyancy flux parameter for wind-driven turbulence
+    Ca_unst :: T = -100.0 # Unstable buoyancy flux parameter for wind-driven turbulence
 
-    Cn_stab :: T  # Stable buoyancy flux parameter for wind-driven turbulence
-    Cn_unst :: T  # Unstable buoyancy flux parameter for wind-driven turbulence
+    Cn_stab :: T = 0.2    # Stable buoyancy flux parameter for wind-driven turbulence
+    Cn_unst :: T = -1.0   # Unstable buoyancy flux parameter for wind-driven turbulence
 
-        KU₀ :: T  # Interior viscosity for velocity
-        KT₀ :: T  # Interior diffusivity for temperature
-        KS₀ :: T  # Interior diffusivity for salinity
-end
-
-function Parameters(T=Float64;
-         Cε = 2.0,
-         Cκ = 0.41,
-         CK = 0.1,
-    Ca_stab = 2.7,
-    Ca_unst = -100,
-    Cn_stab = 0.2,
-    Cn_unst = -1,
-        KU₀ = 1e-6,
-        KT₀ = 1e-7,
-        KS₀ = 1e-9
-    )
-
-    Parameters{T}(Cε, Cκ, CK, Ca_stab, Ca_unst, Cn_stab, Cn_unst, KU₀, KT₀, KS₀)
+        KU₀ :: T = 1e-6   # Interior viscosity for velocity
+        KT₀ :: T = 1e-7   # Interior diffusivity for temperature
+        KS₀ :: T = 1e-9   # Interior diffusivity for salinity
 end
 
 mutable struct State{T} <: FieldVector{5, T}

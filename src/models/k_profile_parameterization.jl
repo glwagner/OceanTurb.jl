@@ -14,69 +14,38 @@ const nsol = 4
 
 Construct KPP parameters.
 """
-struct Parameters{T} <: AbstractParameters
-    CSL   :: T  # Surface layer fraction
-    Cτ    :: T  # Von Karman constant
-    CNL   :: T  # Non-local flux proportionality constant
+@Base.kwdef struct Parameters{T<:AbstractFloat} <: AbstractParameters
+    CSL   :: T  = 0.1   # Surface layer fraction
+    Cτ    :: T  = 0.4   # Von Karman constant
+    CNL   :: T  = 6.33  # Non-local flux proportionality constant
 
-    Cstab :: T  # Stable buoyancy flux parameter for wind-driven turbulence
-    Cunst :: T  # Unstable buoyancy flux parameter for wind-driven turbulence
+    Cstab :: T  = 2.0   # Stable buoyancy flux parameter for wind-driven turbulence
+    Cunst :: T  = 6.4   # Unstable buoyancy flux parameter for wind-driven turbulence
 
-    Cb_U  :: T  # Buoyancy flux parameter for convective turbulence
-    Cτb_U :: T  # Wind stress parameter for convective turbulence
-    Cb_T  :: T  # Buoyancy flux parameter for convective turbulence
-    Cτb_T :: T  # Wind stress parameter for convective turbulence
+       Cn :: T  = 1.0   # Exponent for effect of stable buoyancy forcing on wind mixing
+    Cmτ_U :: T  = 0.25  # Exponent for effect of unstable buoyancy forcing on wind mixing of U
+    Cmτ_T :: T  = 0.5   # Exponent for effect of unstable buoyancy forcing on wind mixing of T
+    Cmb_U :: T  = 1/3   # Exponent for the effect of wind on convective mixing of U
+    Cmb_T :: T  = 1/3   # Exponent for effect of wind on convective mixing of T
 
-    Cd_U  :: T  # Wind mixing regime threshold for momentum
-    Cd_T  :: T  # Wind mixing regime threshold for tracers
+    Cd_U  :: T  = 0.5   # Wind mixing regime threshold for momentum
+    Cd_T  :: T  = 2.5   # Wind mixing regime threshold for tracers
 
-    CRi   :: T  # Critical bulk Richardson number
-    CKE   :: T  # Unresolved turbulence parameter
-    CKE₀  :: T  # Minimum unresolved turbulence kinetic energy
+    Cb_U  :: T  = 0.599 # Buoyancy flux parameter for convective turbulence
+    Cb_T  :: T  = 1.36  # Buoyancy flux parameter for convective turbulence
+    Cτb_U :: T  = (Cτ / Cb_U)^(1/Cmb_U) * (1 + Cunst*Cd_U)^(Cmτ_U/Cmb_U) - Cd_U  # Wind stress parameter for convective turbulence
+    Cτb_T :: T  = (Cτ / Cb_T)^(1/Cmb_T) * (1 + Cunst*Cd_T)^(Cmτ_T/Cmb_T) - Cd_T  # Wind stress parameter for convective turbulence
 
-       Cn :: T  # Exponent for effect of stable buoyancy forcing on wind mixing
-    Cmτ_U :: T  # Exponent for effect of unstable buoyancy forcing on wind mixing of U
-    Cmτ_T :: T  # Exponent for effect of unstable buoyancy forcing on wind mixing of T
-    Cmb_U :: T  # Exponent for effect of wind on convective mixing of U
-    Cmb_T :: T  # Exponent for effect of wind on convective mixing of T
+    CRi   :: T  = 0.3   # Critical bulk Richardson number
+    CKE   :: T  = 4.32  # Unresolved turbulence parameter
+    CKE₀  :: T  = 1e-11 # Minimum unresolved turbulence kinetic energy
 
-    KU₀   :: T  # Interior viscosity for velocity
-    KT₀   :: T  # Interior diffusivity for temperature
-    KS₀   :: T  # Interior diffusivity for salinity
+    KU₀   :: T  = 1e-6  # Interior viscosity for velocity
+    KT₀   :: T  = 1e-7  # Interior diffusivity for temperature
+    KS₀   :: T  = 1e-9  # Interior diffusivity for salinity
 end
 
-function Parameters(T=Float64;
-      CSL = 0.1,
-       Cτ = 0.4,
-      CNL = 6.33,
-    Cstab = 2.0,
-    Cunst = 6.4,
-     Cb_U = 0.599,
-     Cb_T = 1.36,
-     Cd_U = 0.5,
-     Cd_T = 2.5,
-      CRi = 0.3,
-      CKE = 4.32,
-       Cn = 1.0,
-    Cmτ_U = 1/4,
-    Cmτ_T = 1/2,
-    Cmb_U = 1/3,
-    Cmb_T = 1/3,
-       K₀ = 1e-5, KU₀=K₀, KT₀=K₀, KS₀=K₀,
-     # These should not be changed under ordinary circumstances:
-     CKE₀ = 1e-11,
-     Cτb_U = (Cτ / Cb_U)^(1/Cmb_U) * (1 + Cunst*Cd_U)^(Cmτ_U/Cmb_U) - Cd_U,
-     Cτb_T = (Cτ / Cb_T)^(1/Cmb_T) * (1 + Cunst*Cd_T)^(Cmτ_T/Cmb_T) - Cd_T
-     )
-
-     Parameters{T}(CSL, Cτ, CNL, Cstab, Cunst,
-                   Cb_U, Cτb_U, Cb_T, Cτb_T, Cd_U, Cd_T,
-                   CRi, CKE, CKE₀,
-                   Cn, Cmτ_U, Cmτ_T,Cmb_U, Cmb_T,
-                   KU₀, KT₀, KS₀)
-end
-
-# Shape functions (these shoul become parameters eventually).
+# Shape functions.
 # 'd' is a non-dimensional depth coordinate.
 default_shape_N(d) = 0 < d < 1 ? d*(1-d)^2 : 0
 const default_shape_K = default_shape_N
