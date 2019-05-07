@@ -188,7 +188,7 @@ function test_update_state(; N=10, L=20, Fθ=5.1e-3)
 end
 
 function test_bulk_richardson_number(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
-                                       CKE₀=0, γ=0.01, N=20, L=20, Fb=2.1e-5)
+                                       CKE₀=0.0, γ=0.01, N=20, L=20, Fb=2.1e-5)
     parameters = KPP.Parameters(CRi=CRi, CKE=CKE, CKE₀=CKE₀, CSL=0.1/N)
     constants = KPP.Constants(g=g, α=α)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
@@ -224,7 +224,7 @@ end
 
 function test_mixing_depth_convection(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
                                        γ=0.01, N=200, L=20, Fb=4.1e-5)
-    parameters = KPP.Parameters(CRi=CRi, CKE=CKE, CKE₀=0, CSL=0.1/N)
+    parameters = KPP.Parameters(CRi=CRi, CKE=CKE, CKE₀=0.0, CSL=0.1/N)
     constants = KPP.Constants(g=g, α=α)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
@@ -249,10 +249,10 @@ function test_mixing_depth_convection(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
     isapprox(h, h_answer, rtol=1e-3)
 end
 
-function test_mixing_depth_shear(; CSL=0.5, N=20, L=20, CRi=1)
+function test_mixing_depth_shear(; CSL=0.5, N=20, L=20, CRi=1.0)
     T₀ = 1
     U₀ = 3
-    parameters = KPP.Parameters(CRi=CRi, CSL=CSL, CKE₀=0)
+    parameters = KPP.Parameters(CRi=CRi, CSL=CSL, CKE₀=0.0)
     constants = KPP.Constants(g=1, α=1)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
@@ -313,7 +313,7 @@ end
 
 function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, CSL=1e-16)
     # Zero wind + convection => w_scale_U = Cb_U * CSL^(1/3) * ωb.
-    parameters = KPP.Parameters(CRi=1, CKE=1, CKE₀=0, CSL=CSL, Cb_U=Cb_U, Cb_T=Cb_T)
+    parameters = KPP.Parameters(CRi=1.0, CKE=1.0, CKE₀=0.0, CSL=CSL, Cb_U=Cb_U, Cb_T=Cb_T)
     constants = KPP.Constants(g=1, α=1)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
@@ -336,7 +336,7 @@ function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, CSL=
      KPP.w_scale_S(model, i) ≈ Cb_T * CSL^(1/3) * ωb )
 end
 
-function test_turb_velocity_pure_wind(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1)
+function test_turb_velocity_pure_wind(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1.0)
     T₀ = 1
     U₀ = 3
     parameters = KPP.Parameters(CRi=CRi, Cτ=Cτ, CSL=CSL)
@@ -365,7 +365,7 @@ function test_turb_velocity_pure_wind(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1)
 end
 
 
-function test_turb_velocity_wind_stab(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1, Cstab=0.3)
+function test_turb_velocity_wind_stab(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1.0, Cstab=0.3)
     T₀ = 1
     U₀ = 3
     parameters = KPP.Parameters(CRi=CRi, Cτ=Cτ, CSL=CSL, Cstab=Cstab)
@@ -399,11 +399,11 @@ function test_turb_velocity_wind_stab(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1, Cst
      KPP.w_scale_S(model, id) ≈ w_scale )
 end
 
-function test_turb_velocity_wind_unstab(; CKE=0, CSL=0.5, Cτ=0.7, N=20,
+function test_turb_velocity_wind_unstab(; CKE=0.0, CSL=0.5, Cτ=0.7, N=20,
                                         L=20, CRi=(1-0.5CSL), Cunst=0.3)
     T₀ = 1
     U₀ = 3
-    parameters = KPP.Parameters(CRi=CRi, Cτ=Cτ, CKE=CKE, CKE₀=0,
+    parameters = KPP.Parameters(CRi=CRi, Cτ=Cτ, CKE=CKE, CKE₀=0.0,
                                 CSL=CSL, Cunst=Cunst, Cd_U=Inf, Cd_T=Inf)
     constants = KPP.Constants(g=1, α=1)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
@@ -445,12 +445,12 @@ function test_turb_velocity_wind_unstab(; CKE=0, CSL=0.5, Cτ=0.7, N=20,
      KPP.w_scale_S(model, id2) ≈ w_scale_T2 )
 end
 
-function test_conv_velocity_wind(; CKE=0, CKE₀=0, CSL=0.5, Cτ=0.7, N=20, L=20, CRi=(1-0.5CSL),
+function test_conv_velocity_wind(; CKE=0.0, CKE₀=0.0, CSL=0.5, Cτ=0.7, N=20, L=20, CRi=(1-0.5CSL),
                                  Cb_U=1.1, Cb_T=0.1)
     T₀ = 1
     U₀ = 3
 
-    parameters = KPP.Parameters(CRi=CRi, Cτ=Cτ, CKE=CKE, CKE₀=0, CSL=CSL, Cd_U=0, Cd_T=0,
+    parameters = KPP.Parameters(CRi=CRi, Cτ=Cτ, CKE=CKE, CKE₀=0.0, CSL=CSL, Cd_U=0.0, Cd_T=0.0,
                                 Cb_U=1.1, Cb_T=0.1)
 
     constants = KPP.Constants(g=1, α=1)
@@ -498,7 +498,7 @@ function test_conv_velocity_wind(; CKE=0, CKE₀=0, CSL=0.5, Cτ=0.7, N=20, L=20
 end
 
 function test_diffusivity_plain(; K₀=1.1)
-    parameters = KPP.Parameters(K₀=K₀)
+    parameters = KPP.Parameters(KU₀=K₀, KT₀=K₀, KS₀=K₀)
     model = KPP.Model(parameters=parameters)
     KPP.update_state!(model)
 
@@ -522,7 +522,7 @@ end
 
 
 function test_kpp_diffusion_cosine(stepper=:ForwardEuler)
-    parameters = KPP.Parameters(K₀=1)
+    parameters = KPP.Parameters(KT₀=1.0, KS₀=1.0)
     model = KPP.Model(N=100, L=π/2, parameters=parameters, stepper=stepper)
     z = model.grid.zc
 
