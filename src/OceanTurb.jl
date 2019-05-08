@@ -132,6 +132,8 @@ include("fields.jl")
 include("equations.jl")
 include("timesteppers.jl")
 
+include("plotting.jl")
+
 mutable struct Clock{T}
   time :: T
   iter :: Int
