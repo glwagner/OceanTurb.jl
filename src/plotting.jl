@@ -2,7 +2,8 @@ module Plotting
 
 export
     plot,
-    removepines,
+    removespine,
+    removespines,
     cornerspines,
     bottomspine
 
