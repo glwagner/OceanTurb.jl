@@ -42,7 +42,8 @@ using
     LinearAlgebra
 
 import OceanTurb.KPP: 𝒲_unstable, 𝒲_stable, ωτ, ωb, d,
-                      isunstable, isforced, unresolved_kinetic_energy
+                      isunstable, isforced, unresolved_kinetic_energy,
+                      ∂B∂z
 
 const nsol = 4
 @solution U V T S
@@ -58,7 +59,7 @@ Base.@kwdef struct ROMSMixingDepthParameters{T} <: AbstractParameters
      CSL :: T = 0.1  # Surface layer fraction
      CRi :: T = 0.3  # Critical bulk Richardson number
      CKE :: T = 5.07 # Minimum unresolved turbulence kinetic energy
-     CEk :: T = 211  # Unresolved turbulence parameter
+     CEk :: T = 211. # Unresolved turbulence parameter
 end
 
 Base.@kwdef struct LMDCounterGradientFluxParameters{T} <: AbstractParameters
@@ -155,12 +156,13 @@ function Model(; N=10, L=1.0,
              bcs = BoundaryConditions((ZeroFluxBoundaryConditions() for i=1:nsol)...)
     )
 
-    state = State(diffusivity, nonlocalflux, mixingdepth, grid)
-    solution = Solution((CellField(grid) for i=1:nsol)...)
-    K = Accessory{Function}(KU, KV, KT, KS)
-    R = Accessory{Function}(RU, RV, RT, RS)
+      K = Accessory{Function}(KU, KV, KT, KS)
+      R = Accessory{Function}(RU, RV, RT, RS)
     eqn = Equation(R, K, update_state!)
-    lhs = OceanTurb.build_lhs(solution)
+
+       state = State(diffusivity, nonlocalflux, mixingdepth, grid)
+    solution = Solution((CellField(grid) for i=1:nsol)...)
+         lhs = OceanTurb.build_lhs(solution)
 
     timestepper = Timestepper(stepper, eqn, solution, lhs)
 
@@ -181,7 +183,7 @@ function update_state!(m)
     m.state.Fs = getbc(m, m.bcs.S.top)
     m.state.Fb = m.constants.g * (m.constants.α * m.state.Fθ - m.constants.β * m.state.Fs)
     update_mixing_depth!(m)
-    update_nonlocalflux!(m)
+    update_nonlocal_flux!(m)
     return nothing
 end
 
@@ -190,7 +192,7 @@ function update_mixing_depth!(m::Model{K, NL, <:LMDMixingDepthParameters}) where
     return nothing
 end
 
-h_weight(h, CSL, zf, i) = @inbounds -zf[i] / (zf[i] + CSL*h)
+h_weight(h, CSL, zf, i) = @inbounds -zf[i] / (CSL*h - zf[i])
 h_weight(m, i) = h_weight(m.state.h, m.mixingdepth.CSL, m.grid.zf, i)
 
 function h_kernel(U, V, T, S, CRi, CEk, g, α, β, f, i)
@@ -202,9 +204,9 @@ h_kernel(m, i) = h_kernel(m.solution.U, m.solution.V, m.solution.T, m.solution.S
                             m.constants.g, m.constants.α, m.constants.β, m.constants.f, i)
 
 function unresolved_kinetic_energy(m, i)
-    @inbounds unresolved_kinetic_energy(m.grid.zf[i], ∂B∂z(T, S, g, α, β, i),
-                                            m.state.Fb, m.mixingdepth.CKE, 0,
-                                            m.constants.g, m.constants.α, m.constants.β)
+    @inbounds unresolved_kinetic_energy(-m.grid.zf[i],
+        ∂B∂z(m.solution.T, m.solution.S, m.constants.g, m.constants.α, m.constants.β, i),
+        m.state.Fb, m.mixingdepth.CKE, 0, m.constants.g, m.constants.α, m.constants.β)
 end
 
 "Calculate the mixing depth criterion function by integrating from z=0 downwards."
@@ -212,10 +214,11 @@ function mixing_depth_criterion!(h_crit, m)
     @inbounds h_crit[m.grid.N+1] = 0
 
     for i = m.grid.N:-1:1
-        @inbounds h_crit[i] = (
-            h_crit[i+1] + h_weight(m, i) * h_kernel(m, i) * Δc(m.grid, i)
-                - unresolved_kinetic_energy(m, i) / m.grid.zf[i]
-        )
+        @inbounds h_crit[i] = h_crit[i+1] + h_weight(m, i) * h_kernel(m, i) * Δc(m.grid, i)
+    end
+
+    for i in eachindex(h_crit)
+        @inbounds h_crit[i] -= unresolved_kinetic_energy(m, i) / m.grid.zf[i]
     end
 
     return nothing
@@ -224,7 +227,7 @@ end
 linear_interp(y★, x₀, y₀, Δx, Δy) = x₀ + Δx * (y★ - y₀) / Δy
 
 function mixing_depth(m::Model{K, NL, <:ROMSMixingDepthParameters}) where {K, NL}
-    ih₁ = findprev(x -> x<=0, m.state.h_criterion, m.grid.N)
+    ih₁ = findprev(x -> x<=0, m.state.h_criterion.data, m.grid.N)
     @inbounds begin
         if ih₁ === nothing # Mixing depth is entire grid
             z★ = m.grid.zf[1]
@@ -241,12 +244,12 @@ function mixing_depth(m::Model{K, NL, <:ROMSMixingDepthParameters}) where {K, NL
 end
 
 function update_mixing_depth!(m::Model{K, NL, <:ROMSMixingDepthParameters}) where {K, NL}
-    mixing_depth_criterion!(m.state.h_criterion, m.grid.N)
+    mixing_depth_criterion!(m.state.h_criterion, m)
     m.state.h = mixing_depth(m)
     return nothing
 end
 
-update_nonlocalflux!(m) = nothing
+update_nonlocal_flux!(m) = nothing
 
 
 #
