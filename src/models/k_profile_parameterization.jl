@@ -47,8 +47,8 @@ end
 
 # Shape functions.
 # 'd' is a non-dimensional depth coordinate.
-default_shape_N(d) = 0 < d < 1 ? d*(1-d)^2 : 0
-const default_shape_K = default_shape_N
+default_NL_shape(d) = ifelse(0<d<1, d*(1-d)^2, zero(d))
+const default_K_shape = default_NL_shape
 
 mutable struct State{T} <: FieldVector{6, T}
     Fu :: T
@@ -105,13 +105,12 @@ function Model(; N=10, L=1.0,
     return Model(Clock(), grid, timestepper, solution, bcs, parameters, constants, State())
 end
 
-# Note: to increase readability, we use 'm' to refer to 'model' in function
-# definitions below.
-#
+# Note: we use 'm' to refer to 'model' in function definitions below.
 
-## ** The K-Profile-Parameterization! **
-K_KPP(h, 𝒲, d, shape=default_shape_K) = 0 < d < 1 ? max(0, h * 𝒲 * shape(d)) : 0
-d(m, i) = -m.grid.zf[i] / m.state.h
+## ** The K-Profile-Parameterization **
+K_KPP(h, 𝒲, d, shape=default_K_shape) = ifelse(0<d<1, max(zero(h), h*𝒲*shape(d)), zero(h))
+
+d(m, i) = ifelse(m.state.h>0, -m.grid.zf[i]/m.state.h, zero(m.state.h))
 
 "Return the buoyancy gradient at face point i."
 ∂B∂z(T, S, g, α, β, i) = g * (α*∂z(T, i) - β*∂z(S, i))
@@ -306,7 +305,7 @@ const 𝒲_S = 𝒲_T
 #
 
 """
-    N(CNL, flux, d, shape=default_shape)
+    NL(CNL, flux, d, shape=default_shape)
 
 Returns the nonlocal flux, N = CNL*flux*shape(d),
 where `flux` is the flux of some quantity out of the surface,
@@ -318,18 +317,18 @@ a positive surface flux implies negative surface flux divergence,
 which implies a reduction to the quantity in question.
 For example, positive heat flux out of the surface implies cooling.
 """
-N(CNL, flux, d, shape=default_shape_N) = CNL * flux * shape(d)
+NL(CNL, flux, d, shape=default_NL_shape) = CNL * flux * shape(d)
 
-function ∂N∂z(CNL, Fϕ, d, Δf, m)
+function ∂NL∂z(CNL, Fϕ, d, Δf, m)
     if isunstable(m)
-        return (N(CNL, Fϕ, d) - N(CNL, Fϕ, d)) / Δf
+        return (NL(CNL, Fϕ, d) - NL(CNL, Fϕ, d)) / Δf
     else
         return 0
     end
 end
 
-∂NT∂z(m, i) = @inbounds ∂N∂z(m.parameters.CNL, m.state.Fθ, d(m, i), Δf(m.grid, i), m)
-∂NS∂z(m, i) = @inbounds ∂N∂z(m.parameters.CNL, m.state.Fs, d(m, i), Δf(m.grid, i), m)
+∂NLT∂z(m, i) = @inbounds ∂NL∂z(m.parameters.CNL, m.state.Fθ, d(m, i), Δf(m.grid, i), m)
+∂NLS∂z(m, i) = @inbounds ∂NL∂z(m.parameters.CNL, m.state.Fs, d(m, i), Δf(m.grid, i), m)
 
 #
 # Equation specification
@@ -346,7 +345,7 @@ const KV = KU
 
 @inline RU(m, i) = RU(m.constants.f, m.solution.V, i)
 @inline RV(m, i) = RV(m.constants.f, m.solution.U, i)
-@inline RT(m, i) = -∂NT∂z(m, i)
-@inline RS(m, i) = -∂NS∂z(m, i)
+@inline RT(m, i) = -∂NLT∂z(m, i)
+@inline RS(m, i) = -∂NLS∂z(m, i)
 
 end # module
