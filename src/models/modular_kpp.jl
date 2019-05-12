@@ -4,13 +4,13 @@ Here we implement a 'modular' KPP model, with three interchangable components:
 
 1. A model for mixing depth, h
 2. A model for the local diffusivity, K
-3. A model for the nonlocal flux term, NL
+3. A model for the nonlocal flux term, M
 
 Note below the following acronyms:
 
 * LMD94: Large, McWilliams, and Doney (1994) "Oceanic vertical mixing..."
 * RH18: Riechl and Hallberg (2018) "ePBL"
-* SST07: Siebsma, Soares and Teixiera (2007) "An eddy diffusivity mass flux..."
+* LMD07: Siebsma, Soares and Teixiera (2007) "An eddy diffusivity mass flux..."
 
 For mixing depth models we have
 
@@ -31,142 +31,142 @@ For nonlocal flux models we have
 
 module ModularKPP
 
+export
+    LMDMixingDepthParameters,
+    LMDCounterGradientFluxParameters,
+    LMDDiffusivityParameters,
+    HoltslagDiffusivityParameters
+
 using
     OceanTurb,
     LinearAlgebra
 
-import OceanTurb: Constants
+import OceanTurb.KPP: 𝒲_unstable, 𝒲_stable, ωτ, ωb, d,
+                      isunstable, isforced, unresolved_kinetic_energy
 
+const nsol = 4
 @solution U V T S
 
-struct LMDMixingDepthParameters{T} <: AbstractParameters
-    CSL  :: T  # Surface layer fraction
-    CRi  :: T  # Critical bulk Richardson number
-    CKE  :: T  # Unresolved turbulence parameter
+Base.@kwdef struct LMDMixingDepthParameters{T} <: AbstractParameters
+     CSL :: T = 0.1   # Surface layer fraction
+     CRi :: T = 0.3   # Critical bulk Richardson number
+     CKE :: T = 4.32  # Unresolved turbulence parameter
+    CKE₀ :: T = 1e-11 # Minimum unresolved turbulence kinetic energy
 end
 
-function LMDMixingDepthParameters(T=Float64;
-      CSL = 0.1,
-      CRi = 0.3,
-      CKE = 4.32,
-     )
-     LMDMixingDepthParameters{T}(CSL, CRi, CKE)
- end
-
-struct LMDCounterGradientFluxParameters{T} <: AbstractParameters
-    CNL :: T  # Non-local flux proportionality constant
+Base.@kwdef struct ROMSMixingDepthParameters{T} <: AbstractParameters
+     CSL :: T = 0.1  # Surface layer fraction
+     CRi :: T = 0.3  # Critical bulk Richardson number
+     CKE :: T = 5.07 # Minimum unresolved turbulence kinetic energy
+     CEk :: T = 211  # Unresolved turbulence parameter
 end
 
-function LMDCounterGradientFluxParameters(T=Float64; CNL=6.33)
-    LMDCounterGradientFluxParameters{T}(CNL)
+Base.@kwdef struct LMDCounterGradientFluxParameters{T} <: AbstractParameters
+    CNL :: T = 6.33 # Mass flux proportionality constant
 end
 
-struct LMDDiffusivityParameters
-    CSL   :: T  # Surface layer fraction
-    Cτ    :: T  # Von Karman constant
-    Cstab :: T  # Stable buoyancy flux parameter for wind-driven turbulence
-    Cunst :: T  # Unstable buoyancy flux parameter for wind-driven turbulence
+Base.@kwdef struct LMDDiffusivityParameters{T}
+     CKSL :: T = 0.1   # Surface layer fraction
+       Cτ :: T = 0.4   # Von Karman constant
 
-    Cb_U  :: T  # Buoyancy flux parameter for convective turbulence
-    Cτb_U :: T  # Wind stress parameter for convective turbulence
-    Cb_T  :: T  # Buoyancy flux parameter for convective turbulence
-    Cτb_T :: T  # Wind stress parameter for convective turbulence
+    Cstab :: T = 2.0   # Stable buoyancy flux parameter for wind-driven turbulence
+    Cunst :: T = 6.4   # Unstable buoyancy flux parameter for wind-driven turbulence
 
-    Cd_U  :: T  # Wind mixing regime threshold for momentum
-    Cd_T  :: T  # Wind mixing regime threshold for tracers
+       Cn :: T = 1.0   # Exponent for effect of stable buoyancy forcing on wind mixing
+    Cmτ_U :: T = 0.25  # Exponent for effect of unstable buoyancy forcing on wind mixing of U
+    Cmτ_T :: T = 0.5   # Exponent for effect of unstable buoyancy forcing on wind mixing of T
+    Cmb_U :: T = 1/3   # Exponent for the effect of wind on convective mixing of U
+    Cmb_T :: T = 1/3   # Exponent for effect of wind on convective mixing of T
 
-    Cn    :: T  # Exponent for effect of stable buoyancy forcing on wind mixing
-    Cmτ_U :: T  # Exponent for effect of unstable buoyancy forcing on wind mixing of U
-    Cmτ_T :: T  # Exponent for effect of unstable buoyancy forcing on wind mixing of T
-    Cmb_U :: T  # Exponent for effect of wind on convective mixing of U
-    Cmb_T :: T  # Exponent for effect of wind on convective mixing of T
+     Cd_U :: T = 0.5   # Wind mixing regime threshold for momentum
+     Cd_T :: T = 2.5   # Wind mixing regime threshold for tracers
 
-    KU₀   :: T  # Interior viscosity for velocity
-    KT₀   :: T  # Interior diffusivity for temperature
-    KS₀   :: T  # Interior diffusivity for salinity
+     Cb_U :: T = 0.599 # Buoyancy flux parameter for convective turbulence
+     Cb_T :: T = 1.36  # Buoyancy flux parameter for convective turbulence
+    Cτb_U :: T = (Cτ / Cb_U)^(1/Cmb_U) * (1 + Cunst*Cd_U)^(Cmτ_U/Cmb_U) - Cd_U  # Wind stress parameter for convective turbulence
+    Cτb_T :: T = (Cτ / Cb_T)^(1/Cmb_T) * (1 + Cunst*Cd_T)^(Cmτ_T/Cmb_T) - Cd_T  # Wind stress parameter for convective turbulence
+
+      KU₀ :: T = 1e-6 # Interior viscosity for velocity
+      KT₀ :: T = 1e-7 # Interior diffusivity for temperature
+      KS₀ :: T = 1e-9 # Interior diffusivity for salinity
 end
 
-function LMDDiffusivityParameters(T=Float64;
-      CSL = 0.1,
-       Cτ = 0.4,
-    Cstab = 2.0,
-    Cunst = 6.4,
-     Cb_U = 0.599,
-     Cb_T = 1.36,
-     Cd_U = 0.5,
-     Cd_T = 2.5,
-       Cn = 1.0,
-    Cmτ_U = 1/4,
-    Cmτ_T = 1/2,
-    Cmb_U = 1/3,
-    Cmb_T = 1/3,
-     K₀=1e-5, KU₀=K₀, KT₀=K₀, KS₀=K₀,
-     # These should not be changed under ordinary circumstances:
-     Cτb_U = (Cτ / Cb_U)^(1/Cmb_U) * (1 + Cunst*Cd_U)^(Cmτ_U/Cmb_U) - Cd_U,
-     Cτb_T = (Cτ / Cb_T)^(1/Cmb_T) * (1 + Cunst*Cd_T)^(Cmτ_T/Cmb_T) - Cd_T
-     )
-
-     LMDDiffusivityParameters{T}(CSL, Cτ, Cstab, Cunst,
-                                 Cb_U, Cτb_U, Cb_T, Cτb_T, Cd_U, Cd_T,
-                                 Cn, Cmτ_U, Cmτ_T, Cmb_U, Cmb_T,
-                                 KU₀, KT₀, KS₀)
+Base.@kwdef struct HoltslagDiffusivityParameters{T} <: AbstractParameters
+     Cτ :: T = 0.4
+    Cτb :: T = 15.6
+    KU₀ :: T = 1e-6 # Interior viscosity for velocity
+    KT₀ :: T = 1e-7 # Interior diffusivity for temperature
+    KS₀ :: T = 1e-9 # Interior diffusivity for salinity
 end
 
-struct HoltslagDiffusivityParameters{T} <: AbstractParameters
-    Cτ  :: T
-    Cτb :: T
+Base.@kwdef struct SSTMassFluxParameters{T} <: AbstractParameters
+    Ce :: T = 0.4
+    Cμ :: T = 0.15
+    Cb :: T = 0.5
+    Cm :: T = 0.3
+    Cα :: T = 1.0
 end
-
-function HoltslagDiffusivityParameters(T=Float64; Cτ=0.4, Cτb=39)
-    HoltslagDiffusivityParameters{T}(Cτ, Cτb)
-end
-
-
-struct CHCounterGradientFluxParameters{T} <: AbstractParameters
-    Ca  :: T
-    Cσ  :: T
-    Cσw :: T
-end
-
-function CHCounterGradientFluxParameters(T=Float64;
-    Ca  = 2.0,
-    Cσ  = 1.3,
-    Cσh = 0.6)
-    CHCounterGradientFluxParameters{T}(Ca, Cσ, Cσh)
-end
-
-struct SSTMassFluxParameters{T} <: AbstractParameters
-    Ce :: T
-    Cμ :: T
-    Cb :: T
-    Cm :: T
-    Cα :: T
-end
-
-function SSTMassFluxParameters(T=Float64;
-    Ce = 0.4,
-    Cμ = 0.15,
-    Cb = 0.5,
-    Cm = 0.3,
-    Cα = 1.0
-    )
-    SSTMassFluxParameters{T}(Ce, Cμ, Cb, Cm, Cα)
 
 # Shape functions (these shoul become parameters eventually).
 # 'd' is a non-dimensional depth coordinate.
-default_shape_N(d) = 0 < d < 1 ? d*(1-d)^2 : 0
-const default_shape_K = default_shape_N
+default_shape_M(d) = 0 < d < 1 ? d*(1-d)^2 : 0
+const default_shape_K = default_shape_M
 
-mutable struct State{T} <: FieldVector{6, T}
-    Fu :: T
-    Fv :: T
-    Fθ :: T
-    Fs :: T
-    Fb :: T
-    h  :: T
+mutable struct State{T, H, U, W}
+             Fu :: T
+             Fv :: T
+             Fθ :: T
+             Fs :: T
+             Fb :: T
+              h :: T
+    h_criterion :: H
+      T_updraft :: U
+      S_updraft :: U
+     w²_updraft :: W
 end
 
-State(T=Float64) = State{T}(0, 0, 0, 0, 0, 0)
+updrafts(args...) = nothing, nothing, nothing
+h_criterion(args...) = nothing
+h_criterion(::ROMSMixingDepthParameters, grid) = FaceField(grid)
+
+function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
+    T_updraft, S_updraft, w²_updraft = updrafts(nonlocalflux, grid)
+    h_crit = h_criterion(mixingdepth, grid)
+    State(zero(T), zero(T), zero(T), zero(T), zero(T), zero(T),
+            h_crit, T_updraft, S_updraft, w²_updraft)
+end
+
+struct Model{KP, NP, HP, S, TS, G, T} <: AbstractModel{TS, G, T}
+    @add_standard_model_fields
+    diffusivity :: KP
+   nonlocalflux :: NP
+    mixingdepth :: HP
+      constants :: Constants{T}
+          state :: S
+end
+
+function Model(; N=10, L=1.0,
+            grid = UniformGrid(N, L),
+       constants = Constants(),
+     diffusivity = LMDDiffusivityParameters(),
+    nonlocalflux = LMDCounterGradientFluxParameters(),
+     mixingdepth = LMDMixingDepthParameters(),
+         stepper = :BackwardEuler,
+             bcs = BoundaryConditions((ZeroFluxBoundaryConditions() for i=1:nsol)...)
+    )
+
+    state = State(diffusivity, nonlocalflux, mixingdepth, grid)
+    solution = Solution((CellField(grid) for i=1:nsol)...)
+    K = Accessory{Function}(KU, KV, KT, KS)
+    R = Accessory{Function}(RU, RV, RT, RS)
+    eqn = Equation(R, K, update_state!)
+    lhs = OceanTurb.build_lhs(solution)
+
+    timestepper = Timestepper(stepper, eqn, solution, lhs)
+
+    return Model(Clock(), grid, timestepper, solution, bcs,
+                 diffusivity, nonlocalflux, mixingdepth, constants, state)
+end
 
 """
     update_state!(model)
@@ -180,130 +180,82 @@ function update_state!(m)
     m.state.Fθ = getbc(m, m.bcs.T.top)
     m.state.Fs = getbc(m, m.bcs.S.top)
     m.state.Fb = m.constants.g * (m.constants.α * m.state.Fθ - m.constants.β * m.state.Fs)
+    update_mixing_depth!(m)
+    update_nonlocalflux!(m)
+    return nothing
+end
+
+function update_mixing_depth!(m::Model{K, NL, <:LMDMixingDepthParameters}) where {K, NL}
     m.state.h  = mixing_depth(m)
     return nothing
 end
 
-struct Model{KP, NP, HP, TS, G, T} <: AbstractModel{TS, G, T}
-    @add_standard_model_fields
-    K_params  :: KP
-    NL_params :: NP
-    h_params  :: HP
-    constants :: Constants{T}
-    state     :: State{T}
+h_weight(h, CSL, zf, i) = @inbounds -zf[i] / (zf[i] + CSL*h)
+h_weight(m, i) = h_weight(m.state.h, m.mixingdepth.CSL, m.grid.zf, i)
+
+function h_kernel(U, V, T, S, CRi, CEk, g, α, β, f, i)
+    @inbounds ∂z(U, i)^2 + ∂z(V, i)^2 - ∂B∂z(T, S, g, α, β, i)/CRi - CEk*f^2
 end
 
-function Model(; N=10, L=1.0,
-            grid = UniformGrid(N, L),
-       constants = Constants(),
-        h_params = LMDMixingDepthParameters(),
-        K_params = LMDDiffusivityParameters(),
-       NL_params = LMDCounterGradientFluxParameters(),
-         stepper = :BackwardEuler,
-             bcs = BoundaryConditions((ZeroFluxBoundaryConditions() for i=1:nsol)...)
-    )
+h_kernel(m, i) = h_kernel(m.solution.U, m.solution.V, m.solution.T, m.solution.S,
+                            m.mixingdepth.CRi, m.mixingdepth.CEk,
+                            m.constants.g, m.constants.α, m.constants.β, m.constants.f, i)
 
-    solution = Solution((CellField(grid) for i=1:nsol)...)
-    K = Accessory{Function}(KU, KV, KT, KS)
-    R = Accessory{Function}(RU, RV, RT, RS)
-    eqn = Equation(R, K, update_state!)
-    lhs = OceanTurb.build_lhs(solution)
-
-    timestepper = Timestepper(stepper, eqn, solution, lhs)
-
-    return Model(Clock(), grid, timestepper, solution, bcs, parameters, constants, State())
+function unresolved_kinetic_energy(m, i)
+    @inbounds unresolved_kinetic_energy(m.grid.zf[i], ∂B∂z(T, S, g, α, β, i),
+                                            m.state.Fb, m.mixingdepth.CKE, 0,
+                                            m.constants.g, m.constants.α, m.constants.β)
 end
 
+"Calculate the mixing depth criterion function by integrating from z=0 downwards."
+function mixing_depth_criterion!(h_crit, m)
+    @inbounds h_crit[m.grid.N+1] = 0
 
-# Note: to increase readability, we use 'm' to refer to 'model' in function
-# definitions below.
-#
-
-## ** The K-Profile-Parameterization! **
-d(m, i) = -m.grid.zf[i] / m.state.h
-
-K_KPP(h, W, d) = 0 < d < 1 ? max(0, h * W * d * (1 - d)^2) : 0
-
-# Holtslag K-profile
-W_Holtslag(Cτ, Cτb, ωb, ωτ, h, d) = Cτ * h * ωb * ((ωτ/ωb)^3 + Cτb*d)
-
-# Mass flux parameterzation
-σw(Cσ, Cσh, ωτ, ωb, h, z) = Cσ * ωb * ((ωτ/ωb)^3 - Cσh*z/h)^(1/3) * (1 + z/h)^(1/2)
-entrainment(Ce, Δz, h, z) = Ce * ( 1/(z+Δz) + 1/(h+z+Δz) )
-
-
-
-
-
-"Return the buoyancy gradient at face point i."
-∂B∂z(T, S, g, α, β, i) = g * (α*∂z(T, i) - β*∂z(S, i))
-∂B∂z(m, i) = ∂B∂z(m.solution.T, m.solution.S, m.constants.g, m.constants.α, m.constants.β, i)
-
-#
-# Diagnosis of mixing depth "h" by LMD scheme
-#
-
-"Returns the surface_layer_average for mixing depth h = -zf[i]."
-function surface_layer_average(c, CSL, i)
-    if i > c.grid.N # Return surface value
-        return onface(c, c.grid.N+1)
-    else
-        iε = length(c)+1 - CSL*(length(c)+1 - i) # (fractional) face "index" of the surface layer
-        face = ceil(Int, iε)  # the next cell face above the fractional depth
-        frac = face - iε # the fraction of the lowest cell in the surface layer.
-        surface_layer_integral = convert(eltype(c), 0)
-
-        # Contribution of fractional cell to total integral
-        if frac > 0
-            surface_layer_integral += frac * Δf(c, face-1) * c[face-1]
-        end
-
-        # Add cells above face, if there are any.
-        for j = face:length(c)
-          @inbounds surface_layer_integral += Δf(c, j) * c[j]
-        end
-
-        h = -c.grid.zf[i] # depth
-
-        return surface_layer_integral / (CSL*h)
+    for i = m.grid.N:-1:1
+        @inbounds h_crit[i] = (
+            h_crit[i+1] + h_weight(m, i) * h_kernel(m, i) * Δc(m.grid, i)
+                - unresolved_kinetic_energy(m, i) / m.grid.zf[i]
+        )
     end
+
+    return nothing
 end
 
-"""
-Return Δc(hᵢ), the difference between the surface-layer average of c and its value at depth hᵢ, where
-i is a face index.
-"""
-Δ(c, CSL, i) = surface_layer_average(c, CSL, i) - onface(c, i)
+linear_interp(y★, x₀, y₀, Δx, Δy) = x₀ + Δx * (y★ - y₀) / Δy
 
-"Returns the parameterization for unresolved KE at face point i."
-function unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β, i)
-    return CKE * h^(4/3) * sqrt(max(0, Bz)) * max(0, Fb)^(1/3) + CKE₀
-end
-
-"""
-    bulk_richardson_number(model, i)
-
-Returns the bulk Richardson number of `model` at face `i`.
-"""
-function bulk_richardson_number(U, V, T, S, Fb, CKE, CKE₀, CSL, g, α, β, i)
-    h = -U.grid.zf[i]
-    # (h - hε) * ΔB
-    h⁺ΔB = h * (1 - 0.5CSL) * g * (α*Δ(T, CSL, i) - β*Δ(S, CSL, i))
-
-    Bz = ∂B∂z(T, S, g, α, β, i)
-    unresolved_KE = unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β, i)
-    KE = Δ(U, CSL, i)^2 + Δ(V, CSL, i)^2 + unresolved_KE
-
-    if KE == 0 && h⁺ΔB == 0 # Alistar Adcroft's theorem
-        return 0
-    else
-        return h⁺ΔB / KE
+function mixing_depth(m::Model{K, NL, <:ROMSMixingDepthParameters}) where {K, NL}
+    ih₁ = findprev(x -> x<=0, m.state.h_criterion, m.grid.N)
+    @inbounds begin
+        if ih₁ === nothing # Mixing depth is entire grid
+            z★ = m.grid.zf[1]
+        elseif ih₁ == m.grid.N # Mixing depth at surface?
+            z★ = ifelse(m.state.h_criterion[ih₁]==0, m.grid.zf[m.grid.N], m.grid.zf[m.grid.N+1])
+        else # linearly interpolate
+            # x = x₀ + Δx * (y-y₀) / Δy
+            z★ = linear_interp(0, m.grid.zf[ih₁], m.state.h_criterion[ih₁], Δf(m.grid, ih₁),
+                                m.state.h_criterion[ih₁+1] - m.state.h_criterion[ih₁])
+        end
     end
+
+    return -z★
 end
 
-bulk_richardson_number(m, i) = bulk_richardson_number(
+function update_mixing_depth!(m::Model{K, NL, <:ROMSMixingDepthParameters}) where {K, NL}
+    mixing_depth_criterion!(m.state.h_criterion, m.grid.N)
+    m.state.h = mixing_depth(m)
+    return nothing
+end
+
+update_nonlocalflux!(m) = nothing
+
+
+#
+# Mixing depth
+#
+
+bulk_richardson_number(m::Model, i) = KPP.bulk_richardson_number(
     m.solution.U, m.solution.V, m.solution.T, m.solution.S,
-    m.state.Fb, m.parameters.CKE, m.parameters.CKE₀, m.parameters.CSL, m.constants.g,
+    m.state.Fb, m.mixingdepth.CKE, m.mixingdepth.CKE₀, m.mixingdepth.CSL, m.constants.g,
     m.constants.α, m.constants.β, i)
 
 """
@@ -312,145 +264,104 @@ bulk_richardson_number(m, i) = bulk_richardson_number(
 Calculate the mixing depth 'h' for `model`.
 """
 function mixing_depth(m)
-    # Descend through grid until Ri rises above critical value
     ih₁ = m.grid.N + 1 # start at top.
     Ri₁ = bulk_richardson_number(m, ih₁) # should be 0.
-    while ih₁ > 1 && Ri₁ < m.parameters.CRi
+
+    # Descend through grid until Ri rises above critical value
+    while ih₁ > 1 && Ri₁ < m.mixingdepth.CRi
         ih₁ -= 1 # descend
         Ri₁ = bulk_richardson_number(m, ih₁)
     end
 
     # Edge cases:
-    # 1. Mixing depth is 0 or whole domain:
-    if ih₁ == 1 || ih₁ == m.grid.N+1
+    # 1. Mixing depth is 0:
+    if ih₁ == m.grid.N + 1
         z★ = m.grid.zf[ih₁]
 
-    # 2. Ri is infinite somewhere inside the domain.
+    # 2. Mixing depth is whole domain because Ri is always less than CRi:
+    elseif ih₁ == 1 && Ri₁ < m.mixingdepth.CRi
+        z★ = m.grid.zf[ih₁]
+
+    # 3. Ri is infinite somewhere inside the domain.
     elseif !isfinite(Ri₁)
         z★ = m.grid.zc[ih₁]
 
     # Main case: mixing depth is in the interior.
-    else
-        ΔRi = bulk_richardson_number(m, ih₁+1) - Ri₁ # linearly interpolate to find h.
+    else # Ri₁ > CRi
+        ΔRi = bulk_richardson_number(m, ih₁+1) - Ri₁ # <0 linearly interpolate to find h.
         # x = x₀ + Δx * (y-y₀) / Δy
-        z★ = m.grid.zf[ih₁] + Δf(m.grid, ih₁) * (m.parameters.CRi - Ri₁) / ΔRi
+        z★ = m.grid.zf[ih₁] + Δf(m.grid, ih₁) * (m.mixingdepth.CRi - Ri₁) / ΔRi
     end
+
+    -z★ < 0 && @warn "mixing depth $(-z★) is negative"
 
     return -z★ # "depth" is negative height.
 end
 
 #
-# Vertical velocity scale
+# Diffusivity
 #
 
-"Return true if the boundary layer is unstable and convecting."
-isunstable(model) = model.state.Fb > 0
+𝒲_Holtslag(Cτ, Cτb, ωτ, ωb, d) = Cτ * (ωτ^3 + Cτb * d * ωb^3)^(1/3)
+𝒲_Holtslag(m, i) = 𝒲_Holtslag(m.diffusivity.Cτ, m.diffusivity.Cτb, KPP.ωτ(m), KPP.ωb(m), KPP.d(m, i))
 
-"Return true if the boundary layer is forced."
-isforced(model) = model.state.Fu != 0 || model.state.Fv != 0 || model.state.Fb != 0
+𝒲_LMD_unstable_U(m, i) = KPP.𝒲_unstable(
+    m.diffusivity.CKSL, m.diffusivity.Cd_U,
+    m.diffusivity.Cτ, m.diffusivity.Cunst,
+    m.diffusivity.Cb_U, m.diffusivity.Cτb_U,
+    m.diffusivity.Cmτ_U, m.diffusivity.Cmb_U,
+    ωτ(m), ωb(m), d(m, i)
+    )
 
-"Return the turbuent velocity scale associated with wind stress."
-ωτ(Fu, Fv) = (Fu^2 + Fv^2)^(1/4)
-ωτ(m::AbstractModel) = ωτ(m.state.Fu, m.state.Fv)
+𝒲_LMD_unstable_T(m, i) = KPP.𝒲_unstable(
+    m.diffusivity.CKSL, m.diffusivity.Cd_T,
+    m.diffusivity.Cτ, m.diffusivity.Cunst,
+    m.diffusivity.Cb_T, m.diffusivity.Cτb_T,
+    m.diffusivity.Cmτ_T, m.diffusivity.Cmb_T,
+    ωτ(m), ωb(m), d(m, i)
+    )
 
-"Return the turbuent velocity scale associated with convection."
-ωb(Fb, h) = abs(h * Fb)^(1/3)
-ωb(m::AbstractModel) = ωb(m.state.Fb, m.state.h)
+𝒲_LMD_stable(m, i) = KPP.𝒲_stable(
+    m.diffusivity.Cτ, m.diffusivity.Cstab, m.diffusivity.Cn,
+    ωτ(m), ωb(m), d(m, i)
+    )
 
-"Return truncated, non-dimensional depth coordinate."
-dϵ(m::AbstractModel, d) = min(m.parameters.CSL, d)
-
-"Return the vertical velocity scale at depth d for a stable boundary layer."
-W_KPP_stable(Cτ, Cstab, Cn, ωτ, ωb, d) = Cτ * ωτ / (1 + Cstab * d * (ωb/ωτ)^3)^Cn
-
-"Return the vertical velocity scale at scaled depth dϵ for an unstable boundary layer."
-function W_KPP_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
-    dϵ = min(CSL, d)
-    if dϵ < Cd * (ωτ/ωb)^3
-        return Cτ * ωτ * ( 1 + Cunst * dϵ * (ωb/ωτ)^3 )^Cmτ
-    else
-        return Cb * ωb * ( dϵ + Cτb * (ωτ/ωb)^3 )^Cmb
-    end
-end
-
-function W_KPP_unstable_U(m, i)
-    return W_KPP_unstable(m.parameters.CSL, m.parameters.Cd_U, m.parameters.Cτ, m.parameters.Cunst,
-                            m.parameters.Cb_U, m.parameters.Cτb_U,
-                            m.parameters.Cmτ_U, m.parameters.Cmb_U,
-                            ωτ(m), ωb(m), d(m, i)
-                            )
-end
-
-function W_KPP_unstable_T(m, i)
-    return W_KPP_unstable(m.parameters.CSL, m.parameters.Cd_T, m.parameters.Cτ, m.parameters.Cunst,
-                            m.parameters.Cb_T, m.parameters.Cτb_T,
-                            m.parameters.Cmτ_T, m.parameters.Cmb_T,
-                            ωτ(m), ωb(m), d(m, i)
-                            )
-end
-
-function W_KPP_stable(m, i)
-    return W_KPP_stable(m.parameters.Cτ, m.parameters.Cstab, m.parameters.Cn,
-                          ωτ(m), ωb(m), d(m, i)
-                          )
-end
-
-"Return the vertical velocity scale for momentum at face point i."
-function W_KPP_U(m, i)
+"Return the vertical velocity scale for momentum at face point i"
+function 𝒲_LMD_U(m, i)
     if !isforced(m)
         return 0
     elseif isunstable(m)
-        return W_KPP_unstable_U(m, i)
+        return 𝒲_LMD_unstable_U(m, i)
     else
-        return W_KPP_stable(m, i)
+        return 𝒲_LMD_stable(m, i)
     end
 end
-
 
 "Return the vertical velocity scale for tracers at face point i."
-function W_KPP_T(m, i)
+function 𝒲_LMD_T(m, i)
     if !isforced(m)
         return 0
     elseif isunstable(m)
-        return W_KPP_unstable_T(m, i)
+        return 𝒲_LMD_unstable_T(m, i)
     else
-        return W_KPP_stable(m, i)
+        return 𝒲_LMD_stable(m, i)
     end
 end
 
-const W_KPP_V = W_KPP_U
-const W_KPP_S = W_KPP_T
+const 𝒲_LMD_V = 𝒲_LMD_U
+const 𝒲_LMD_S = 𝒲_LMD_T
 
 #
-# Non-local flux
+# Mass flux
 #
 
-"""
-    N(CNL, flux, d, shape=default_shape)
-
-Returns the nonlocal flux, N = CNL*flux*shape(d),
-where `flux` is the flux of some quantity out of the surface,
-`shape` is a shape function, and `d` is a non-dimensional depth coordinate
-that increases from 0 at the surface to 1 at the bottom of the mixing layer.
-
-Because flux is defined as pointing in the positive direction,
-a positive surface flux implies negative surface flux divergence,
-which implies a reduction to the quantity in question.
-For example, positive heat flux out of the surface implies cooling.
-"""
-N_LMD(CNL, flux, d, shape=default_shape_N) = CNL * flux * shape(d)
-N_CH(Ca, Cσ, Cσh, ωτ, ωb, Fϕ, h, z) = Ca * ωb / σw(Cσ, Cσh, ωτ, ωb, h, z)^2 * Fϕ
-
-function ∂N∂z(CNL, Fϕ, m, i)
-    if isunstable(m)
-        return (N_LMD(CNL, Fϕ, d(m, i+1)) - N_LMD(CNL, Fϕ, d(m, i))) / Δf(m.grid, i)
-    else
-        return 0
-    end
+function ∂NLT∂z(m::Model{K, <:LMDCounterGradientFluxParameters}, i) where K
+    KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Fθ, d(m, i), Δf(m.grid, i), m)
 end
 
-∂NT∂z(m, i) = ∂N∂z(m.parameters.CNL, m.state.Fθ, m, i)
-∂NS∂z(m, i) = ∂N∂z(m.parameters.CNL, m.state.Fs, m, i)
+function ∂NLS∂z(m::Model{K, <:LMDCounterGradientFluxParameters}, i) where K
+    KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Fs, d(m, i), Δf(m.grid, i), m)
+end
 
 #
 # Equation specification
@@ -460,17 +371,18 @@ RU(m, i) =   m.constants.f * m.solution.V[i]
 RV(m, i) = - m.constants.f * m.solution.U[i]
 
 # K_{U,V,T,S} is calculated at face points
-KU(m::Model{<:LMDDiffusivityParameters}, i) = K_KPP(m.state.h, W_KPP_U(m, i), d(m, i)) + m.parameters.KU₀
-KT(m::Model{<:LMDDiffusivityParameters}, i) = K_KPP(m.state.h, W_KPP_T(m, i), d(m, i)) + m.parameters.KT₀
-KS(m::Model{<:LMDDiffusivityParameters}, i) = K_KPP(m.state.h, W_KPP_S(m, i), d(m, i)) + m.parameters.KS₀
+KU(m::Model{<:LMDDiffusivityParameters}, i)      = KPP.K_KPP(m.state.h, 𝒲_LMD_U(m, i),    d(m, i)) + m.diffusivity.KU₀
+KT(m::Model{<:LMDDiffusivityParameters}, i)      = KPP.K_KPP(m.state.h, 𝒲_LMD_T(m, i),    d(m, i)) + m.diffusivity.KT₀
+KS(m::Model{<:LMDDiffusivityParameters}, i)      = KPP.K_KPP(m.state.h, 𝒲_LMD_S(m, i),    d(m, i)) + m.diffusivity.KS₀
 
-KU(m::Model{<:HoltslagDiffusivityParameters}, i) = K_KPP(m.state.h, W_Holtslag(m, i), d(m, i)) + m.parameters.KU₀
-KT(m::Model{<:HoltslagDiffusivityParameters}, i) = K_KPP(m.state.h, W_Holtslag(m, i), d(m, i)) + m.parameters.KT₀
-KS(m::Model{<:HoltslagDiffusivityParameters}, i) = K_KPP(m.state.h, W_Holtslag(m, i), d(m, i)) + m.parameters.KS₀
+KU(m::Model{<:HoltslagDiffusivityParameters}, i) = KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KU₀
+KT(m::Model{<:HoltslagDiffusivityParameters}, i) = KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KT₀
+KS(m::Model{<:HoltslagDiffusivityParameters}, i) = KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KS₀
+
 
 const KV = KU
 
-RT(m, i) = - ∂NT∂z(m, i)
-RS(m, i) = - ∂NS∂z(m, i)
+RT(m, i) = - ∂NLT∂z(m, i)
+RS(m, i) = - ∂NLS∂z(m, i)
 
 end # module
