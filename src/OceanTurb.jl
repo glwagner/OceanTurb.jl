@@ -213,9 +213,11 @@ end
 #
 
 include("models/diffusion.jl")
+
 include("models/k_profile_parameterization.jl")
 include("models/modular_kpp.jl")
-include("models/pacanowski_philander.jl")
 include("models/eddy_diffusivity_mass_flux.jl")
+
+include("models/pacanowski_philander.jl")
 
 end # module
