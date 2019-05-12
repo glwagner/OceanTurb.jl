@@ -5,12 +5,17 @@ export
     removespine,
     removespines,
     cornerspines,
-    bottomspine
+    bottomspine,
 
-using OceanTurb, PyPlot
+    defaultcolors
+
+using OceanTurb, PyPlot, PyCall
 
 # A few nice things for plotting
 import PyPlot: plot
+
+font_manager = pyimport("matplotlib.font_manager")
+defaultcolors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
 plot(f::AbstractField, args...; kwargs...) = plot(data(f), nodes(f), args...; kwargs...)
 plot(op::Function, f::AbstractField, args...; kwargs...) = plot(op.(data(f)), nodes(f), args...; kwargs...)

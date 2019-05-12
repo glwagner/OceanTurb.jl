@@ -10,7 +10,7 @@ Tz = 0.001
 Δt = 10*minute
 tf = 8*hour
 
-vanilla = KPP.Model(; modelsetup...)
+cvmix = KPP.Model(; modelsetup...)
 
 holtslag = ModularKPP.Model(; modelsetup...,
     diffusivity=ModularKPP.HoltslagDiffusivityParameters())
@@ -21,7 +21,7 @@ roms = ModularKPP.Model(; modelsetup...,
 # Initial condition and fluxes
 T₀(z) = 20 + Tz*z
 
-models = (vanilla, holtslag, roms)
+models = (cvmix, holtslag, roms)
 
 for model in models
     model.solution.T = T₀
@@ -32,51 +32,60 @@ for model in models
     model.bcs.T.bottom = GradientBoundaryCondition(Tz)
 end
 
-fig, axs = subplots(ncols=2, sharey=true)
+fig, axs = subplots()
 
-removespines("top", "right", ax=axs[1])
+removespines("top", "right")
+xlabel("Temperature")
+ylabel(L"z \, \mathrm{(m)}")
 
-for ax in axs[2:end]
-    removespines("left", "top", "right", ax=ax)
-    ax.tick_params(left=false)
-end
-
-#sca(axs[1])
-#plot(vanilla.solution.T)
-
-#uke = FaceField(roms.grid)
-#ker = FaceField(roms.grid)
-
-for i = 1:4
-    for model in models
-        iterate!(model, Δt, 100)
+for i = 1:5
+    if i > 1
+        for model in models
+            run_until!(model, Δt, (i-1)*12hour)
+        end
     end
+
     @printf("""
-        i : %d
-         vanilla h : %.2f
+        t : %.1f hours
+
+          mixing depths
+          =============
+
+         cvmix h : %.2f
         holtslag h : %.2f
             roms h : %.2f
-    \n""", i,
-    vanilla.state.h,
+    \n""", time(cvmix)/hour,
+    cvmix.state.h,
     holtslag.state.h,
     roms.state.h,
     )
 
-    for i in eachindex(uke)
-        uke[i] = - KPP.unresolved_kinetic_energy(roms, i) / roms.grid.zf[i]
-        ker[i] = ModularKPP.h_kernel(roms, i)
+    if i == 1
+        vlabel = "CVMix KPP"
+        hlabel = "Holtslag \$K\$-profile and CVMix mixing depth model"
+        rlabel = "CVMix \$K\$-profile and ROMS mixing depth model"
+    else
+        vlabel = ""
+        hlabel = ""
+        rlabel = ""
     end
 
-    sca(axs[1])
-    plot(vanilla.solution.T, "-")
-    plot(holtslag.solution.T, "--")
-    plot(roms.solution.T, ":")
+    if i == 1
+        tlabel = text(cvmix.solution.T[end], 0,
+            @sprintf("\$ t = %.0f \$ hours", time(cvmix)/hour),
+            verticalalignment="bottom", horizontalalignment="center", color=defaultcolors[i])
+    else
+        tlabel = text(maximum(cvmix.solution.T.data), -cvmix.state.h,
+            @sprintf("\$ t = %.0f \$ hours", time(cvmix)/hour),
+            verticalalignment="bottom", horizontalalignment="left", color=defaultcolors[i])
+    end
 
-    sca(axs[2])
-    plot(roms.state.h_criterion)
-    xlabel("h criterion")
+    plot(cvmix.solution.T,  "-",  color=defaultcolors[i], label=vlabel)
+    plot(holtslag.solution.T, "--", color=defaultcolors[i], label=hlabel)
+    plot(roms.solution.T,     ":",  color=defaultcolors[i], label=rlabel)
 end
 
+legend(fontsize=10)
 gcf()
 
 #=
@@ -84,13 +93,30 @@ fig, axs = subplots()
 
 removespines("top", "right")
 
-plot(vanilla.solution.T)
+plot(cvmix.solution.T)
 
 for model in models
     run_until!(model, Δt, tf)
 end
 
-plot(vanilla.solution.T)
+plot(cvmix.solution.T)
+plot(holtslag.solution.T)
+plot(roms.solution.T)
+gcf()
+=#
+
+#=
+fig, axs = subplots()
+
+removespines("top", "right")
+
+plot(cvmix.solution.T)
+
+for model in models
+    run_until!(model, Δt, tf)
+end
+
+plot(cvmix.solution.T)
 plot(holtslag.solution.T)
 plot(roms.solution.T)
 gcf()
