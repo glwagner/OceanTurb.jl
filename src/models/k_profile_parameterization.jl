@@ -94,29 +94,27 @@ function Model(; N=10, L=1.0,
              bcs = BoundaryConditions((ZeroFluxBoundaryConditions() for i=1:nsol)...)
     )
 
-    solution = Solution((CellField(grid) for i=1:nsol)...)
-    K = Accessory{Function}(KU, KV, KT, KS)
-    R = Accessory{Function}(RU, RV, RT, RS)
+      K = Accessory{Function}(KU, KV, KT, KS)
+      R = Accessory{Function}(RU, RV, RT, RS)
     eqn = Equation(R, K, update_state!)
-    lhs = OceanTurb.build_lhs(solution)
 
+    solution = Solution((CellField(grid) for i=1:nsol)...)
+         lhs = OceanTurb.build_lhs(solution)
     timestepper = Timestepper(stepper, eqn, solution, lhs)
 
     return Model(Clock(), grid, timestepper, solution, bcs, parameters, constants, State())
 end
-
 
 # Note: to increase readability, we use 'm' to refer to 'model' in function
 # definitions below.
 #
 
 ## ** The K-Profile-Parameterization! **
-K_KPP(h, w_scale, d, shape=default_shape_K) = 0 < d < 1 ? max(0, h * w_scale * shape(d)) : 0
+K_KPP(h, 𝒲, d, shape=default_shape_K) = 0 < d < 1 ? max(0, h * 𝒲 * shape(d)) : 0
 d(m, i) = -m.grid.zf[i] / m.state.h
 
 "Return the buoyancy gradient at face point i."
 ∂B∂z(T, S, g, α, β, i) = g * (α*∂z(T, i) - β*∂z(S, i))
-∂B∂z(m, i) = ∂B∂z(m.solution.T, m.solution.S, m.constants.g, m.constants.α, m.constants.β, i)
 
 #
 # Diagnosis of mixing depth "h"
@@ -128,18 +126,16 @@ function surface_layer_average(c, CSL, i)
         return onface(c, c.grid.N+1)
     else
         iε = length(c)+1 - CSL*(length(c)+1 - i) # (fractional) face "index" of the surface layer
-        face = ceil(Int, iε)  # the next cell face above the fractional depth
-        frac = face - iε # the fraction of the lowest cell in the surface layer.
-        surface_layer_integral = convert(eltype(c), 0)
+        face = ceil(Int, iε)  # next cell face above the fractional depth
+        frac = face - iε # fraction of lowermost cell in the surface layer.
+        surface_layer_integral = zero(eltype(c))
 
         # Contribution of fractional cell to total integral
-        if frac > 0
-            surface_layer_integral += frac * Δf(c, face-1) * c[face-1]
-        end
+        surface_layer_integral += frac * Δf(c, face-1) * c[face-1]
 
         # Add cells above face, if there are any.
         for j = face:length(c)
-          @inbounds surface_layer_integral += Δf(c, j) * c[j]
+            @inbounds surface_layer_integral += Δf(c, j) * c[j]
         end
 
         h = -c.grid.zf[i] # depth
@@ -155,7 +151,7 @@ i is a face index.
 Δ(c, CSL, i) = surface_layer_average(c, CSL, i) - onface(c, i)
 
 "Returns the parameterization for unresolved KE at face point i."
-function unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β, i)
+function unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β)
     return CKE * h^(4/3) * sqrt(max(0, Bz)) * max(0, Fb)^(1/3) + CKE₀
 end
 
@@ -170,7 +166,7 @@ function bulk_richardson_number(U, V, T, S, Fb, CKE, CKE₀, CSL, g, α, β, i)
     h⁺ΔB = h * (1 - 0.5CSL) * g * (α*Δ(T, CSL, i) - β*Δ(S, CSL, i))
 
     Bz = ∂B∂z(T, S, g, α, β, i)
-    unresolved_KE = unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β, i)
+    unresolved_KE = unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β)
     KE = Δ(U, CSL, i)^2 + Δ(V, CSL, i)^2 + unresolved_KE
 
     if KE == 0 && h⁺ΔB == 0 # Alistar Adcroft's theorem
@@ -201,7 +197,7 @@ function mixing_depth(m)
     end
 
     # Edge cases:
-    # 1. Mixing depth is 0:
+    # 1. Mixing depth is at the top of the domain (z=0):
     if ih₁ == m.grid.N + 1
         z★ = m.grid.zf[ih₁]
 
@@ -243,14 +239,11 @@ isforced(model) = model.state.Fu != 0 || model.state.Fv != 0 || model.state.Fb !
 ωb(Fb, h) = abs(h * Fb)^(1/3)
 ωb(m::AbstractModel) = ωb(m.state.Fb, m.state.h)
 
-"Return truncated, non-dimensional depth coordinate."
-dϵ(m::AbstractModel, d) = min(m.parameters.CSL, d)
-
 "Return the vertical velocity scale at depth d for a stable boundary layer."
-w_scale_stable(Cτ, Cstab, Cn, ωτ, ωb, d) = Cτ * ωτ / (1 + Cstab * d * (ωb/ωτ)^3)^Cn
+𝒲_stable(Cτ, Cstab, Cn, ωτ, ωb, d) = Cτ * ωτ / (1 + Cstab * d * (ωb/ωτ)^3)^Cn
 
 "Return the vertical velocity scale at scaled depth dϵ for an unstable boundary layer."
-function w_scale_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
+function 𝒲_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
     dϵ = min(CSL, d)
     if dϵ < Cd * (ωτ/ωb)^3
         return Cτ * ωτ * (1 + Cunst * dϵ * (ωb/ωτ)^3)^Cmτ
@@ -259,8 +252,8 @@ function w_scale_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d
     end
 end
 
-function w_scale_unstable_U(m, i)
-    return w_scale_unstable(m.parameters.CSL, m.parameters.Cd_U,
+function 𝒲_unstable_U(m, i)
+    return 𝒲_unstable(m.parameters.CSL, m.parameters.Cd_U,
                             m.parameters.Cτ, m.parameters.Cunst,
                             m.parameters.Cb_U, m.parameters.Cτb_U,
                             m.parameters.Cmτ_U, m.parameters.Cmb_U,
@@ -268,8 +261,8 @@ function w_scale_unstable_U(m, i)
                             )
 end
 
-function w_scale_unstable_T(m, i)
-    return w_scale_unstable(m.parameters.CSL, m.parameters.Cd_T,
+function 𝒲_unstable_T(m, i)
+    return 𝒲_unstable(m.parameters.CSL, m.parameters.Cd_T,
                             m.parameters.Cτ, m.parameters.Cunst,
                             m.parameters.Cb_T, m.parameters.Cτb_T,
                             m.parameters.Cmτ_T, m.parameters.Cmb_T,
@@ -277,37 +270,36 @@ function w_scale_unstable_T(m, i)
                             )
 end
 
-function w_scale_stable(m, i)
-    return w_scale_stable(m.parameters.Cτ, m.parameters.Cstab, m.parameters.Cn,
+function 𝒲_stable(m, i)
+    return 𝒲_stable(m.parameters.Cτ, m.parameters.Cstab, m.parameters.Cn,
                           ωτ(m), ωb(m), d(m, i)
                           )
 end
 
-"Return the vertical velocity scale for momentum at face point i."
-function w_scale_U(m, i)
+"Return the turbulent velocity scale for momentum at face point i."
+function 𝒲_U(m, i)
     if !isforced(m)
         return 0
     elseif isunstable(m)
-        return w_scale_unstable_U(m, i)
+        return 𝒲_unstable_U(m, i)
     else
-        return w_scale_stable(m, i)
+        return 𝒲_stable(m, i)
     end
 end
 
-
-"Return the vertical velocity scale for tracers at face point i."
-function w_scale_T(m, i)
+"Return the turbulent velocity scale for tracers at face point i."
+function 𝒲_T(m, i)
     if !isforced(m)
         return 0
     elseif isunstable(m)
-        return w_scale_unstable_T(m, i)
+        return 𝒲_unstable_T(m, i)
     else
-        return w_scale_stable(m, i)
+        return 𝒲_stable(m, i)
     end
 end
 
-const w_scale_V = w_scale_U
-const w_scale_S = w_scale_T
+const 𝒲_V = 𝒲_U
+const 𝒲_S = 𝒲_T
 
 #
 # Non-local flux
@@ -344,9 +336,9 @@ end
 #
 
 # K_{U,V,T,S} is calculated at face points
-KU(m, i) = K_KPP(m.state.h, w_scale_U(m, i), d(m, i)) + m.parameters.KU₀
-KT(m, i) = K_KPP(m.state.h, w_scale_T(m, i), d(m, i)) + m.parameters.KT₀
-KS(m, i) = K_KPP(m.state.h, w_scale_S(m, i), d(m, i)) + m.parameters.KS₀
+KU(m, i) = K_KPP(m.state.h, 𝒲_U(m, i), d(m, i)) + m.parameters.KU₀
+KT(m, i) = K_KPP(m.state.h, 𝒲_T(m, i), d(m, i)) + m.parameters.KT₀
+KS(m, i) = K_KPP(m.state.h, 𝒲_S(m, i), d(m, i)) + m.parameters.KS₀
 const KV = KU
 
 @inline RU(f, V, i) = @inbounds  f*V[i]
