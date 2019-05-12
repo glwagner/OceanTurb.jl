@@ -14,9 +14,10 @@ makedocs(
        pages = Any[
                 "Home" => "index.md",
                 "Numerical methods" => "numerics.md",
-                "Boundary layer models" => Any[
+                "Turbulence models" => Any[
                   "models/basics.md",
                   "models/kpp.md",
+                  "models/modular_kpp.md",
                   "models/edmf.md",
                   "models/pacanowskiphilander.md"],
                 "DocStrings" => Any[

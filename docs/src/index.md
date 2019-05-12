@@ -37,9 +37,9 @@ Use help mode by typing `?` to find information about key functions:
 help?> iterate!
 search: iterate! iterate InteractiveUtils isinteractive Iterators
 
-  iterate!(model, Δt, nt=1)
+  iterate!(model, Δt, Nt=1)
 
-  Step model forward in time by one time-step with step-size Δt.
+  Step model forward in time by `Nt` time-steps with step-size Δt.
 ```
 
 ## Components
