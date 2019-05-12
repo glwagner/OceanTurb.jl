@@ -96,6 +96,7 @@ export # This file, core functionality:
     # Ocean turbulence models
     Diffusion,
     KPP,
+    ModularKPP,
     PacanowskiPhilander,
     EDMF
 
@@ -183,7 +184,17 @@ end
 #
 # Physical oceanic constants
 
+"""
+    Constants(T=Float64; α=2.5e-4, β=8e-5, ρ₀=1035, cP=3992, f=0, g=9.81)
 
+Construct `Constants` with
+    * thermal expansion coefficient `α` [C⁻¹]
+    * haline contraction coefficient `β` [psu⁻¹]
+    * reference density `ρ₀` [kg m⁻³]
+    * heat capacity `cP` [...]
+    * Coriolis parameter `f` [s⁻¹]
+    * gravitational acceleration `g` [m² s⁻¹]
+"""
 struct Constants{T}
     g  :: T # Gravitiational acceleration
     cP :: T # Heat capacity of water
@@ -203,6 +214,7 @@ end
 
 include("models/diffusion.jl")
 include("models/k_profile_parameterization.jl")
+include("models/modular_kpp.jl")
 include("models/pacanowski_philander.jl")
 include("models/eddy_diffusivity_mass_flux.jl")
 
