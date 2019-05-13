@@ -100,12 +100,14 @@ Base.@kwdef struct HoltslagDiffusivityParameters{T} <: AbstractParameters
     KS₀ :: T = 1e-9 # Interior diffusivity for salinity
 end
 
-Base.@kwdef struct SSTMassFluxParameters{T} <: AbstractParameters
-    Ce :: T = 0.4
-    Cμ :: T = 0.15
-    Cb :: T = 0.5
-    Cm :: T = 0.3
-    Cα :: T = 1.0
+Base.@kwdef struct BulkPlumeParameters{T} <: AbstractParameters
+     Ce :: T = 0.4
+     Cμ :: T = 0.15
+     Cb :: T = 0.5
+     Cm :: T = 0.3
+     Cα :: T = 1.0
+     Cσ :: T = 1.0
+    Cσb :: T = 1.0
 end
 
 # Shape functions (these shoul become parameters eventually).
@@ -114,27 +116,27 @@ default_shape_M(d) = 0 < d < 1 ? d*(1-d)^2 : 0
 const default_shape_K = default_shape_M
 
 mutable struct State{T, H, U, W}
-             Fu :: T
-             Fv :: T
-             Fθ :: T
-             Fs :: T
-             Fb :: T
-              h :: T
-    h_criterion :: H
-      T_updraft :: U
-      S_updraft :: U
-     w²_updraft :: W
+          Fu :: T
+          Fv :: T
+          Fθ :: T
+          Fs :: T
+          Fb :: T
+           h :: T
+      h_crit :: H
+     plume_T :: U
+     plume_S :: U
+    plume_w² :: W
 end
 
-updrafts(args...) = nothing, nothing, nothing
+plumes(args...) = nothing, nothing, nothing
 h_criterion(args...) = nothing
 h_criterion(::ROMSMixingDepthParameters, grid) = FaceField(grid)
 
 function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
-    T_updraft, S_updraft, w²_updraft = updrafts(nonlocalflux, grid)
+    plume_T, plume_S, plume_w²= plumes(nonlocalflux, grid)
     h_crit = h_criterion(mixingdepth, grid)
     State(zero(T), zero(T), zero(T), zero(T), zero(T), zero(T),
-            h_crit, T_updraft, S_updraft, w²_updraft)
+            h_crit, T_plume, S_plume, w²_plume)
 end
 
 struct Model{KP, NP, HP, S, TS, G, T} <: AbstractModel{TS, G, T}
@@ -227,16 +229,16 @@ end
 linear_interp(y★, x₀, y₀, Δx, Δy) = x₀ + Δx * (y★ - y₀) / Δy
 
 function mixing_depth(m::Model{K, NL, <:ROMSMixingDepthParameters}) where {K, NL}
-    ih₁ = findprev(x -> x<=0, m.state.h_criterion.data, m.grid.N)
+    ih₁ = findprev(x -> x<=0, m.state.h_crit.data, m.grid.N)
     @inbounds begin
         if ih₁ === nothing # Mixing depth is entire grid
             z★ = m.grid.zf[1]
         elseif ih₁ == m.grid.N # Mixing depth at surface?
-            z★ = ifelse(m.state.h_criterion[ih₁]==0, m.grid.zf[m.grid.N], m.grid.zf[m.grid.N+1])
+            z★ = ifelse(m.state.h_crit[ih₁]==0, m.grid.zf[m.grid.N], m.grid.zf[m.grid.N+1])
         else # linearly interpolate
             # x = x₀ + Δx * (y-y₀) / Δy
-            z★ = linear_interp(0, m.grid.zf[ih₁], m.state.h_criterion[ih₁], Δf(m.grid, ih₁),
-                                m.state.h_criterion[ih₁+1] - m.state.h_criterion[ih₁])
+            z★ = linear_interp(0, m.grid.zf[ih₁], m.state.h_crit[ih₁], Δf(m.grid, ih₁),
+                                m.state.h_crit[ih₁+1] - m.state.h_crit[ih₁])
         end
     end
 
@@ -244,7 +246,7 @@ function mixing_depth(m::Model{K, NL, <:ROMSMixingDepthParameters}) where {K, NL
 end
 
 function update_mixing_depth!(m::Model{K, NL, <:ROMSMixingDepthParameters}) where {K, NL}
-    mixing_depth_criterion!(m.state.h_criterion, m)
+    mixing_depth_criterion!(m.state.h_crit, m)
     m.state.h = mixing_depth(m)
     return nothing
 end
@@ -364,6 +366,14 @@ end
 
 function ∂NLS∂z(m::Model{K, <:LMDCounterGradientFluxParameters}, i) where K
     KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Fs, d(m, i), Δf(m.grid, i), m)
+end
+
+σw(ωb, ωτ, Cσ, Cσb, d) = Cσ * (ωτ^3 + Cσb * ωb^3 * d)^(1/3) * (1 - d)^(1/2)
+
+entrainment(Ce, h, Δz, z) = Ce * (- 1 / (z + Δz) + 1 / (h + z + Δz))
+
+function plume_buoyancy(plume_T, plume_S, T, S, α, β, g, i)
+    @inbounds g*(α*(plume_T[i] - T[i]) - β*(plume_S[i] - S[i]))
 end
 
 #
