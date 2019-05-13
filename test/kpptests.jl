@@ -153,25 +153,26 @@ function test_buoyancy_gradient(; γ=0.01, g=9.81, ρ₀=1028, α=2e-4, β=0.0, 
 end
 
 function test_unresolved_KE(; CKE=0.1, CKE₀=1e-11, Fb=1e-7, γ=0.01, g=9.81,
-                            ρ₀=1028, α=2e-4, β=0.0, N=10, L=1.0)
+                                ρ₀=1028, α=2e-4, β=0.0, N=10, L=1.0)
     Bz = g * α * γ
     T₁(z) = γ*z
     T₂(z) = -γ*z
     model = KPP.Model(N=N, L=L)
+    U, V, T, S = model.solution
 
     i = 2
     h = -model.grid.zf[i]
 
     # Test for Bz > 0
     model.solution.T = T₁
-    Bz = KPP.∂B∂z(model, i)
-    ke₁ = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β, i)
+    Bz = KPP.∂B∂z(T, S, model.constants.g, model.constants.α, model.constants.β, i)
+    ke₁ = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β)
     ke₁_answer = CKE * h^(4/3) * sqrt(Bz) * Fb^(1/3) + CKE₀
 
     # Test for Bz < 0
     model.solution.T = T₂
-    Bz = KPP.∂B∂z(model, i)
-    ke₂ = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β, i)
+    Bz = KPP.∂B∂z(T, S, model.constants.g, model.constants.α, model.constants.β, i)
+    ke₂ = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β)
     ke₂_answer = CKE₀
 
     ke₂ ≈ ke₂_answer && ke₁ ≈ ke₁_answer
@@ -214,8 +215,8 @@ function test_bulk_richardson_number(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
 
         h = - model.grid.zf[i]
         h⁺ = h * (1 - 0.5*model.parameters.CSL)
-        Bz = KPP.∂B∂z(model, i)
-        uke = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, model.constants.β, i)
+        Bz = KPP.∂B∂z(T, S, model.constants.g, model.constants.α, model.constants.β, i)
+        uke = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, model.constants.β)
         Ri_answer[i] = h⁺ * (B_N - g*α*T₀(-h)) / uke
     end
 
@@ -312,7 +313,7 @@ function test_convective_velocity()
 end
 
 function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, CSL=1e-16)
-    # Zero wind + convection => w_scale_U = Cb_U * CSL^(1/3) * ωb.
+    # Zero wind + convection => 𝒲_U = Cb_U * CSL^(1/3) * ωb.
     parameters = KPP.Parameters(CRi=1.0, CKE=1.0, CKE₀=0.0, CSL=CSL, Cb_U=Cb_U, Cb_T=Cb_T)
     constants = KPP.Constants(g=1, α=1)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
@@ -330,10 +331,10 @@ function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, CSL=
     h = sqrt(Fb) / (1-0.5CSL) # requires h to be an integer... ?
     ωb = (h*Fb)^(1/3)
 
-    (KPP.w_scale_U(model, i) ≈ Cb_U * CSL^(1/3) * ωb &&
-     KPP.w_scale_V(model, i) ≈ Cb_U * CSL^(1/3) * ωb &&
-     KPP.w_scale_T(model, i) ≈ Cb_T * CSL^(1/3) * ωb &&
-     KPP.w_scale_S(model, i) ≈ Cb_T * CSL^(1/3) * ωb )
+    (KPP.𝒲_U(model, i) ≈ Cb_U * CSL^(1/3) * ωb &&
+     KPP.𝒲_V(model, i) ≈ Cb_U * CSL^(1/3) * ωb &&
+     KPP.𝒲_T(model, i) ≈ Cb_T * CSL^(1/3) * ωb &&
+     KPP.𝒲_S(model, i) ≈ Cb_T * CSL^(1/3) * ωb )
 end
 
 function test_turb_velocity_pure_wind(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1.0)
@@ -356,12 +357,12 @@ function test_turb_velocity_pure_wind(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1.0)
     model.bcs.U.top = FluxBoundaryCondition(Fu)
     KPP.update_state!(model)
 
-    w_scale = Cτ * sqrt(Fu)
+    𝒲 = Cτ * sqrt(Fu)
 
-    (KPP.w_scale_U(model, 3) == w_scale &&
-     KPP.w_scale_V(model, 3) == w_scale &&
-     KPP.w_scale_T(model, 3) == w_scale &&
-     KPP.w_scale_S(model, 3) == w_scale )
+    (KPP.𝒲_U(model, 3) == 𝒲 &&
+     KPP.𝒲_V(model, 3) == 𝒲 &&
+     KPP.𝒲_T(model, 3) == 𝒲 &&
+     KPP.𝒲_S(model, 3) == 𝒲 )
 end
 
 
@@ -391,12 +392,12 @@ function test_turb_velocity_wind_stab(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1.0, C
 
     id = 16 # d=5/9
     d = 5/9
-    w_scale = Cτ * sqrt(Fu) / (1 + Cstab * rb * d)
+    𝒲 = Cτ * sqrt(Fu) / (1 + Cstab * rb * d)
 
-    (KPP.w_scale_U(model, id) ≈ w_scale &&
-     KPP.w_scale_V(model, id) ≈ w_scale &&
-     KPP.w_scale_T(model, id) ≈ w_scale &&
-     KPP.w_scale_S(model, id) ≈ w_scale )
+    (KPP.𝒲_U(model, id) ≈ 𝒲 &&
+     KPP.𝒲_V(model, id) ≈ 𝒲 &&
+     KPP.𝒲_T(model, id) ≈ 𝒲 &&
+     KPP.𝒲_S(model, id) ≈ 𝒲 )
 end
 
 function test_turb_velocity_wind_unstab(; CKE=0.0, CSL=0.5, Cτ=0.7, N=20,
@@ -429,20 +430,20 @@ function test_turb_velocity_wind_unstab(; CKE=0.0, CSL=0.5, Cτ=0.7, N=20,
     d1 = 5/9
     d2 = 3/9
 
-    w_scale_U1 = Cτ * sqrt(Fu) * (1 + Cunst * rb * CSL)^(1/4)
-    w_scale_T1 = Cτ * sqrt(Fu) * (1 + Cunst * rb * CSL)^(1/2)
+    𝒲_U1 = Cτ * sqrt(Fu) * (1 + Cunst * rb * CSL)^(1/4)
+    𝒲_T1 = Cτ * sqrt(Fu) * (1 + Cunst * rb * CSL)^(1/2)
 
-    w_scale_U2 = Cτ * sqrt(Fu) * (1 + Cunst * rb * d2)^(1/4)
-    w_scale_T2 = Cτ * sqrt(Fu) * (1 + Cunst * rb * d2)^(1/2)
+    𝒲_U2 = Cτ * sqrt(Fu) * (1 + Cunst * rb * d2)^(1/4)
+    𝒲_T2 = Cτ * sqrt(Fu) * (1 + Cunst * rb * d2)^(1/2)
 
-    (KPP.w_scale_U(model, id1) ≈ w_scale_U1 &&
-     KPP.w_scale_V(model, id1) ≈ w_scale_U1 &&
-     KPP.w_scale_T(model, id1) ≈ w_scale_T1 &&
-     KPP.w_scale_S(model, id1) ≈ w_scale_T1 &&
-     KPP.w_scale_U(model, id2) ≈ w_scale_U2 &&
-     KPP.w_scale_V(model, id2) ≈ w_scale_U2 &&
-     KPP.w_scale_T(model, id2) ≈ w_scale_T2 &&
-     KPP.w_scale_S(model, id2) ≈ w_scale_T2 )
+    (KPP.𝒲_U(model, id1) ≈ 𝒲_U1 &&
+     KPP.𝒲_V(model, id1) ≈ 𝒲_U1 &&
+     KPP.𝒲_T(model, id1) ≈ 𝒲_T1 &&
+     KPP.𝒲_S(model, id1) ≈ 𝒲_T1 &&
+     KPP.𝒲_U(model, id2) ≈ 𝒲_U2 &&
+     KPP.𝒲_V(model, id2) ≈ 𝒲_U2 &&
+     KPP.𝒲_T(model, id2) ≈ 𝒲_T2 &&
+     KPP.𝒲_S(model, id2) ≈ 𝒲_T2 )
 end
 
 function test_conv_velocity_wind(; CKE=0.0, CKE₀=0.0, CSL=0.5, Cτ=0.7, N=20, L=20, CRi=(1-0.5CSL),
@@ -481,20 +482,20 @@ function test_conv_velocity_wind(; CKE=0.0, CKE₀=0.0, CSL=0.5, Cτ=0.7, N=20, 
     Cτb_U = model.parameters.Cτb_U
     Cτb_T = model.parameters.Cτb_T
 
-    w_scale_U1 = Cb_U * abs(h*Fθ)^(1/3) * (CSL + Cτb_U * rτ)^(1/3)
-    w_scale_T1 = Cb_T * abs(h*Fθ)^(1/3) * (CSL + Cτb_T * rτ)^(1/3)
+    𝒲_U1 = Cb_U * abs(h*Fθ)^(1/3) * (CSL + Cτb_U * rτ)^(1/3)
+    𝒲_T1 = Cb_T * abs(h*Fθ)^(1/3) * (CSL + Cτb_T * rτ)^(1/3)
 
-    w_scale_U2 = Cb_U * abs(h*Fθ)^(1/3) * (d2 + Cτb_U * rτ)^(1/3)
-    w_scale_T2 = Cb_T * abs(h*Fθ)^(1/3) * (d2 + Cτb_T * rτ)^(1/3)
+    𝒲_U2 = Cb_U * abs(h*Fθ)^(1/3) * (d2 + Cτb_U * rτ)^(1/3)
+    𝒲_T2 = Cb_T * abs(h*Fθ)^(1/3) * (d2 + Cτb_T * rτ)^(1/3)
 
-    (KPP.w_scale_U(model, id1) ≈ w_scale_U1 &&
-     KPP.w_scale_V(model, id1) ≈ w_scale_U1 &&
-     KPP.w_scale_T(model, id1) ≈ w_scale_T1 &&
-     KPP.w_scale_S(model, id1) ≈ w_scale_T1 &&
-     KPP.w_scale_U(model, id2) ≈ w_scale_U2 &&
-     KPP.w_scale_V(model, id2) ≈ w_scale_U2 &&
-     KPP.w_scale_T(model, id2) ≈ w_scale_T2 &&
-     KPP.w_scale_S(model, id2) ≈ w_scale_T2 )
+    (KPP.𝒲_U(model, id1) ≈ 𝒲_U1 &&
+     KPP.𝒲_V(model, id1) ≈ 𝒲_U1 &&
+     KPP.𝒲_T(model, id1) ≈ 𝒲_T1 &&
+     KPP.𝒲_S(model, id1) ≈ 𝒲_T1 &&
+     KPP.𝒲_U(model, id2) ≈ 𝒲_U2 &&
+     KPP.𝒲_V(model, id2) ≈ 𝒲_U2 &&
+     KPP.𝒲_T(model, id2) ≈ 𝒲_T2 &&
+     KPP.𝒲_S(model, id2) ≈ 𝒲_T2 )
 end
 
 function test_diffusivity_plain(; K₀=1.1)

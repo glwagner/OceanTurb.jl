@@ -1,11 +1,18 @@
 # OceanTurb.jl
 
-`OceanTurb.jl` implements one-dimensional partial differential equations
-that model turbulent convection and diffusion.
+> *How inappropriate to call this planet Earth when it is quite clearly Ocean.*
+>> *Arthur C. Clark*
 
-The primary purpose of the package is to explore models for convection
-and turbulent mixing in the ocean's surface boundary layer, where atmospheric
-forcing due to wind, waves, precipitation, evaporation, heating, cooling,
+`OceanTurb.jl` implements one-dimensional partial differential equations
+that model turbulent convection and diffusion in the ocean surface boundary layer.
+It's purpose is the exploration, development, and practical usage
+of ocean turbulence models.
+
+### In the scheme of things
+
+Just beneath the surface of the ocean, atmospheric fluxes of energy, heat
+fresh water, salinity, and momentum
+due to wind, waves, precipitation, evaporation, heating, cooling,
 and radiation drive turbulence and mediate the exchange of quantities like
 heat, momentum, and carbon between the atmosphere and ocean interior.
 Models that approximate the effects of atmospheric forcing on
@@ -35,12 +42,13 @@ Use help mode by typing `?` to find information about key functions:
 
 ```julia
 help?> iterate!
-search: iterate! iterate InteractiveUtils isinteractive Iterators
-
-  iterate!(model, Δt, nt=1)
-
-  Step model forward in time by one time-step with step-size Δt.
 ```
+
+which should give the information
+
+```@docs
+iterate!
+```  
 
 ## Components
 
@@ -53,10 +61,11 @@ and can be used by writing
 julia> using OceanTurb.Diffusion
 ```
 
-In addition to simple diffusion we have
+In addition to simple diffusion we have models for
 
-* K-Profile-Parameterization
-* ... others coming soon.
+* The K-Profile-Parameterization proposed by
+* A 'modular' K-Profile-Parameterization that allows mixing and matching the three separate components of a canonical 'KPP'-type model.
+* Pacanowski-Philander
 
 ## Authors
 
