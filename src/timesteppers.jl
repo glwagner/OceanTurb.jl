@@ -13,15 +13,6 @@ function Timestepper(stepper, args...)
   return eval(Expr(:call, fullsteppername, args...))
 end
 
-"""
-    iterate!(model; Δt, Nt)
-
-Step `model` forward in time for `Nt` steps with step size Δt.
-
-    iterate!(model, Δt)
-
-Step `model` forward by Δt.
-"""
 function iterate!(model, Δt, Nt)
     for step = 1:Nt
         iterate!(model, Δt)
@@ -29,6 +20,11 @@ function iterate!(model, Δt, Nt)
     return nothing
 end
 
+"""
+    iterate!(model; Δt, Nt)
+
+Step `model` forward in time for `Nt` steps with step size Δt.
+"""
 iterate!(model; Δt, Nt) = iterate!(model, Δt, Nt)
 
 "Update the clock after one iteration."
