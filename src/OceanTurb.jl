@@ -223,7 +223,7 @@ include("models/pacanowski_philander.jl")
 macro use_pyplot_utils()
     return esc(quote
         using PyPlot, PyCall
-        include("../plotting/pyplot_utils.jl")
+        include(joinpath(@__DIR__, "..", "plotting", "pyplot_utils.jl"))
         using PyPlotUtils
     end
     )
