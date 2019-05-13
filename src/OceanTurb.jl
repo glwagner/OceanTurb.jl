@@ -10,6 +10,7 @@ export # This file, core functionality:
     iter,
     set!,
     reset!,
+    @use_pyplot_utils,
 
     # utils.jl
     second,
@@ -133,8 +134,6 @@ include("fields.jl")
 include("equations.jl")
 include("timesteppers.jl")
 
-include("plotting.jl")
-
 mutable struct Clock{T}
   time :: T
   iter :: Int
@@ -219,5 +218,15 @@ include("models/modular_kpp.jl")
 include("models/eddy_diffusivity_mass_flux.jl")
 
 include("models/pacanowski_philander.jl")
+
+# Convenient utilities for plotting
+macro use_pyplot_utils()
+    return esc(quote
+        using PyPlot, PyCall
+        include("../plotting/pyplot_utils.jl")
+        using PyPlotUtils
+    end
+    )
+end
 
 end # module

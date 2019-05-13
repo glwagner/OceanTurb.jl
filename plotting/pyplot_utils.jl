@@ -1,4 +1,4 @@
-module Plotting
+module PyPlotUtils
 
 export
     plot,
