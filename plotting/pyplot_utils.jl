@@ -1,4 +1,4 @@
-module PyPlotUtils
+module OceanTurbPyPlotUtils
 
 export
     plot,
