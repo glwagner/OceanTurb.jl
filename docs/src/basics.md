@@ -1,4 +1,4 @@
-# Primer on boundary layer modeling
+# Turbulent boundary layers
 
 ```math
 \newcommand{\c}{\, ,}
@@ -17,7 +17,7 @@
 \newcommand{\eeqs}{\end{gather}}
 ```
 
-Models for the ocean surface boundary layer are partial
+Models for the turbulent ocean surface boundary layer are partial
 differential equations that approximate the effects of
 atmospheric forcing on the turbulent vertical flux
 and evolution of large-scale temperature, salinity, and momentum
@@ -74,6 +74,22 @@ temperature, respectively.
 In \eqref{xmomentum}--\eqref{temperature}, internal forcing of
 temperature due to solar radiation is denoted ``I_\Phi``.
 
+## Buoyancy
+
+`OceanTurb.jl` uses a linear equation of state, so that
+buoyancy is deteremined from temperature ``T`` and salinity ``S`` via
+
+```math
+\begin{align}
+B & \equiv - \frac{g \rho'}{\rho_0} \\
+  &     = g \left [ \alpha \left ( T - T_0 \right ) - \beta \left ( S - S_0 \right ) \right ] \c
+\end{align}
+```
+
+where ``g = 9.81 \, \mathrm{m \, s^{-2}}, \alpha = 2 \times 10^{-4} \, \mathrm{K^{-1}}``, and ``\beta = 8 \times 10^{-5}``,
+are the default gravitational acceleration, the thermal expansion coefficient, and the
+haline contraction coefficient, respectively.
+
 ## Surface fluxes
 
 Turbulence in the ocean surface boundary layer is driven by fluxes from
@@ -93,3 +109,33 @@ to a positive advective flux ``w \phi``.
 This convention also implies that a positive temperature flux at the ocean surface ---
 corresponding to heat fluxing upwards, out of the ocean, into the atmosphere ---
 implies a cooling of the ocean surface boundary layer.
+
+### Turbulent velocity scales
+
+The surface buoyancy flux is determined from temperature and
+salinity fluxes:
+
+```math
+\beq
+F_b = g \left ( \alpha F_\theta - \beta F_s \right ) \p
+\eeq
+```
+
+The velocity scale of turbulent motions associated with
+buoyancy flux ``F_b`` and velocity fluxes ``F_u`` and
+``F_v`` are
+
+```math
+\beq
+\omega_b \equiv | h F_b |^{1/3} \qquad \text{and} \qquad \omega_\tau \equiv | \b{\tau} / \rho_0 |^{1/2} \p
+\eeq
+```
+
+where ``h`` is the depth of the 'mixing layer', or the depth to which
+turbulent mixing and turbulent fluxes penetrate, ``\b{\tau}`` is wind stress,
+and ``\rho_0 = 1028 \, \mathrm{kg \, m^{-3}}`` is a reference density.
+
+Note that we also define a turbulent velocity scale for
+stabilizing buoyancy fluxes ``F_b < 0``, even though
+a stabilizing buoyancy flux suppresses, rather than generates,
+turbulence.

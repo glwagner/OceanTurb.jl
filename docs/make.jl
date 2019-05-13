@@ -13,9 +13,9 @@ makedocs(
 
        pages = Any[
                 "Home" => "index.md",
+                "Turbulence, fluxes, and physics" =>  "basics.md",
                 "Numerical methods" => "numerics.md",
                 "Turbulence models" => Any[
-                  "models/basics.md",
                   "models/kpp.md",
                   "models/modular_kpp.md",
                   "models/edmf.md",

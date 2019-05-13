@@ -55,38 +55,6 @@ decay to zero.
 Below, we denote 'model parameters' as ``\C{\mathrm{label}}{\mathrm{var}}``, where
 'label' describes the parameter and 'var' is a variable like ``U, V, T`` or ``S``.
 
-Buoyancy is then defined in terms of ``T`` and ``S`` as
-
-```math
-\begin{align}
-B & \equiv - \frac{g \rho'}{\rho_0} \\
-  &     = g \left [ \alpha \left ( T - T_0 \right ) - \beta \left ( S - S_0 \right ) \right ] \c
-\end{align}
-```
-
-where ``g = 9.81 \, \mathrm{m \, s^{-2}}, \alpha = 2 \times 10^{-4} \, \mathrm{K^{-1}}``, and ``\beta = 8 \times 10^{-5}``,
-are gravitational acceleration, the thermal expansion coefficient, and the
-haline contraction coefficient, respectively.
-Buoyancy forcing is equivalently
-
-```math
-\beq
-F_b = g \left ( \alpha F_\theta - \beta F_s \right ) \p
-\eeq
-```
-
-The turbulent velocity scales associated with buoyancy and wind forcing are
-
-```math
-\beq
-\omega_b \equiv | h F_b |^{1/3} \qquad \text{and} \qquad \omega_\tau \equiv | \b{\tau} / \rho_0 |^{1/2} \p
-\eeq
-```
-
-where ``h`` is the depth of the 'mixing layer', or the depth to which
-turbulent mixing and turbulent fluxes penetrate, ``\b{\tau}`` is wind stress,
-and ``\rho_0 = 1028 \, \mathrm{kg \, m^{-3}}`` is a reference density.
-
 We also define the ratios
 
 ```math
