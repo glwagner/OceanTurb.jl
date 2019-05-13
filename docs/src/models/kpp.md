@@ -34,7 +34,7 @@
 
 The K-Profile-Parameterization, or "KPP", is proposed by
 [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
-as a model for convection- and wind-driven mixing in the upper ocean.
+as a mo
 In KPP, vertical turbulent fluxes of a quantity ``\phi`` are parameterized as
 
 ```math
@@ -50,21 +50,22 @@ The non-local flux and turbulent diffusivity are defined to vanish at the surfac
 corresponds to the depth at which turbulent fluxes and turbulent kinetic energy
 decay to zero.
 
-## Description of the model
+The various numerical implementations of 'KPP' have effectively resulted in
+the proliferation of practically distinct KPP models in different codes.
+Here we describe the implementation of KPP in `OceanTurb`, which is meant to
+follow the version of KPP described by the
+[Community Vertical Mixing Project (CVMix)](https://github.com/CVMix/CVMix-description/raw/master/cvmix.pdf).
+
+The KPP model has three distinct parts:
+
+1. A model for the mixing layer depth, ``h``.
+2. A model for the non-local flux, ``\NL_\Phi``.
+3. A model for the local diffusivity, ``K_\Phi``.
 
 Below, we denote 'model parameters' as ``\C{\mathrm{label}}{\mathrm{var}}``, where
 'label' describes the parameter and 'var' is a variable like ``U, V, T`` or ``S``.
 
-We also define the ratios
-
-```math
-\beq
-r_b \equiv \left ( \frac{\omega_b}{\omega_\tau} \right )^3 \qquad \text{and}
-\qquad r_\tau \equiv \left ( \frac{\omega_\tau}{\omega_b} \right )^3 = \frac{1}{r_b} \p
-\eeq
-```
-
-### The mixing layer depth, ``h``
+## Mixing depth model in CVMix KPP
 
 The mixing layer depth ``h`` is defined implicitly via the bulk Richardson number criterion
 
@@ -95,7 +96,7 @@ The unresolved kinetic energy constant is ``\C{\K}{} = 4.32`` and the minimum un
 To solve \eqref{bulk\_ri} for ``h``, we evaluate the right side of \eqref{bulk\_ri} for ``z < 0`` at increasing depths until the right side rises above the critical ``\C{\Ri}{}``.
 We then linearly interpolate to find ``h``.
 
-### Non-local flux
+## 'Countergradient' non-local flux model in CVMix KPP
 
 The non-local flux is defined only for ``T`` and ``S``, and is
 
@@ -106,7 +107,7 @@ NL_\phi = \C{\NL}{} F_\phi d (1 - d)^2 \c
 ```
 where ``d = -z/h`` is a non-dimensional depth coordinate and ``\C{\NL}{} = 6.33``.
 
-### Turbulent Diffusivity
+## ``K``-Profile model in CVMix KPP
 
 The KPP diffusivity is defined
 
@@ -116,6 +117,16 @@ K_\phi = h \F{w}{\phi} d ( 1 - d )^2 \c
 \eeq
 ```
 where ``\F{w}{\phi}`` is the turbulent velocity scale.
+
+We define the ratios
+
+```math
+\beq
+r_b \equiv \left ( \frac{\omega_b}{\omega_\tau} \right )^3 \qquad \text{and}
+\qquad r_\tau \equiv \left ( \frac{\omega_\tau}{\omega_b} \right )^3 = \frac{1}{r_b} \p
+\eeq
+```
+
 In wind-driven turbulence under stable buoyancy forcing such that ``F_b < 0``, the turbulent velocity scale is
 
 ```math
