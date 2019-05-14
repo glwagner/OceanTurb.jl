@@ -8,6 +8,7 @@ export
     bottomspine,
 
     defaultcolors,
+    fontmanager,
     usecmbright
 
 using OceanTurb, PyPlot, PyCall
@@ -15,7 +16,7 @@ using OceanTurb, PyPlot, PyCall
 # A few nice things for plotting
 import PyPlot: plot
 
-font_manager = pyimport("matplotlib.font_manager")
+fontmanager = pyimport("matplotlib.font_manager")
 defaultcolors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
 plot(f::AbstractField, args...; kwargs...) = plot(data(f), nodes(f), args...; kwargs...)
