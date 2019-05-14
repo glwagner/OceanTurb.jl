@@ -1,4 +1,4 @@
-using Pkg; Pkg.activate("..")
+#using Pkg; Pkg.activate("..")
 
 using OceanTurb, Printf, StaticArrays, BenchmarkTools
 
@@ -37,20 +37,22 @@ function atomic_backward_euler_benchmark(m, Δt)
     return nothing
 end
 
-
 @printf "\nAtomic timestepping benchmarking of default configuration...\n"
 Δt = 1.1
 for N in Ns
 
+    #=
     @printf "N: % 4d, forward Euler\n" N
     m = KPP.Model(N=N, stepper=:ForwardEuler)
     atomic_forward_euler_benchmark(m, Δt)
+    =#
 
     @printf "N: % 4d, backward Euler\n" N
     m = KPP.Model(N=N, stepper=:BackwardEuler)
     atomic_backward_euler_benchmark(m, Δt)
 end
 
+#=
 @printf "\nAtomic timestepping benchmarking of configuration with one constant boundary condition...\n"
 Δt = 1.1
 for N in Ns
@@ -65,3 +67,4 @@ for N in Ns
     m.bcs.T.top = BoundaryCondition(Gradient, 0)
     atomic_backward_euler_benchmark(m, Δt)
 end
+=#
