@@ -95,9 +95,9 @@ julia> set_bcs!(model, c=(FluxBoundaryCondition(-1),
 function set_bcs!(model; bcspecs...)
     bcs = model.bcs
     for (ϕsym, bcs) in bcspecs
-        ϕbcs = getproperty(bcs, ϕ)
-        setproperty!(ϕbcs.bottom, ϕ, bcs[1])
-        setproperty!(ϕbcs.top, ϕ, bcs[2])
+        ϕbcs = getproperty(model.bcs, ϕsym)
+        setproperty!(ϕbcs, :bottom, bcs[1])
+        setproperty!(ϕbcs, :top, bcs[2])
     end
     return nothing
 end
