@@ -136,7 +136,7 @@ function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
     plume_T, plume_S, plume_w²= plumes(nonlocalflux, grid)
     h_crit = h_criterion(mixingdepth, grid)
     State(zero(T), zero(T), zero(T), zero(T), zero(T), zero(T),
-            h_crit, T_plume, S_plume, w²_plume)
+            h_crit, plume_T, plume_S, plume_w²)
 end
 
 struct Model{KP, NP, HP, S, TS, G, T} <: AbstractModel{TS, G, T}
