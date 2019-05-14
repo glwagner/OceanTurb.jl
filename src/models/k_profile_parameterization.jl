@@ -86,11 +86,15 @@ function update_state!(m)
     return nothing
 end
 
-mutable struct Model{TS, G, T} <: AbstractModel{TS, G, T}
-    @add_standard_model_fields
-    parameters :: Parameters{T}
-    constants  :: Constants{T}
-    state      :: State{T}
+mutable struct Model{TS, G, T, S} <: AbstractModel{TS, G, T}
+    clock       :: Clock{T}
+    grid        :: G
+    timestepper :: TS
+    solution    :: S
+    bcs         :: BoundaryConditions
+    parameters  :: Parameters{T}
+    constants   :: Constants{T}
+    state       :: State{T}
 end
 
 function Model(; N=10, L=1.0,
@@ -101,17 +105,17 @@ function Model(; N=10, L=1.0,
              bcs = BoundaryConditions((ZeroFluxBoundaryConditions() for i=1:nsol)...)
     )
 
-      #K = Accessory{Function}(KU, KV, KT, KS)
-      #R = Accessory{Function}(RU, RV, RT, RS)
-      K = (KU, KV, KT, KS)
-      R = (RU, RV, RT, RS)
+      K = (U=KU, V=KV, T=KT, S=KS)
+      R = (U=RU, V=RV, T=RT, S=RS)
     eqn = Equation(R, K, update_state!)
 
     solution = Solution((CellField(grid) for i=1:nsol)...)
-         lhs = OceanTurb.build_lhs(solution)
+    lhs = OceanTurb.build_lhs(solution)
     timestepper = Timestepper(stepper, eqn, solution, lhs)
+    clock = Clock()
+    state = State()
 
-    return Model(Clock(), grid, timestepper, solution, bcs, parameters, constants, State())
+    return Model(clock, grid, timestepper, solution, bcs, parameters, constants, state)
 end
 
 # Note: we use 'm' to refer to 'model' in function definitions below.
@@ -168,13 +172,13 @@ end
 
 Returns the bulk Richardson number of `model` at face `i`.
 """
-@inline function bulk_richardson_number(U, V, T, S, Fb::TT, 
+@inline function bulk_richardson_number(U, V, T, S, Fb::TT,
                                 CKE::TT, CKE₀::TT, CSL::TT, g::TT, α::TT, β::TT, i) where TT
     h = -U.grid.zf[i]
     # (h - hε) * ΔB
     h⁺ΔB = h * (1.0 - 0.5CSL) * g * (α*Δ(T, CSL, i) - β*Δ(S, CSL, i))
 
-    KE = (Δ(U, CSL, i)^2 + Δ(V, CSL, i)^2 
+    KE = (Δ(U, CSL, i)^2 + Δ(V, CSL, i)^2
               + unresolved_kinetic_energy(h, ∂B∂z(T, S, g, α, β, i), Fb, CKE, CKE₀, g, α, β))
 
     if KE == 0 && h⁺ΔB == 0 # Alistar Adcroft's theorem
