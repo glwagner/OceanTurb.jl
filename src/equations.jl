@@ -12,10 +12,10 @@ The functions K[j](m, i) and R[j](m, i) calculate the
 diffusivity K and remaining terms R for the model `m` at
 grid point `i`.
 """
-struct Equation{TR, TK}
+struct Equation{TR, TK, U}
     R       :: TR
     K       :: TK
-    update! :: Function
+    update! :: U
 end
 
 nothing_func(args...) = nothing

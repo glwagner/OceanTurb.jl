@@ -52,12 +52,11 @@ end
 
 function prepare!(bcs, K, solution, update_eqn!, N, m)
     update_eqn!(m)
-    for j in eachindex(solution)
-        @inbounds begin
-            ϕ = solution[j]
-            Kϕ = K[j]
-            bcsϕ = bcs[j]
-        end
+    ntuple(Val(length(solution))) do j
+        Base.@_inline_meta
+        ϕ = solution[j]
+        Kϕ = K[j]
+        bcsϕ = bcs[j]
         fill_bottom_ghost_cell!(bcsϕ.bottom, ϕ, Kϕ(m, 1), m)
         fill_top_ghost_cell!(bcsϕ.top, ϕ, Kϕ(m, N+1), m, N)
     end
@@ -67,18 +66,16 @@ end
 @inline explicit_rhs_kernel(ϕ, K, R, m, i) = ∇K∇c(K(m, i+1), K(m, i), ϕ, i) + R(m, i)
 @inline implicit_rhs_top(ϕ, K, R, m) = ∇K∇c(K(m, m.grid.N+1), 0, ϕ, m.grid.N) + R(m, m.grid.N)
 @inline implicit_rhs_bottom(ϕ, K, R, m) = ∇K∇c(0, K(m, 1), ϕ, 1) + R(m, 1)
-@propagate_inbounds implicit_rhs_kernel!(rhs, ϕ, R, m, i) = rhs[i] = R(m, i)
+@inline implicit_rhs_kernel(rhs, ϕ, R, m, i) = R(m, i)
 
 "Evaluate the right-hand-side of ∂ϕ∂t for the current time-step."
 function calc_explicit_rhs!(rhs, eqn, solution, m)
-    for j in eachindex(solution)
-
-        @inbounds begin
-            ϕ = solution[j]
-            rhsϕ = rhs[j]
-            Kϕ = eqn.K[j]
-            Rϕ = eqn.R[j]
-        end
+    ntuple(Val(length(solution))) do j
+        Base.@_inline_meta
+        ϕ = solution[j]
+        rhsϕ = rhs[j]
+        Kϕ = eqn.K[j]
+        Rϕ = eqn.R[j]
 
         for i in eachindex(rhsϕ)
             @inbounds rhsϕ[i] = explicit_rhs_kernel(ϕ, Kϕ, Rϕ, m, i)
@@ -89,17 +86,15 @@ end
 
 function calc_implicit_rhs!(rhs, eqn, solution, m)
     N = m.grid.N
-    for j in eachindex(solution)
-
-        @inbounds begin
-            ϕ = solution[j]
-            rhsϕ = rhs[j]
-            Kϕ = eqn.K[j]
-            Rϕ = eqn.R[j]
-        end
+    ntuple(Val(length(solution))) do j
+        Base.@_inline_meta
+        ϕ = solution[j]
+        rhsϕ = rhs[j]
+        Kϕ = eqn.K[j]
+        Rϕ = eqn.R[j]
 
         for i in interiorindices(rhsϕ)
-            @inbounds implicit_rhs_kernel!(rhsϕ, ϕ, Rϕ, m, i)
+            @inbounds rhsϕ[i] = implicit_rhs_kernel(rhsϕ, ϕ, Rϕ, m, i)
         end
 
         @inbounds rhsϕ[N] = implicit_rhs_top(ϕ, Kϕ, Rϕ, m)
@@ -111,12 +106,10 @@ end
 
 function forward_euler_update!(rhs, solution, Δt)
     # Take one forward Euler step
-    for j in eachindex(solution)
-
-        @inbounds begin
-            ϕ = solution[j]
-            rhsϕ = rhs[j]
-        end
+    ntuple(Val(length(solution))) do j
+        Base.@_inline_meta
+        ϕ = solution[j]
+        rhsϕ = rhs[j]
 
         for i in eachindex(ϕ)
             @inbounds ϕ[i] += Δt * rhsϕ[i]
@@ -160,31 +153,26 @@ function Tridiagonal(fld::AbstractField)
 end
 
 function build_lhs(solution)
-    lhs_1 = Tridiagonal(solution[1])
-    lhs = [lhs_1]
-    for i = 2:length(solution)
-        lhs_i = Tridiagonal(solution[i])
-        push!(lhs, lhs_i)
+    ntuple(Val(length(solution))) do i
+        Tridiagonal(solution[i])
     end
-    return lhs
 end
 
-flux_div_op(m, K::Function, face, cell) = K(m, face) / Δc(m.grid, face) / Δf(m.grid, cell)
-flux_div_op(m, K::Number, face, cell) = K / Δc(m.grid, face) / Δf(m.grid, cell)
+@inline flux_div_op(m, K::Function, face, cell) = K(m, face) / Δc(m.grid, face) / Δf(m.grid, cell)
+@inline flux_div_op(m, K::Number, face, cell) = K / Δc(m.grid, face) / Δf(m.grid, cell)
 
 # Build backward Euler operator for diffusive problems
 function calc_diffusive_lhs!(Δt, lhs, K, solution, m)
-    for j in eachindex(solution)
-        @inbounds begin
-            ϕ = solution[j]
-            Kϕ = K[j]
-            L = lhs[j]
-        end
+    ntuple(Val(length(solution))) do j
+        Base.@_inline_meta
+        ϕ = solution[j]
+        Kϕ = K[j]
+        L = lhs[j]
 
         for i in interiorindices(ϕ)
             @inbounds begin
                 L.du[i]   = -Δt * flux_div_op(m, Kϕ, i+1, i)
-                L.d[i]    = 1 + Δt * (flux_div_op(m, Kϕ, i+1, i) + flux_div_op(m, Kϕ, i, i))
+                L.d[i]    = 1.0 + Δt * (flux_div_op(m, Kϕ, i+1, i) + flux_div_op(m, Kϕ, i, i))
                 L.dl[i-1] = -Δt * flux_div_op(m, Kϕ, i, i)
             end
         end
@@ -203,12 +191,11 @@ end
 
 "Update solution by inverting Tridiagonal lhs matrix."
 function backward_euler_update!(rhs, lhs, solution, Δt)
-    for j in eachindex(solution)
-        @inbounds begin
-            lhsϕ = lhs[j]
-            rhsϕ = data(rhs[j])
-            ϕ = data(solution[j])
-        end
+    ntuple(Val(length(solution))) do j
+        Base.@_inline_meta
+        lhsϕ = lhs[j]
+        rhsϕ = data(rhs[j])
+        ϕ = data(solution[j])
 
         for i in eachindex(rhsϕ)
             @inbounds rhsϕ[i] = ϕ[i] + Δt*rhsϕ[i]

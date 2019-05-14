@@ -9,6 +9,13 @@ import OceanTurb: Constants
 const nsol = 4
 @solution U V T S
 
+#=
+struct Solution{A, G, T} <: AbstractSolution{4, AbstractField}
+
+end
+=#
+
+
 """
     Parameters(; kwargs...)
 
@@ -47,7 +54,7 @@ end
 
 # Shape functions.
 # 'd' is a non-dimensional depth coordinate.
-default_NL_shape(d) = ifelse(0<d<1, d*(1-d)^2, zero(d))
+default_NL_shape(d) = ifelse(0<d<1, d*(1-d)^2, -zero(d))
 const default_K_shape = default_NL_shape
 
 mutable struct State{T} <: FieldVector{6, T}
@@ -94,8 +101,10 @@ function Model(; N=10, L=1.0,
              bcs = BoundaryConditions((ZeroFluxBoundaryConditions() for i=1:nsol)...)
     )
 
-      K = Accessory{Function}(KU, KV, KT, KS)
-      R = Accessory{Function}(RU, RV, RT, RS)
+      #K = Accessory{Function}(KU, KV, KT, KS)
+      #R = Accessory{Function}(RU, RV, RT, RS)
+      K = (KU, KV, KT, KS)
+      R = (RU, RV, RT, RS)
     eqn = Equation(R, K, update_state!)
 
     solution = Solution((CellField(grid) for i=1:nsol)...)
@@ -108,9 +117,9 @@ end
 # Note: we use 'm' to refer to 'model' in function definitions below.
 
 ## ** The K-Profile-Parameterization **
-K_KPP(h, 𝒲, d, shape=default_K_shape) = ifelse(0<d<1, max(zero(h), h*𝒲*shape(d)), zero(h))
+K_KPP(h, 𝒲, d, shape=default_K_shape) = ifelse(0<d<1, max(zero(h), h*𝒲*shape(d)), -zero(h))
 
-d(m, i) = ifelse(m.state.h>0, -m.grid.zf[i]/m.state.h, zero(m.state.h))
+d(m, i) = @inbounds ifelse(m.state.h>0, -m.grid.zf[i]/m.state.h, -zero(m.state.h))
 
 "Return the buoyancy gradient at face point i."
 ∂B∂z(T, S, g, α, β, i) = g * (α*∂z(T, i) - β*∂z(S, i))
@@ -159,17 +168,17 @@ end
 
 Returns the bulk Richardson number of `model` at face `i`.
 """
-function bulk_richardson_number(U, V, T, S, Fb, CKE, CKE₀, CSL, g, α, β, i)
+@inline function bulk_richardson_number(U, V, T, S, Fb::TT, 
+                                CKE::TT, CKE₀::TT, CSL::TT, g::TT, α::TT, β::TT, i) where TT
     h = -U.grid.zf[i]
     # (h - hε) * ΔB
-    h⁺ΔB = h * (1 - 0.5CSL) * g * (α*Δ(T, CSL, i) - β*Δ(S, CSL, i))
+    h⁺ΔB = h * (1.0 - 0.5CSL) * g * (α*Δ(T, CSL, i) - β*Δ(S, CSL, i))
 
-    Bz = ∂B∂z(T, S, g, α, β, i)
-    unresolved_KE = unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β)
-    KE = Δ(U, CSL, i)^2 + Δ(V, CSL, i)^2 + unresolved_KE
+    KE = (Δ(U, CSL, i)^2 + Δ(V, CSL, i)^2 
+              + unresolved_kinetic_energy(h, ∂B∂z(T, S, g, α, β, i), Fb, CKE, CKE₀, g, α, β))
 
     if KE == 0 && h⁺ΔB == 0 # Alistar Adcroft's theorem
-        return 0
+        return -zero(TT)
     else
         return h⁺ΔB / KE
     end
@@ -242,7 +251,7 @@ isforced(model) = model.state.Fu != 0 || model.state.Fv != 0 || model.state.Fb !
 𝒲_stable(Cτ, Cstab, Cn, ωτ, ωb, d) = Cτ * ωτ / (1 + Cstab * d * (ωb/ωτ)^3)^Cn
 
 "Return the vertical velocity scale at scaled depth dϵ for an unstable boundary layer."
-function 𝒲_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
+@inline function 𝒲_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
     dϵ = min(CSL, d)
     if dϵ < Cd * (ωτ/ωb)^3
         return Cτ * ωτ * (1 + Cunst * dϵ * (ωb/ωτ)^3)^Cmτ
@@ -251,7 +260,7 @@ function 𝒲_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
     end
 end
 
-function 𝒲_unstable_U(m, i)
+@inline function 𝒲_unstable_U(m, i)
     return 𝒲_unstable(m.parameters.CSL, m.parameters.Cd_U,
                             m.parameters.Cτ, m.parameters.Cunst,
                             m.parameters.Cb_U, m.parameters.Cτb_U,
@@ -260,7 +269,7 @@ function 𝒲_unstable_U(m, i)
                             )
 end
 
-function 𝒲_unstable_T(m, i)
+@inline function 𝒲_unstable_T(m, i)
     return 𝒲_unstable(m.parameters.CSL, m.parameters.Cd_T,
                             m.parameters.Cτ, m.parameters.Cunst,
                             m.parameters.Cb_T, m.parameters.Cτb_T,
@@ -269,16 +278,16 @@ function 𝒲_unstable_T(m, i)
                             )
 end
 
-function 𝒲_stable(m, i)
+@inline function 𝒲_stable(m, i)
     return 𝒲_stable(m.parameters.Cτ, m.parameters.Cstab, m.parameters.Cn,
                           ωτ(m), ωb(m), d(m, i)
                           )
 end
 
 "Return the turbulent velocity scale for momentum at face point i."
-function 𝒲_U(m, i)
+@inline function 𝒲_U(m::AbstractModel{TS, G, T}, i) where {TS, G, T}
     if !isforced(m)
-        return 0
+        return -zero(T)
     elseif isunstable(m)
         return 𝒲_unstable_U(m, i)
     else
@@ -287,9 +296,9 @@ function 𝒲_U(m, i)
 end
 
 "Return the turbulent velocity scale for tracers at face point i."
-function 𝒲_T(m, i)
+@inline function 𝒲_T(m::AbstractModel{TS, G, T}, i) where {TS, G, T}
     if !isforced(m)
-        return 0
+        return -zero(T)
     elseif isunstable(m)
         return 𝒲_unstable_T(m, i)
     else
@@ -319,11 +328,11 @@ For example, positive heat flux out of the surface implies cooling.
 """
 NL(CNL, flux, d, shape=default_NL_shape) = CNL * flux * shape(d)
 
-function ∂NL∂z(CNL, Fϕ, d, Δf, m)
+function ∂NL∂z(CNL::T, Fϕ, d, Δf, m) where T
     if isunstable(m)
         return (NL(CNL, Fϕ, d) - NL(CNL, Fϕ, d)) / Δf
     else
-        return 0
+        return -zero(T)
     end
 end
 
@@ -335,10 +344,14 @@ end
 #
 
 # K_{U,V,T,S} is calculated at face points
-KU(m, i) = K_KPP(m.state.h, 𝒲_U(m, i), d(m, i)) + m.parameters.KU₀
-KT(m, i) = K_KPP(m.state.h, 𝒲_T(m, i), d(m, i)) + m.parameters.KT₀
-KS(m, i) = K_KPP(m.state.h, 𝒲_S(m, i), d(m, i)) + m.parameters.KS₀
+@inline KU(m, i) = K_KPP(m.state.h, 𝒲_U(m, i), d(m, i)) + m.parameters.KU₀
+@inline KT(m, i) = K_KPP(m.state.h, 𝒲_T(m, i), d(m, i)) + m.parameters.KT₀
+@inline KS(m, i) = K_KPP(m.state.h, 𝒲_S(m, i), d(m, i)) + m.parameters.KS₀
 const KV = KU
+
+#@inline KU(m, i) = K_KPP(m.state.h, 𝒲_U(m, i), d(m, i)) + m.parameters.KU₀
+#const KT = KS = KV = KU
+
 
 @inline RU(f, V, i) = @inbounds  f*V[i]
 @inline RV(f, U, i) = @inbounds -f*U[i]

@@ -28,17 +28,18 @@ macro def(name, definition)
     end
 end
 
-function build_homogeneous_solution(names, type=:CellField; prefix=Symbol(""))
+function build_homogeneous_solution(names, typeprefix=:CellField; prefix=Symbol(""))
     nfields = length(names)
-    exprs = [ :( $(names[i]) :: $(Expr(:curly, type, :A, :G, :T))) for i = 1:nfields ]
+    fieldtype = Expr(:curly, typeprefix, :A, :G, :T)
+    exprs = [ :( $(names[i]) :: $fieldtype ) for i = 1:nfields ]
 
     fullname = Symbol(prefix, :Solution)
     signature = Expr(:curly, fullname, :A, :G, :T)
 
     return quote
-        import StaticArrays: FieldVector
+        #import StaticArrays: FieldVector
 
-        struct $signature <: AbstractSolution{$(nfields), AbstractField}
+        struct $signature <: AbstractSolution{$(nfields), $fieldtype}
             $(exprs...)
         end
     end
