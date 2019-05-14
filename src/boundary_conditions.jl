@@ -77,3 +77,27 @@ function FieldBoundaryConditions(; bottom = ZeroFluxBoundaryCondition(),
 end
 
 ZeroFluxBoundaryConditions() = FieldBoundaryConditions()
+
+"""
+    set_bcs!(model; bcspecs...)
+
+Set boundary conditions of model solution fields.
+The keyword argument name must be the name of a model solution
+and its value is a (bottom_bc, top_bc) tuple.
+
+Example
+========
+
+julia> set_bcs!(model, c=(FluxBoundaryCondition(-1),
+                          FluxBoundaryCondition(0))
+                )
+"""
+function set_bcs!(model; bcspecs...)
+    bcs = model.bcs
+    for (ϕsym, bcs) in bcspecs
+        ϕbcs = getproperty(model.bcs, ϕsym)
+        setproperty!(ϕbcs, :bottom, bcs[1])
+        setproperty!(ϕbcs, :top, bcs[2])
+    end
+    return nothing
+end
