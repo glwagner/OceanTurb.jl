@@ -5,7 +5,7 @@
 | [![docs][docs-img]][docs-url] | [![travis][travis-img]][travis-url] |[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://mit-license.org/)|
 
 
-`OceanTurb.jl` is julia software that solves one-dimensional 
+`OceanTurb.jl` provides software for solving one-dimensional 
 models that approximate the physics of the 
 ocean's turbulent surface boundary layer.
 
