@@ -44,23 +44,23 @@ A `Grid` has two type parameters: an element type `T`,
 and and a range type `R`. `T` defaults to Float64.
 """
 struct UniformGrid{T, R} <: Grid{T, R}
-  N  :: Int
-  L  :: T
-  Δc :: T
-  Δf :: T
-  zc :: R
-  zf :: R
+    N  :: Int
+    L  :: T
+    Δc :: T
+    Δf :: T
+    zc :: R
+    zf :: R
 end
 
 function UniformGrid(T, N::Int, L::Number)
-  Δ = convert(T, L/N)
-  L = convert(T, L)
-  half_Δ = convert(T, 0.5Δ)
+    Δ = convert(T, L/N)
+    L = convert(T, L)
+    half_Δ = convert(T, 0.5Δ)
 
-  zc = range(-L+half_Δ; length=N, stop=-half_Δ)
-  zf = range(-L; length=N+1, stop=zero(T))
+    zc = range(-L+half_Δ; length=N, stop=-half_Δ)
+    zf = range(-L; length=N+1, stop=zero(T))
 
-  UniformGrid(N, L, Δ, Δ, zc, zf)
+    UniformGrid(N, L, Δ, Δ, zc, zf)
 end
 
 # Defaults

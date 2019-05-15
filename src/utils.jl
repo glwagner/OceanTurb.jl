@@ -99,18 +99,6 @@ macro prefixed_solution(prefix, names...)
     )
 end
 
-#=
-macro pair_typed_solution(paired_specs...)
-    fieldnames = Symbol[]
-    fieldtypes = Symbol[]
-    for (i, spec) in enumerate(paired_specs)
-        isodd(i) && push!(fieldtypes, spec)
-        iseven(i) && push!(fieldnames, spec)
-    end
-    esc(build_solution(fieldnames, fieldtypes))
-end
-=#
-
 @def add_standard_model_fields begin
     clock       :: Clock{T}
     grid        :: G

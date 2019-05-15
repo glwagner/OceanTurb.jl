@@ -38,15 +38,15 @@ end
 # ForwardEuler timestepper
 #
 
-struct ForwardEulerTimestepper{R, ER, EK} <: Timestepper
-    eqn :: Equation{ER, EK}
+struct ForwardEulerTimestepper{E, R} <: Timestepper
+    eqn :: E
     rhs :: R
-    function ForwardEulerTimestepper(eqn::Equation{R, K}, solution, args...) where {R, K}
+    function ForwardEulerTimestepper(eqn, solution, args...)
         rhs = deepcopy(solution)
         for fld in rhs
             set!(fld, 0)
         end
-        new{typeof(rhs), R, K}(eqn, rhs)
+        new{typeof(eqn), typeof(rhs)}(eqn, rhs)
     end
 end
 
@@ -63,10 +63,10 @@ function prepare!(bcs, K, solution, update_eqn!, N, m)
     return nothing
 end
 
-@inline explicit_rhs_kernel(ϕ, K, R, m, i) = ∇K∇c(K(m, i+1), K(m, i), ϕ, i) + R(m, i)
-@inline implicit_rhs_top(ϕ, K, R, m) = ∇K∇c(K(m, m.grid.N+1), 0, ϕ, m.grid.N) + R(m, m.grid.N)
-@inline implicit_rhs_bottom(ϕ, K, R, m) = ∇K∇c(0, K(m, 1), ϕ, 1) + R(m, 1)
-@inline implicit_rhs_kernel(rhs, ϕ, R, m, i) = R(m, i)
+@propagate_inbounds explicit_rhs_kernel(ϕ, K, R, m, i) = ∇K∇c(K(m, i+1), K(m, i), ϕ, i) + R(m, i)
+@propagate_inbounds implicit_rhs_top(ϕ, K, R, m) = ∇K∇c(K(m, m.grid.N+1), 0, ϕ, m.grid.N) + R(m, m.grid.N)
+@propagate_inbounds implicit_rhs_bottom(ϕ, K, R, m) = ∇K∇c(0, K(m, 1), ϕ, 1) + R(m, 1)
+@propagate_inbounds implicit_rhs_kernel(rhs, ϕ, R, m, i) = R(m, i)
 
 "Evaluate the right-hand-side of ∂ϕ∂t for the current time-step."
 function calc_explicit_rhs!(rhs, eqn, solution, m)
@@ -127,21 +127,20 @@ function iterate!(m::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
     return nothing
 end
 
-
 #
 # BackwardEuler timestepper
 #
 
-struct BackwardEulerTimestepper{R, L, ER, EK} <: Timestepper
-    eqn :: Equation{ER, EK}
+struct BackwardEulerTimestepper{E, R, L} <: Timestepper
+    eqn :: E
     rhs :: R
     lhs :: L
-    function BackwardEulerTimestepper(eqn::Equation{R, K}, solution, lhs) where {R, K}
+    function BackwardEulerTimestepper(eqn, solution, lhs)
         rhs = deepcopy(solution)
         for fld in rhs
             set!(fld, 0)
         end
-        new{typeof(rhs), typeof(lhs), R, K}(eqn, rhs, lhs)
+        new{typeof(eqn), typeof(rhs), typeof(lhs)}(eqn, rhs, lhs)
     end
 end
 
@@ -162,7 +161,7 @@ end
 @inline flux_div_op(m, K::Number, face, cell) = K / Δc(m.grid, face) / Δf(m.grid, cell)
 
 # Build backward Euler operator for diffusive problems
-function calc_diffusive_lhs!(Δt, lhs, K, solution, m)
+function calc_diffusive_lhs!(Δt::T, lhs, K, solution, m) where T
     ntuple(Val(length(solution))) do j
         Base.@_inline_meta
         ϕ = solution[j]
@@ -172,7 +171,7 @@ function calc_diffusive_lhs!(Δt, lhs, K, solution, m)
         for i in interiorindices(ϕ)
             @inbounds begin
                 L.du[i]   = -Δt * flux_div_op(m, Kϕ, i+1, i)
-                L.d[i]    = 1.0 + Δt * (flux_div_op(m, Kϕ, i+1, i) + flux_div_op(m, Kϕ, i, i))
+                L.d[i]    = one(T) + Δt * (flux_div_op(m, Kϕ, i+1, i) + flux_div_op(m, Kϕ, i, i))
                 L.dl[i-1] = -Δt * flux_div_op(m, Kϕ, i, i)
             end
         end

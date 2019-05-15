@@ -78,11 +78,12 @@ export # This file, core functionality:
     Gradient,
     Value,
     BoundaryCondition,
-    FieldBoundaryConditions,
     FluxBoundaryCondition,
-    ZeroFluxBoundaryConditions,
     ValueBoundaryCondition,
     GradientBoundaryCondition,
+    FieldBoundaryConditions,
+    ZeroFluxBoundaryConditions,
+    DefaultBoundaryConditions,
     set_bcs!,
     getbc,
     fill_top_ghost_cell!,
@@ -110,12 +111,11 @@ import Base: time, setproperty!
 
 abstract type AbstractParameters end
 abstract type AbstractEquation end
-abstract type Grid{T, A<:AbstractArray} end
+abstract type Grid{T, A} end
 abstract type Timestepper end
-abstract type AbstractField{A<:AbstractArray, G<:Grid, T} end
+abstract type AbstractField{A, G, T} end
 abstract type AbstractSolution{N, T} <: FieldVector{N, T} end
-abstract type HeterogeneousSolution end
-abstract type AbstractModel{T, G, TS} end  # Explain: what is a `Model`?
+abstract type AbstractModel{T, G, TS} end
 
 #
 # Core OceanTurb.jl functionality

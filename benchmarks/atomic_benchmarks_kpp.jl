@@ -28,7 +28,7 @@ function atomic_backward_euler_benchmark(m, Δt)
 
     @printf "% 24s:" "calc diffusive lhs"
     @btime OceanTurb.calc_diffusive_lhs!($Δt, $(m.timestepper.lhs), $(m.timestepper.eqn.K), $(m.solution), $m)
-    
+
     @printf "% 24s:" "update solution"
     @btime OceanTurb.backward_euler_update!($(m.timestepper.rhs), $(m.timestepper.lhs), $(m.solution), $Δt)
 
@@ -41,30 +41,26 @@ end
 Δt = 1.1
 for N in Ns
 
-    #=
     @printf "N: % 4d, forward Euler\n" N
     m = KPP.Model(N=N, stepper=:ForwardEuler)
     atomic_forward_euler_benchmark(m, Δt)
-    =#
 
     @printf "N: % 4d, backward Euler\n" N
     m = KPP.Model(N=N, stepper=:BackwardEuler)
     atomic_backward_euler_benchmark(m, Δt)
 end
 
-#=
 @printf "\nAtomic timestepping benchmarking of configuration with one constant boundary condition...\n"
 Δt = 1.1
 for N in Ns
 
     @printf "N: % 4d, forward Euler\n" N
     m = KPP.Model(N=N, stepper=:ForwardEuler)
-    m.bcs.T.top = BoundaryCondition(Gradient, 0)
+    m.bcs.T.top = BoundaryCondition(Flux, 1.0)
     atomic_forward_euler_benchmark(m, Δt)
 
     @printf "N: % 4d, backward Euler\n" N
     m = KPP.Model(N=N, stepper=:BackwardEuler)
-    m.bcs.T.top = BoundaryCondition(Gradient, 0)
+    m.bcs.T.top = BoundaryCondition(Flux, 1.0)
     atomic_backward_euler_benchmark(m, Δt)
 end
-=#
