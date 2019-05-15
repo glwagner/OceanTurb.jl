@@ -5,14 +5,14 @@ using OceanTurb, Printf, StaticArrays, BenchmarkTools
 Ns = (128,)
 
 function atomic_forward_euler_benchmark(m, Δt)
-    @printf "% 24s:" "prepare"
-    @btime OceanTurb.prepare!($(m.bcs), $(m.timestepper.eqn.K), $(m.solution), $(m.timestepper.eqn.update!), $(m.grid.N), $m)
+    @printf "% 24s:" "update"
+    @btime OceanTurb.update!($(m.bcs), $(m.timestepper.eqn), $(m.solution), $m)
 
     @printf "% 24s:" "calc explicit rhs"
     @btime OceanTurb.calc_explicit_rhs!($(m.timestepper.rhs), $(m.timestepper.eqn), $(m.solution), $m)
 
     @printf "% 24s:" "update solution"
-    @btime OceanTurb.forward_euler_update!($(m.timestepper.rhs), $(m.solution), $Δt)
+    @btime OceanTurb.forward_euler_step!($(m.timestepper.rhs), $(m.solution), $Δt)
 
     @printf "% 24s:" "tick"
     @btime OceanTurb.tick!($(m.clock), $Δt)
@@ -20,8 +20,8 @@ function atomic_forward_euler_benchmark(m, Δt)
 end
 
 function atomic_backward_euler_benchmark(m, Δt)
-    @printf "% 24s:" "prepare"
-    @btime OceanTurb.prepare!($(m.bcs), $(m.timestepper.eqn.K), $(m.solution), $(m.timestepper.eqn.update!), $(m.grid.N), $m)
+    @printf "% 24s:" "update"
+    @btime OceanTurb.update!($(m.bcs), $(m.timestepper.eqn), $(m.solution), $m)
 
     @printf "% 24s:" "calc implicit rhs"
     @btime OceanTurb.calc_implicit_rhs!($(m.timestepper.rhs), $(m.timestepper.eqn), $(m.solution), $m)
@@ -30,7 +30,7 @@ function atomic_backward_euler_benchmark(m, Δt)
     @btime OceanTurb.calc_diffusive_lhs!($Δt, $(m.timestepper.lhs), $(m.timestepper.eqn.K), $(m.solution), $m)
 
     @printf "% 24s:" "update solution"
-    @btime OceanTurb.backward_euler_update!($(m.timestepper.rhs), $(m.timestepper.lhs), $(m.solution), $Δt)
+    @btime OceanTurb.backward_euler_step!($(m.timestepper.rhs), $(m.timestepper.lhs), $(m.solution), $Δt)
 
     @printf "% 24s:" "tick"
     @btime OceanTurb.tick!($(m.clock), $Δt)
