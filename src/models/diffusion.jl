@@ -31,7 +31,7 @@ function Model(; N=10, L=1.0, K=0.1,
     K = Accessory(Kc)
     R = Accessory(Rc) #nothing)
     eqn = Equation(R, K)
-    lhs = LeftHandSide(solution)
+    lhs = build_lhs(solution) #LeftHandSide(solution)
     timestepper = Timestepper(stepper, eqn, solution, lhs)
 
     return Model(Clock(), grid, timestepper, solution, bcs, parameters)

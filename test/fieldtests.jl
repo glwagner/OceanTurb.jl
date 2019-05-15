@@ -1,6 +1,6 @@
-# --
+#
 # Define tests
-# --
+# 
 
 function fill_ghost_cells!(c, κtop, κbottom, model, fieldbcs)
     fill_bottom_ghost_cell!(fieldbcs.bottom, c, κbottom, model)
@@ -131,7 +131,7 @@ function test_ghost_cell_value(T)
     c_bottom = T(0.11)
     top_bc = ValueBoundaryCondition(c_top)
     bottom_bc = ValueBoundaryCondition(c_bottom)
-    fieldbcs = FieldBoundaryConditions(top=top_bc, bottom=bottom_bc)
+    fieldbcs = FieldBoundaryConditions(bottom_bc, top_bc)
     fill_ghost_cells!(c, 0, 0, model, fieldbcs)
 
     onface(c, 1) ≈ c_bottom && onface(c, grid.N+1) ≈ c_top
@@ -145,7 +145,7 @@ function test_ghost_cell_gradient(T)
     cz_bottom = T(0.11)
     top_bc = GradientBoundaryCondition(cz_top)
     bottom_bc = GradientBoundaryCondition(cz_bottom)
-    fieldbcs = FieldBoundaryConditions(top=top_bc, bottom=bottom_bc)
+    fieldbcs = FieldBoundaryConditions(bottom_bc, top_bc)
 
     fill_ghost_cells!(c, 0, 0, model, fieldbcs)
 
@@ -160,7 +160,7 @@ function test_ghost_cell_flux(T)
     Fc_bottom = T(0.11)
     top_bc = FluxBoundaryCondition(Fc_top)
     bottom_bc = FluxBoundaryCondition(Fc_bottom)
-    fieldbcs = FieldBoundaryConditions(top=top_bc, bottom=bottom_bc)
+    fieldbcs = FieldBoundaryConditions(bottom_bc, top_bc)
 
     κ = T(0.47)
     fill_ghost_cells!(c, κ, κ, model, fieldbcs)

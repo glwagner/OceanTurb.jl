@@ -6,6 +6,8 @@ using
 
 import OceanTurb: Constants
 
+using Base: @propagate_inbounds
+
 const nsol = 4
 @solution U V T S
 
@@ -47,7 +49,7 @@ end
 
 # Shape functions.
 # 'd' is a non-dimensional depth coordinate.
-default_NL_shape(d) = ifelse(0<d<1, d*(1-d)^2, zero(d))
+default_NL_shape(d) = ifelse(0<d<1, d*(1-d)^2, -zero(d))
 const default_K_shape = default_NL_shape
 
 mutable struct State{T} <: FieldVector{6, T}
@@ -61,7 +63,60 @@ end
 
 State(T=Float64) = State{T}(0, 0, 0, 0, 0, 0)
 
-Fb(g, α, β, Fθ, Fs) = g * (α*Fθ - β*Fs)
+
+mutable struct Model{S, G, T, U, B} <: AbstractModel{S, G, T}
+    clock       :: Clock{T}
+    grid        :: G
+    timestepper :: S
+    solution    :: U
+    bcs         :: B
+    parameters  :: Parameters{T}
+    constants   :: Constants{T}
+    state       :: State{T}
+end
+
+
+function Model(; N=10, L=1.0,
+            grid = UniformGrid(N, L),
+       constants = Constants(),
+      parameters = Parameters(),
+         stepper = :ForwardEuler
+              )
+
+     K = (U=KU, V=KV, T=KT, S=KS)
+     R = (U=RU, V=RV, T=RT, S=RS)
+    eq = Equation(R, K, update_state!)
+
+    bcs = (
+        U = DefaultBoundaryConditions(eltype(grid)),
+        V = DefaultBoundaryConditions(eltype(grid)),
+        T = DefaultBoundaryConditions(eltype(grid)),
+        S = DefaultBoundaryConditions(eltype(grid))
+    )
+
+    solution = Solution(
+        CellField(grid),
+        CellField(grid),
+        CellField(grid),
+        CellField(grid)
+    )
+
+    lhs = OceanTurb.build_lhs(solution)
+    timestepper = Timestepper(stepper, eq, solution, lhs)
+    clock = Clock()
+    state = State()
+
+    return Model(clock, grid, timestepper, solution, bcs, parameters, constants, state)
+end
+
+# Note: we use 'm' to refer to 'model' in function definitions below.
+
+@inline Fb(g, α, β, Fθ, Fs) = g * (α*Fθ - β*Fs)
+
+@propagate_inbounds d(m, i) = ifelse(m.state.h>0, -m.grid.zf[i]/m.state.h, -zero(m.state.h))
+
+"Return the buoyancy gradient at face point i."
+@propagate_inbounds ∂B∂z(T, S, g, α, β, i) = g * (α*∂z(T, i) - β*∂z(S, i))
 
 """
     update_state!(model)
@@ -79,62 +134,26 @@ function update_state!(m)
     return nothing
 end
 
-mutable struct Model{TS, G, T} <: AbstractModel{TS, G, T}
-    @add_standard_model_fields
-    parameters :: Parameters{T}
-    constants  :: Constants{T}
-    state      :: State{T}
-end
-
-function Model(; N=10, L=1.0,
-            grid = UniformGrid(N, L),
-       constants = Constants(),
-      parameters = Parameters(),
-         stepper = :ForwardEuler,
-             bcs = BoundaryConditions((ZeroFluxBoundaryConditions() for i=1:nsol)...)
-    )
-
-      K = Accessory{Function}(KU, KV, KT, KS)
-      R = Accessory{Function}(RU, RV, RT, RS)
-    eqn = Equation(R, K, update_state!)
-
-    solution = Solution((CellField(grid) for i=1:nsol)...)
-         lhs = OceanTurb.build_lhs(solution)
-    timestepper = Timestepper(stepper, eqn, solution, lhs)
-
-    return Model(Clock(), grid, timestepper, solution, bcs, parameters, constants, State())
-end
-
-# Note: we use 'm' to refer to 'model' in function definitions below.
-
-## ** The K-Profile-Parameterization **
-K_KPP(h, 𝒲, d, shape=default_K_shape) = ifelse(0<d<1, max(zero(h), h*𝒲*shape(d)), zero(h))
-
-d(m, i) = ifelse(m.state.h>0, -m.grid.zf[i]/m.state.h, zero(m.state.h))
-
-"Return the buoyancy gradient at face point i."
-∂B∂z(T, S, g, α, β, i) = g * (α*∂z(T, i) - β*∂z(S, i))
-
 #
 # Diagnosis of mixing depth "h"
 #
 
 "Returns the surface_layer_average for mixing depth h = -zf[i]."
-function surface_layer_average(c, CSL, i)
+@propagate_inbounds function surface_layer_average(c, CSL::T, i) where T
     if i > c.grid.N # Return surface value
         return onface(c, c.grid.N+1)
     else
         iε = length(c)+1 - CSL*(length(c)+1 - i) # (fractional) face "index" of the surface layer
         face = ceil(Int, iε)  # next cell face above the fractional depth
         frac = face - iε # fraction of lowermost cell in the surface layer.
-        surface_layer_integral = zero(eltype(c))
+        surface_layer_integral = zero(T)
 
         # Contribution of fractional cell to total integral
         surface_layer_integral += frac * Δf(c, face-1) * c[face-1]
 
         # Add cells above face, if there are any.
         for j = face:length(c)
-            @inbounds surface_layer_integral += Δf(c, j) * c[j]
+            surface_layer_integral += Δf(c, j) * c[j]
         end
 
         h = -c.grid.zf[i] # depth
@@ -147,10 +166,10 @@ end
 Return Δc(hᵢ), the difference between the surface-layer average of c and its value at depth hᵢ, where
 i is a face index.
 """
-Δ(c, CSL, i) = surface_layer_average(c, CSL, i) - onface(c, i)
+@propagate_inbounds Δ(c, CSL, i) = surface_layer_average(c, CSL, i) - onface(c, i)
 
 "Returns the parameterization for unresolved KE at face point i."
-function unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β)
+@inline function unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β)
     return CKE * h^(4/3) * sqrt(max(0, Bz)) * max(0, Fb)^(1/3) + CKE₀
 end
 
@@ -159,23 +178,25 @@ end
 
 Returns the bulk Richardson number of `model` at face `i`.
 """
-function bulk_richardson_number(U, V, T, S, Fb, CKE, CKE₀, CSL, g, α, β, i)
+@propagate_inbounds function bulk_richardson_number(
+            U, V, T, S, Fb::TT, CKE::TT, CKE₀::TT, CSL::TT,
+            g::TT, α::TT, β::TT, i) where TT
+
     h = -U.grid.zf[i]
     # (h - hε) * ΔB
-    h⁺ΔB = h * (1 - 0.5CSL) * g * (α*Δ(T, CSL, i) - β*Δ(S, CSL, i))
+    h⁺ΔB = h * (one(TT) - CSL/2) * g * (α*Δ(T, CSL, i) - β*Δ(S, CSL, i))
 
-    Bz = ∂B∂z(T, S, g, α, β, i)
-    unresolved_KE = unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β)
-    KE = Δ(U, CSL, i)^2 + Δ(V, CSL, i)^2 + unresolved_KE
+    KE = (Δ(U, CSL, i)^2 + Δ(V, CSL, i)^2
+              + unresolved_kinetic_energy(h, ∂B∂z(T, S, g, α, β, i), Fb, CKE, CKE₀, g, α, β))
 
     if KE == 0 && h⁺ΔB == 0 # Alistar Adcroft's theorem
-        return 0
+        return -zero(TT)
     else
         return h⁺ΔB / KE
     end
 end
 
-bulk_richardson_number(m, i) = bulk_richardson_number(
+@propagate_inbounds bulk_richardson_number(m, i) = bulk_richardson_number(
     m.solution.U, m.solution.V, m.solution.T, m.solution.S,
     m.state.Fb, m.parameters.CKE, m.parameters.CKE₀, m.parameters.CSL, m.constants.g,
     m.constants.α, m.constants.β, i)
@@ -187,32 +208,32 @@ Calculate the mixing depth 'h' for `model`.
 """
 function mixing_depth(m)
     ih₁ = m.grid.N + 1 # start at top.
-    Ri₁ = bulk_richardson_number(m, ih₁) # should be 0.
+    @inbounds Ri₁ = bulk_richardson_number(m, ih₁) # should be 0.
 
     # Descend through grid until Ri rises above critical value
     while ih₁ > 1 && Ri₁ < m.parameters.CRi
         ih₁ -= 1 # descend
-        Ri₁ = bulk_richardson_number(m, ih₁)
+        @inbounds Ri₁ = bulk_richardson_number(m, ih₁)
     end
 
     # Edge cases:
     # 1. Mixing depth is at the top of the domain (z=0):
     if ih₁ == m.grid.N + 1
-        z★ = m.grid.zf[ih₁]
+        @inbounds z★ = m.grid.zf[ih₁]
 
     # 2. Mixing depth is whole domain because Ri is always less than CRi:
     elseif ih₁ == 1 && Ri₁ < m.parameters.CRi
-        z★ = m.grid.zf[ih₁]
+        @inbounds z★ = m.grid.zf[ih₁]
 
     # 3. Ri is infinite somewhere inside the domain.
     elseif !isfinite(Ri₁)
-        z★ = m.grid.zc[ih₁]
+        @inbounds z★ = m.grid.zc[ih₁]
 
     # Main case: mixing depth is in the interior.
     else # Ri₁ > CRi
         ΔRi = bulk_richardson_number(m, ih₁+1) - Ri₁ # <0 linearly interpolate to find h.
         # x = x₀ + Δx * (y-y₀) / Δy
-        z★ = m.grid.zf[ih₁] + Δf(m.grid, ih₁) * (m.parameters.CRi - Ri₁) / ΔRi
+        @inbounds z★ = m.grid.zf[ih₁] + Δf(m.grid, ih₁) * (m.parameters.CRi - Ri₁) / ΔRi
     end
 
     -z★ < 0 && @warn "mixing depth $(-z★) is negative"
@@ -225,33 +246,33 @@ end
 #
 
 "Return true if the boundary layer is unstable and convecting."
-isunstable(model) = model.state.Fb > 0
+@inline isunstable(model) = model.state.Fb > 0
 
 "Return true if the boundary layer is forced."
-isforced(model) = model.state.Fu != 0 || model.state.Fv != 0 || model.state.Fb != 0
+@inline isforced(model) = model.state.Fu != 0 || model.state.Fv != 0 || model.state.Fb != 0
 
 "Return the turbuent velocity scale associated with wind stress."
-ωτ(Fu, Fv) = (Fu^2 + Fv^2)^(1/4)
-ωτ(m::AbstractModel) = ωτ(m.state.Fu, m.state.Fv)
+@inline ωτ(Fu, Fv) = (Fu^2 + Fv^2)^(1/4)
+@inline ωτ(m::AbstractModel) = ωτ(m.state.Fu, m.state.Fv)
 
 "Return the turbuent velocity scale associated with convection."
-ωb(Fb, h) = abs(h * Fb)^(1/3)
-ωb(m::AbstractModel) = ωb(m.state.Fb, m.state.h)
+@inline ωb(Fb, h) = abs(h * Fb)^(1/3)
+@inline ωb(m::AbstractModel) = ωb(m.state.Fb, m.state.h)
 
 "Return the vertical velocity scale at depth d for a stable boundary layer."
-𝒲_stable(Cτ, Cstab, Cn, ωτ, ωb, d) = Cτ * ωτ / (1 + Cstab * d * (ωb/ωτ)^3)^Cn
+@inline 𝒲_stable(Cτ, Cstab, Cn, ωτ, ωb, d) = Cτ * ωτ / (1 + Cstab * d * (ωb/ωτ)^3)^Cn
 
 "Return the vertical velocity scale at scaled depth dϵ for an unstable boundary layer."
-function 𝒲_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
+@inline function 𝒲_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
     dϵ = min(CSL, d)
-    if dϵ < Cd * (ωτ/ωb)^3
+    if dϵ * ωb^3 < Cd * ωτ^3
         return Cτ * ωτ * (1 + Cunst * dϵ * (ωb/ωτ)^3)^Cmτ
     else
         return Cb * ωb * (dϵ + Cτb * (ωτ/ωb)^3)^Cmb
     end
 end
 
-function 𝒲_unstable_U(m, i)
+@propagate_inbounds function 𝒲_unstable_U(m, i)
     return 𝒲_unstable(m.parameters.CSL, m.parameters.Cd_U,
                             m.parameters.Cτ, m.parameters.Cunst,
                             m.parameters.Cb_U, m.parameters.Cτb_U,
@@ -260,7 +281,7 @@ function 𝒲_unstable_U(m, i)
                             )
 end
 
-function 𝒲_unstable_T(m, i)
+@propagate_inbounds function 𝒲_unstable_T(m, i)
     return 𝒲_unstable(m.parameters.CSL, m.parameters.Cd_T,
                             m.parameters.Cτ, m.parameters.Cunst,
                             m.parameters.Cb_T, m.parameters.Cτb_T,
@@ -269,16 +290,16 @@ function 𝒲_unstable_T(m, i)
                             )
 end
 
-function 𝒲_stable(m, i)
+@propagate_inbounds function 𝒲_stable(m, i)
     return 𝒲_stable(m.parameters.Cτ, m.parameters.Cstab, m.parameters.Cn,
                           ωτ(m), ωb(m), d(m, i)
                           )
 end
 
 "Return the turbulent velocity scale for momentum at face point i."
-function 𝒲_U(m, i)
+@propagate_inbounds function 𝒲_U(m::AbstractModel{TS, G, T}, i) where {TS, G, T}
     if !isforced(m)
-        return 0
+        return -zero(T)
     elseif isunstable(m)
         return 𝒲_unstable_U(m, i)
     else
@@ -287,9 +308,9 @@ function 𝒲_U(m, i)
 end
 
 "Return the turbulent velocity scale for tracers at face point i."
-function 𝒲_T(m, i)
+@propagate_inbounds function 𝒲_T(m::AbstractModel{TS, G, T}, i) where {TS, G, T}
     if !isforced(m)
-        return 0
+        return -zero(T)
     elseif isunstable(m)
         return 𝒲_unstable_T(m, i)
     else
@@ -299,6 +320,9 @@ end
 
 const 𝒲_V = 𝒲_U
 const 𝒲_S = 𝒲_T
+
+## ** The K-Profile-Parameterization **
+K_KPP(h, 𝒲, d, shape=default_K_shape) = ifelse(0<d<1, max(zero(h), h*𝒲*shape(d)), -zero(h))
 
 #
 # Non-local flux
@@ -317,35 +341,32 @@ a positive surface flux implies negative surface flux divergence,
 which implies a reduction to the quantity in question.
 For example, positive heat flux out of the surface implies cooling.
 """
-NL(CNL, flux, d, shape=default_NL_shape) = CNL * flux * shape(d)
+@inline NL(CNL, flux, d, shape=default_NL_shape) = CNL * flux * shape(d)
 
-function ∂NL∂z(CNL, Fϕ, d, Δf, m)
+@inline function ∂NL∂z(CNL::T, Fϕ, d, Δf, m) where T
     if isunstable(m)
         return (NL(CNL, Fϕ, d) - NL(CNL, Fϕ, d)) / Δf
     else
-        return 0
+        return -zero(T)
     end
 end
 
-∂NLT∂z(m, i) = @inbounds ∂NL∂z(m.parameters.CNL, m.state.Fθ, d(m, i), Δf(m.grid, i), m)
-∂NLS∂z(m, i) = @inbounds ∂NL∂z(m.parameters.CNL, m.state.Fs, d(m, i), Δf(m.grid, i), m)
+@propagate_inbounds ∂NLT∂z(m, i) = ∂NL∂z(m.parameters.CNL, m.state.Fθ, d(m, i), Δf(m.grid, i), m)
+@propagate_inbounds ∂NLS∂z(m, i) = ∂NL∂z(m.parameters.CNL, m.state.Fs, d(m, i), Δf(m.grid, i), m)
 
 #
 # Equation specification
 #
 
 # K_{U,V,T,S} is calculated at face points
-KU(m, i) = K_KPP(m.state.h, 𝒲_U(m, i), d(m, i)) + m.parameters.KU₀
-KT(m, i) = K_KPP(m.state.h, 𝒲_T(m, i), d(m, i)) + m.parameters.KT₀
-KS(m, i) = K_KPP(m.state.h, 𝒲_S(m, i), d(m, i)) + m.parameters.KS₀
+@propagate_inbounds KU(m, i) = K_KPP(m.state.h, 𝒲_U(m, i), d(m, i)) + m.parameters.KU₀
+@propagate_inbounds KT(m, i) = K_KPP(m.state.h, 𝒲_T(m, i), d(m, i)) + m.parameters.KT₀
+@propagate_inbounds KS(m, i) = K_KPP(m.state.h, 𝒲_S(m, i), d(m, i)) + m.parameters.KS₀
 const KV = KU
 
-@inline RU(f, V, i) = @inbounds  f*V[i]
-@inline RV(f, U, i) = @inbounds -f*U[i]
-
-@inline RU(m, i) = RU(m.constants.f, m.solution.V, i)
-@inline RV(m, i) = RV(m.constants.f, m.solution.U, i)
-@inline RT(m, i) = -∂NLT∂z(m, i)
-@inline RS(m, i) = -∂NLS∂z(m, i)
+@propagate_inbounds RU(m, i) =   m.constants.f * m.solution.V[i]
+@propagate_inbounds RV(m, i) = - m.constants.f * m.solution.U[i]
+@propagate_inbounds RT(m, i) = - ∂NLT∂z(m, i)
+@propagate_inbounds RS(m, i) = - ∂NLS∂z(m, i)
 
 end # module

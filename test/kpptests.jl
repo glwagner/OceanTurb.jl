@@ -550,7 +550,8 @@ function test_flux(stepper=:ForwardEuler; fieldname=:U, top_flux=0.3, bottom_flu
 
     bcs = getproperty(model.bcs, fieldname)
     bcs.top = FluxBoundaryCondition(top_flux)
-    bcs.bottom = FluxBoundaryCondition(bottom_flux)
+    bottom_K = getproperty(model.timestepper.eqn.K, fieldname)(model, 1)
+    bcs.bottom = GradientBoundaryCondition(-bottom_flux / bottom_K)
 
     c = getproperty(model.solution, fieldname)
     C₀ = integral(c)

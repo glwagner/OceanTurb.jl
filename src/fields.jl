@@ -140,9 +140,9 @@ interiorindices(f::FaceField) = 2:f.grid.N
 boundaryindices(c::CellField) = (1, c.grid.N)
 
 # Sugary sweet: access indices of c.data by indexing into c.
-getindex(c::AbstractField, inds...) = getindex(c.data, inds...)
-setindex!(c::AbstractField, d, inds...) = setindex!(c.data, d, inds...)
-setindex!(c::AbstractField, d::AbstractField, inds...) = setindex!(c.data, d.data, inds...)
+@propagate_inbounds getindex(c::AbstractField, inds...) = getindex(c.data, inds...)
+@propagate_inbounds setindex!(c::AbstractField, d, inds...) = setindex!(c.data, d, inds...)
+@propagate_inbounds setindex!(c::AbstractField, d::AbstractField, inds...) = setindex!(c.data, d.data, inds...)
 
 #
 # Ways to specify a field's data
@@ -296,8 +296,8 @@ end
 # Differential operators and such for fields
 #
 
-@inline Δc(c::AbstractField, i_face) = Δc(c.grid, i_face)
-@inline Δf(c::AbstractField, i_cell) = Δf(c.grid, i_cell)
+@propagate_inbounds Δc(c::AbstractField, i_face) = Δc(c.grid, i_face)
+@propagate_inbounds Δf(c::AbstractField, i_cell) = Δf(c.grid, i_cell)
 
 """
     ∂z(a, i)
@@ -310,7 +310,7 @@ and the derviative of a `Field{Face}` is computed at cell points.
 ∂z(a, i) = throw("∂z is not defined for arbitrary fields.")
 
 "Return ∂c/∂z at face index i."
-@propagate_inbounds ∂z(c::CellField, i) = @inbounds (c.data[i] - c.data[i-1]) / Δc(c, i)
+@propagate_inbounds ∂z(c::CellField, i) = (c.data[i] - c.data[i-1]) / Δc(c, i)
 
 "Return ∂c/∂z at face index i."
 @propagate_inbounds ∂z(c::FaceField, i) = (c.data[i+1] - c.data[i]) / Δc(c, i)
@@ -353,22 +353,27 @@ end
 #
 
 # ∇K∇c for c::CellField
-K∂z(K, c, i) = @inbounds K*∂z(c, i)
-∇K∇c(Kᵢ₊₁, Kᵢ, c, i)            = @inbounds ( K∂z(Kᵢ₊₁, c, i+1) -    K∂z(Kᵢ, c, i)     ) /    Δf(c, i)
-∇K∇c_top(Kᴺ, c, top_flux)       = @inbounds (     -top_flux     - K∂z(Kᴺ, c, c.grid.N) ) / Δf(c, c.grid.N)
-∇K∇c_bottom(K₂, c, bottom_flux) = @inbounds (   K∂z(K₂, c, 2)   +     bottom_flux      ) /    Δf(c, 1)
+@propagate_inbounds K∂z(K, ϕ, i) = K*∂z(ϕ, i)
+@propagate_inbounds ∇K∇ϕ(Kᵢ₊₁, Kᵢ, ϕ, i)            = ( K∂z(Kᵢ₊₁, ϕ, i+1) -    K∂z(Kᵢ, ϕ, i)     ) /    Δf(ϕ, i)
+@propagate_inbounds ∇K∇ϕ_top(Kᴺ, ϕ, top_flux)       = (     -top_flux     - K∂z(Kᴺ, ϕ, ϕ.grid.N) ) / Δf(ϕ, ϕ.grid.N)
+@propagate_inbounds ∇K∇ϕ_bottom(K₂, ϕ, bottom_flux) = (   K∂z(K₂, ϕ, 2)   +     bottom_flux      ) /    Δf(ϕ, 1)
+
 
 ## Top and bottom flux estimates for constant (Dirichlet) boundary conditions
-bottom_flux(K, c, c_bndry, Δf) = -2K*( bottom(c) - c_bndry ) / Δf # -K*∂c/∂z at the bottom
-top_flux(K, c, c_bndry, Δf)    = -2K*(  c_bndry  -  top(c) ) / Δf # -K*∂c/∂z at the top
+bottom_flux(K, ϕ, ϕ_bndry, Δf) = -2K*( bottom(ϕ) - ϕ_bndry ) / Δf # -K*∂ϕ/∂z at the bottom
+top_flux(K, ϕ, ϕ_bndry, Δf)    = -2K*(  ϕ_bndry  -  top(ϕ) ) / Δf # -K*∂ϕ/∂z at the top
 
-∇K∇c_top(Kᴺ⁺¹, Kᴺ, c, bc, model) = ∇K∇c_top(Kᴺ, c, -Kᴺ⁺¹*getbc(model, bc))
-∇K∇c_bottom(K₂, K₁, c, bc, model) = ∇K∇c_bottom(K₂, c, -K₁*getbc(model, bc))
+@propagate_inbounds ∇K∇ϕ_top(Kᴺ⁺¹, Kᴺ, ϕ, bϕ, model) = ∇K∇ϕ_top(Kᴺ, ϕ, -Kᴺ⁺¹*getbϕ(model, bϕ))
+@propagate_inbounds ∇K∇ϕ_bottom(K₂, K₁, ϕ, bϕ, model) = ∇K∇ϕ_bottom(K₂, ϕ, -K₁*getbϕ(model, bϕ))
 
 "Return the total flux (advective + diffusive) across face i."
-flux(w, κ, c, i) = @inbounds w * onface(c, i) - κ * ∂z(c, i)
-top_flux_div(wtop, κtop, c) = @inbounds -flux(wtop, κtop, c, c.grid.N) / Δf(c, c.grid.N)
-bottom_flux_div(wbottom, κbottom, c) = @inbounds flux(wbottom, κbottom, c, 1) / Δf(c, 1)
+@propagate_inbounds flux(w, κ, ϕ, i) = w * onface(ϕ, i) - κ * ∂z(ϕ, i)
+@propagate_inbounds top_flux_div(wtop, κtop, ϕ) = -flux(wtop, κtop, ϕ, ϕ.grid.N) / Δf(ϕ, ϕ.grid.N)
+@propagate_inbounds bottom_flux_div(wbottom, κbottom, ϕ) = flux(wbottom, κbottom, ϕ, 1) / Δf(ϕ, 1)
+
+const ∇K∇c = ∇K∇ϕ
+const ∇K∇c_top = ∇K∇ϕ_top
+const ∇K∇c_bottom = ∇K∇ϕ_bottom
 
 #
 # Convenience functions

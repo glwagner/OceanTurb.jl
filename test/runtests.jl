@@ -19,7 +19,6 @@ end
     @test test_ldiv(10)
 end
 
-
 @testset "Grids" begin
     include("gridtests.jl")
     nz, Lz = 3, 4.2

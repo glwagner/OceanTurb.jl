@@ -133,19 +133,23 @@ h_criterion(args...) = nothing
 h_criterion(::ROMSMixingDepthParameters, grid) = FaceField(grid)
 
 function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
-    plume_T, plume_S, plume_w²= plumes(nonlocalflux, grid)
+    plume_T, plume_S, plume_w² = plumes(nonlocalflux, grid)
     h_crit = h_criterion(mixingdepth, grid)
     State(zero(T), zero(T), zero(T), zero(T), zero(T), zero(T),
             h_crit, plume_T, plume_S, plume_w²)
 end
 
-struct Model{KP, NP, HP, S, TS, G, T} <: AbstractModel{TS, G, T}
-    @add_standard_model_fields
-    diffusivity :: KP
-   nonlocalflux :: NP
-    mixingdepth :: HP
-      constants :: Constants{T}
-          state :: S
+struct Model{KP, NP, HP, SO, BC, ST, TS, G, T} <: AbstractModel{TS, G, T}
+    clock        :: Clock{T}
+    grid         :: G
+    timestepper  :: TS
+    solution     :: SO
+    bcs          :: BC
+    diffusivity  :: KP
+    nonlocalflux :: NP
+    mixingdepth  :: HP
+    constants    :: Constants{T}
+    state        :: ST
 end
 
 function Model(; N=10, L=1.0,
@@ -155,7 +159,7 @@ function Model(; N=10, L=1.0,
     nonlocalflux = LMDCounterGradientFluxParameters(),
      mixingdepth = LMDMixingDepthParameters(),
          stepper = :BackwardEuler,
-             bcs = BoundaryConditions((ZeroFluxBoundaryConditions() for i=1:nsol)...)
+             bcs = BoundaryConditions((FluxBoundaryConditions(0) for i=1:nsol)...)
     )
 
       K = Accessory{Function}(KU, KV, KT, KS)

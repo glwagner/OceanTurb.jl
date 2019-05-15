@@ -113,12 +113,12 @@ Timesteppers in `OceanTurb.jl` integrate equations of the form
 
 ```math
 \beq \label{equationform}
-\d_t \Phi = \d_z K \d_z \Phi + R(\Phi) \c
+\d_t \Phi + \d_z \left ( M \Phi \right )= \left ( \d_z K \d_z \right ) \Phi + R(\Phi) \c
 \eeq
 ```
 where ``\Phi(z, t)`` is a variable like velocity, temperature, or salinity,
-``K`` is a diffusivity which is a general nonlinear function
-of ``\Phi``, ``z``, and external parameters,
+``M`` and ``K`` are an advective 'mass flux' and a diffusivity
+which are a general nonlinear functions of ``\Phi``, ``z``, and external parameters,
 and ``R`` is an arbitrary function representing any number of processes,
 including the Coriolis force or external forcing.
 
@@ -131,11 +131,12 @@ We implement `iterate!` functions and types for:
 
 ### Forward Euler method
 
-The explicit forward Euler time integration scheme uses
+The explicit forward Euler time integration scheme
+obtains ``\Phi`` at time-step ``n+1`` using the formula
 
 ```math
 \beq
-\Phi^{n+1} = \Phi^{n} + \Delta t \, \big [ \left ( \d_z K^n \d_z \right ) \Phi^n + R \left ( \Phi^n \right ) \big ]
+\Phi^{n+1} = \Phi^{n} + \Delta t \, \big [ - \d_z \left ( M^n \Phi^n \right ) + \left ( \d_z K^n \d_z \right ) \Phi^n + R \left ( \Phi^n \right ) \big ]
 \eeq
 ```
 
@@ -144,16 +145,21 @@ time-step ``n`` and ``n+1``, respectively.
 
 ### Backward Euler method
 
-The backward Euler method uses the temporal discretization
+The backward Euler method
+obtains ``\Phi`` at time-step ``n+1`` using the formula
 
 ```math
 \beq
-\Phi^{n+1} - \Delta t \left ( \d_z K^n \d_z \right ) \Phi^{n+1} = \Phi^n + \Delta t R(\Phi^n)
+\Phi^{n+1}
+  + \Delta t \left [ \d_z \left ( M^n \Phi^{n+1} \right ) - \left ( \d_z K^n \d_z \right ) \Phi^{n+1} \right ]
+    = \Phi^n + \Delta t R \left ( \Phi^n \right )
 \eeq
 ```
 
-The ``z``-derivatives in the diffusive term generate a matrix problem to be solved
-for ``\Phi^{n+1}``:
+The ``z``-derivatives in the advective and diffusive terms generate
+and elliptic problem to be solved for ``\Phi^{n+1}`` at each time-step.
+In the finite volume discretization used by `OceanTurb.jl`, this elliptic
+problem becomes a matrix problem of the form
 
 ```math
 \beq
@@ -169,7 +175,7 @@ multiplication ``L^n_{ij} \Phi_j^{n+1}`` has the form
 
 ```math
 \begin{align}
-L^n_{ij} \Phi_j^{n+1} &= \left [ 1 - \Delta t \left (\d_z K^n \d_z \right ) \right ]_{ij} \Phi_j^{n+1} \\
+L^n_{ij} \Phi_j^{n+1} &= \left [ 1 + \Delta t \left ( \d_z M^n - \d_z K^n \d_z \right ) \right ]_{ij} \Phi_j^{n+1} \\
 
 &= \left [ \begin{matrix}
 
