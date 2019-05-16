@@ -1,13 +1,8 @@
 module EDMF
 
-using
-    OceanTurb,
-    StaticArrays,
-    LinearAlgebra
+using OceanTurb
 
-import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top, Constants
-import OceanTurb: oncell
-
+import ..OceanTurb: oncell
 import .KPP: ∂B∂z
 
 const nsol = 5
@@ -73,9 +68,9 @@ function ZeroPlumeModel(; N=10, L=1.0,
 
     solution = ZeroPlumeSolution((CellField(grid) for i=1:nsol)...)
 
-    KZP = ZeroPlumeAccessory{Function}(K, K, K, K, K)
-    RZP = ZeroPlumeAccessory{Any}(RU, RV, nothing, nothing, Re)
-    eqn = Equation(RZP, KZP, update_state!)
+    KZP = (U=K, V=K, T=K, S=K, e=K)
+    RZP = (U=RU, V=RV, T=nothing, S=nothing, e=Re)
+    eqn = Equation(R=RZP, K=KZP, update=update_state!)
     lhs = OceanTurb.build_lhs(solution)
 
     timestepper = Timestepper(stepper, eqn, solution, lhs)

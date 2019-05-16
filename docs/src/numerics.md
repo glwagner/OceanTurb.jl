@@ -66,8 +66,8 @@ where ``\Phi_i`` denotes the value of ``\Phi`` at cell ``i``, and
 ``\Delta c_i = z_{c, i} - z_{c, i-1}`` is the vertical separation between
 node ``i`` and cell point ``i-1``.
 
-With diffusivity given on cell interfaces, the diffusive flux
-at face ``i`` is just ``K_i \left ( \d_z \Phi \right )_i``.
+With diffusivities defined on cell interfaces, the diffusive flux
+across face ``i`` is ``K_i \left ( \d_z \Phi \right )_i``.
 The (negative of the) divergence of the diffusive flux at node ``i`` is therefore
 
 ```math
@@ -102,6 +102,14 @@ In the bottom cell where ``i=1``, on the other hand, the diffusive flux is
 \end{align}
 ```
 
+For negative advective mass fluxes ``M`` defined at cell centers (corresponding
+to downdrafts or down-travelling plumes) imply an advective flux divergence
+
+```math
+\beq
+\d_z \left ( M \Phi \right )_i = \frac{M_i \Phi_i - M_{i-1} \Phi_{i-1}}{\Delta c_i}
+\eeq
+```
 
 # Time integration
 
@@ -179,22 +187,26 @@ L^n_{ij} \Phi_j^{n+1} &= \left [ 1 + \Delta t \left ( \d_z M^n - \d_z K^n \d_z \
 
 &= \left [ \begin{matrix}
 
-1 + \Delta t \tfrac{K^n_2}{\Delta f_1 \Delta c_2}
+1 + \Delta t \left ( \tfrac{M_1^n}{\Delta c_1} + \tfrac{K^n_2}{\Delta f_1 \Delta c_2} \right )
   & -\Delta t \tfrac{K^n_2}{\Delta f_1 \Delta c_2}
     & \cdot & \cdot & \cdot & \cdot \\
 
 \ddots & \ddots & \ddots & \cdot & \cdot & \cdot \\
 
 \cdot
-  & - \Delta t \tfrac{K^n_i}{\Delta c_i \Delta f_i}
-  & 1 + \tfrac{\Delta t}{\Delta f_i} \left ( \tfrac{K^n_{i+1}}{\Delta c_{i+1}} + \tfrac{K^n_i}{\Delta c_i} \right )
-  & - \Delta t \tfrac{K^n_{i+1}}{\Delta c_{i+1} \Delta f_{i+1}} & \cdot & \cdot \\
+  & - \Delta t \left ( \tfrac{M^n_{i-1}}{\Delta c_i} + \tfrac{K^n_i}{\Delta c_i \Delta f_i} \right )
+  & 1 + \Delta t
+    \left [ \frac{M^n_i}{\Delta c_i} + \tfrac{K^n_{i+1}}{\Delta f_i \Delta c_{i+1}} + \tfrac{K^n_i}{\Delta f_i \Delta c_i} \right ]
+  & -\Delta t \tfrac{K^n_{i+1}}{\Delta c_{i+1} \Delta f_{i+1}} & \cdot & \cdot \\
 
 \cdot & \cdot & \ddots & \ddots & \ddots & \cdot \\
 
-\cdot & \cdot & \cdot & \cdot & - \Delta t \tfrac{K^n_N}{\Delta c_N \Delta f_N}
-  & 1 + \Delta t \tfrac{K^n_N}{\Delta c_N \Delta f_N}
+\cdot & \cdot & \cdot & \cdot
+  & - \Delta t \left( \tfrac{M_{N-1}^n}{\Delta c_N} + \tfrac{K^n_N}{\Delta c_N \Delta f_N} \right )
+  & 1 + \Delta t \left ( \tfrac{M^n_N}{\Delta c_N} + \tfrac{K^n_N}{\Delta c_N \Delta f_N} \right )
+
 \end{matrix} \right ]
+
 \left [ \begin{matrix}
 \Phi^{n+1}_1 \\[1.1ex]
 \vdots \\[1.1ex]

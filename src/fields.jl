@@ -349,31 +349,19 @@ function ∂z(f::FaceField)
 end
 
 #
-# A bunch of (unsafe) diffusive flux operators
+# Advection and diffusion operators
 #
 
-# ∇K∇c for c::CellField
 @propagate_inbounds K∂z(K, ϕ, i) = K*∂z(ϕ, i)
-@propagate_inbounds ∇K∇ϕ(Kᵢ₊₁, Kᵢ, ϕ, i)            = ( K∂z(Kᵢ₊₁, ϕ, i+1) -    K∂z(Kᵢ, ϕ, i)     ) /    Δf(ϕ, i)
-@propagate_inbounds ∇K∇ϕ_top(Kᴺ, ϕ, top_flux)       = (     -top_flux     - K∂z(Kᴺ, ϕ, ϕ.grid.N) ) / Δf(ϕ, ϕ.grid.N)
-@propagate_inbounds ∇K∇ϕ_bottom(K₂, ϕ, bottom_flux) = (   K∂z(K₂, ϕ, 2)   +     bottom_flux      ) /    Δf(ϕ, 1)
 
+"Return the diffusive flux divergence at cell i."
+@propagate_inbounds ∇K∇ϕ(Kᵢ₊₁, Kᵢ, ϕ, i) = (K∂z(Kᵢ₊₁, ϕ, i+1) - K∂z(Kᵢ, ϕ, i)) / Δf(ϕ, i)
 
-## Top and bottom flux estimates for constant (Dirichlet) boundary conditions
-bottom_flux(K, ϕ, ϕ_bndry, Δf) = -2K*( bottom(ϕ) - ϕ_bndry ) / Δf # -K*∂ϕ/∂z at the bottom
-top_flux(K, ϕ, ϕ_bndry, Δf)    = -2K*(  ϕ_bndry  -  top(ϕ) ) / Δf # -K*∂ϕ/∂z at the top
-
-@propagate_inbounds ∇K∇ϕ_top(Kᴺ⁺¹, Kᴺ, ϕ, bϕ, model) = ∇K∇ϕ_top(Kᴺ, ϕ, -Kᴺ⁺¹*getbϕ(model, bϕ))
-@propagate_inbounds ∇K∇ϕ_bottom(K₂, K₁, ϕ, bϕ, model) = ∇K∇ϕ_bottom(K₂, ϕ, -K₁*getbϕ(model, bϕ))
+"Return the advective flux divergence at cell i for M<0."
+@propagate_inbounds ∂zM(Mᵢ, Mᵢ₋₁, ϕ, i) = (Mᵢ * ϕ[i] - Mᵢ₋₁ * ϕ[i-1]) / Δc(ϕ, i)""
 
 "Return the total flux (advective + diffusive) across face i."
-@propagate_inbounds flux(w, κ, ϕ, i) = w * onface(ϕ, i) - κ * ∂z(ϕ, i)
-@propagate_inbounds top_flux_div(wtop, κtop, ϕ) = -flux(wtop, κtop, ϕ, ϕ.grid.N) / Δf(ϕ, ϕ.grid.N)
-@propagate_inbounds bottom_flux_div(wbottom, κbottom, ϕ) = flux(wbottom, κbottom, ϕ, 1) / Δf(ϕ, 1)
-
-const ∇K∇c = ∇K∇ϕ
-const ∇K∇c_top = ∇K∇ϕ_top
-const ∇K∇c_bottom = ∇K∇ϕ_bottom
+@propagate_inbounds flux(M, K, ϕ, i) = M * onface(ϕ, i) - K * ∂z(ϕ, i)
 
 #
 # Convenience functions
@@ -393,7 +381,7 @@ bottom(a::Union{AbstractField, AbstractArray}) = @inbounds a[1]
 
 Return the interpolation of `c` onto face point `i`.
 """
-@propagate_inbounds onface(c::CellField, i) = 0.5*(c.data[i] + c.data[i-1])
+@propagate_inbounds onface(c::CellField, i) = (c.data[i] + c.data[i-1])/2
 @propagate_inbounds onface(f::FaceField, i) = f[i]
 
 """
@@ -401,7 +389,7 @@ Return the interpolation of `c` onto face point `i`.
 
 Return the interpolation of `f` onto cell point `i`.
 """
-@propagate_inbounds oncell(f::FaceField, i) = 0.5*(f.data[i+1] + f.data[i])
+@propagate_inbounds oncell(f::FaceField, i) = (f.data[i+1] + f.data[i])/2
 @propagate_inbounds oncell(c::CellField, i) = c[i]
 
 """

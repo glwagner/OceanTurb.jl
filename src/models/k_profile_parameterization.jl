@@ -1,8 +1,6 @@
 module KPP
 
-using
-    OceanTurb,
-    LinearAlgebra
+using OceanTurb
 
 import OceanTurb: Constants
 
@@ -85,7 +83,7 @@ function Model(; N=10, L=1.0,
 
      K = (U=KU, V=KV, T=KT, S=KS)
      R = (U=RU, V=RV, T=RT, S=RS)
-    eq = Equation(R, K, update_state!)
+    eq = Equation(R=R, K=K, update=update_state!)
 
     bcs = (
         U = DefaultBoundaryConditions(eltype(grid)),
