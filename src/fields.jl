@@ -358,7 +358,7 @@ end
 @propagate_inbounds ∇K∇ϕ(Kᵢ₊₁, Kᵢ, ϕ, i) = (K∂z(Kᵢ₊₁, ϕ, i+1) - K∂z(Kᵢ, ϕ, i)) / Δf(ϕ, i)
 
 "Return the advective flux divergence at cell i for M<0."
-@propagate_inbounds ∂zM(Mᵢ, Mᵢ₋₁, ϕ, i) = (Mᵢ * ϕ[i] - Mᵢ₋₁ * ϕ[i-1]) / Δc(ϕ, i)""
+@propagate_inbounds ∂zM(Mᵢ, Mᵢ₋₁, ϕ, i) = (Mᵢ * ϕ[i] - Mᵢ₋₁ * ϕ[i-1]) / Δc(ϕ, i)
 
 "Return the total flux (advective + diffusive) across face i."
 @propagate_inbounds flux(M, K, ϕ, i) = M * onface(ϕ, i) - K * ∂z(ϕ, i)
