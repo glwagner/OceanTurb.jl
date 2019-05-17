@@ -6,12 +6,12 @@ import ..OceanTurb: oncell
 import .KPP: ∂B∂z
 
 const nsol = 5
-@prefixed_solution ZeroPlume U V T S e
+@solution U V T S e
 
 Base.@kwdef struct Parameters{T} <: AbstractParameters
          Cε :: T = 2.0    # Surface layer fraction
          Cκ :: T = 0.41   # Von Karman constant
-         CK :: T = 0.1    # Minimum unresolved turbulence kinetic energy
+         CK :: T = 0.1    # Diffusivity parameter
 
     Ca_stab :: T = 2.7    # Stable buoyancy flux parameter for wind-driven turbulence
     Ca_unst :: T = -100.0 # Unstable buoyancy flux parameter for wind-driven turbulence
@@ -24,7 +24,7 @@ Base.@kwdef struct Parameters{T} <: AbstractParameters
         KS₀ :: T = 1e-9   # Interior diffusivity for salinity
 end
 
-mutable struct State{T} <: FieldVector{5, T}
+mutable struct State{T, U, U, W} <: FieldVector{5, T}
     Fu :: T
     Fv :: T
     Fθ :: T
