@@ -65,7 +65,7 @@ Field(::Type{Cell}, grid) = CellField(grid)
 """
     FaceField(grid)
 
-Return a `Field{Face}` on `grid` with its data initialized to 0.
+Return a `FaceField` on `grid` with its data initialized to 0.
 """
 function FaceField(A::DataType, grid)
     data = convert(A, fill(0, face_size(grid)))
@@ -75,7 +75,7 @@ end
 """
     CellField(grid)
 
-Return a `Field{Cell}` on `grid` with its data initialized to 0.
+Return a `CellField` on `grid` with its data initialized to 0.
 """
 function CellField(A::DataType, grid)
     data = convert(A, fill(0, cell_size(grid)))
@@ -89,9 +89,9 @@ FaceField(grid) = FaceField(default_arraytype(eltype(grid)), grid)
 """
     CellField(data, grid)
 
-Return a `Field{Cell}` with its `data` located on the `grid`.
+Return a `CellField` with its `data` located on the `grid`.
 if `data` is an array, it must be broadcastable to `c.data`, where
-`c` is a `Field{Cell}`.
+`c` is a `CellField`.
 """
 function CellField(data, grid)
     c = CellField(grid)
@@ -102,9 +102,9 @@ end
 """
     FaceField(data, grid)
 
-Return a `Field{Face}` with its `data` located on the `grid`.
+Return a `FaceField` with its `data` located on the `grid`.
 if `data` is an array, it must be broadcastable to `f.data`, where
-`f` is a `Field{Face}`.
+`f` is a `FaceField`.
 """
 function FaceField(data, grid)
     f = FaceField(grid)
@@ -304,8 +304,8 @@ end
 
 Return the discrete derivative of `a` at grid point `i`.
 
-The derivative of a `Field{Cell}` is computed at face points,
-and the derviative of a `Field{Face}` is computed at cell points.
+The derivative of a `CellField` is computed at face points,
+and the derviative of a `FaceField` is computed at cell points.
 """
 ∂z(a, i) = throw("∂z is not defined for arbitrary fields.")
 
@@ -397,7 +397,7 @@ Return the interpolation of `f` onto cell point `i`.
 
 Compute the absolute error between `c` and `d` with norm `p`, defined as
 
-error = (L^{-1} int (c-d)^p dz)^(1/p) .
+``\mathrm{abs \, error} = \left ( L^{-1} int_{-L}^0 (c-d)^p \, \mathrm{d} z \right )^(1/p)``.
 """
 function absolute_error(c::CellField, d::CellField, p=2)
     if length(c) != length(d)
@@ -415,4 +415,16 @@ function absolute_error(c::CellField, d::CellField, p=2)
     return  ( total / height(c) )^(1/p)
 end
 
+"""
+    relative_error(c, d, p=2)
+
+Compute the relative error between `c` and `d` with norm `p`, defined as
+
+```math
+\beq
+\mathrm{rel \, error} = \frac{\left ( int_{-L}^0 (c-d)^p \, \mathrm{d} z \right )^(1/p)}
+                             {\left ( int_{-L}^0 d^p \, \mathrm{d} z \right )^(1/p)}
+\eeq
+```
+"""
 relative_error(c::CellField, d::CellField, p=2) = absolute_error(c, d, p) / mean(x -> x^p, d)^(1/p)
