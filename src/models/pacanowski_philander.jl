@@ -1,14 +1,6 @@
 module PacanowskiPhilander
 
-using
-    StaticArrays,
-    OceanTurb
-
-export
-    Parameters,
-    Model
-
-import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top, Constants
+using OceanTurb
 
 import .KPP: ∂B∂z
 
@@ -39,9 +31,9 @@ function Model(; N=10, L=1.0,
     )
 
     solution = Solution((CellField(grid) for i=1:nsol)...)
-    K = Accessory{Function}(KU, KV, KT, KS)
-    R = Accessory{Function}(RU, RV, RT, RS)
-    eqn = Equation(R, K)
+    K = (U=KU, V=KV, T=KT, S=KS)
+    R = (U=RU, V=RV, T=RT, S=RS)
+    eqn = Equation(K=K, R=R)
     lhs = OceanTurb.build_lhs(solution)
 
     timestepper = Timestepper(stepper, eqn, solution, lhs)

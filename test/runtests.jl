@@ -70,6 +70,7 @@ end
         @test test_diffusion_cosine(stepper)
         @test test_diffusive_flux(stepper, top_flux=0, bottom_flux=0)
         @test test_diffusive_flux(stepper)
+        @test test_advection(stepper)
     end
 end
 

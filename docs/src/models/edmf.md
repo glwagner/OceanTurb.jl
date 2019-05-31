@@ -1,4 +1,4 @@
-# The eddy-diffusivity mass-flux (EDMF) schemes
+# An eddy-diffusivity mass-flux (EDMF) scheme
 
 ```math
 \newcommand{\c}         {\, ,}

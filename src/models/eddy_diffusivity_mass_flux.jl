@@ -1,22 +1,17 @@
 module EDMF
 
-using
-    OceanTurb,
-    StaticArrays,
-    LinearAlgebra
+using OceanTurb
 
-import OceanTurb: ∇K∇c, ∇K∇c_bottom, ∇K∇c_top, Constants
-import OceanTurb: oncell
-
+import ..OceanTurb: oncell
 import .KPP: ∂B∂z
 
 const nsol = 5
-@prefixed_solution ZeroPlume U V T S e
+@solution U V T S e
 
 Base.@kwdef struct Parameters{T} <: AbstractParameters
          Cε :: T = 2.0    # Surface layer fraction
          Cκ :: T = 0.41   # Von Karman constant
-         CK :: T = 0.1    # Minimum unresolved turbulence kinetic energy
+         CK :: T = 0.1    # Diffusivity parameter
 
     Ca_stab :: T = 2.7    # Stable buoyancy flux parameter for wind-driven turbulence
     Ca_unst :: T = -100.0 # Unstable buoyancy flux parameter for wind-driven turbulence
@@ -54,35 +49,41 @@ function update_state!(m)
     return nothing
 end
 
-struct ZeroPlumeModel{TS, G, T} <: AbstractModel{TS, G, T}
+struct Model{S, BC, TS, G, T} <: AbstractModel{TS, G, T}
     @add_clock_grid_timestepper
-      solution :: ZeroPlumeSolution
-           bcs :: ZeroPlumeBoundaryConditions
+      solution :: S
+           bcs :: BC
     parameters :: Parameters{T}
     constants  :: Constants{T}
          state :: State{T}
 end
 
-function ZeroPlumeModel(; N=10, L=1.0,
+function Model(; N=10, L=1.0,
             grid = UniformGrid(N, L),
        constants = Constants(),
       parameters = Parameters(),
          stepper = :ForwardEuler,
-             bcs = ZeroPlumeBoundaryConditions((ZeroFluxBoundaryConditions() for i=1:nsol)...)
     )
 
-    solution = ZeroPlumeSolution((CellField(grid) for i=1:nsol)...)
+    solution = Solution((CellField(grid) for i=1:nsol)...)
 
-    KZP = ZeroPlumeAccessory{Function}(K, K, K, K, K)
-    RZP = ZeroPlumeAccessory{Any}(RU, RV, nothing, nothing, Re)
-    eqn = Equation(RZP, KZP, update_state!)
+    bcs = (
+        U = DefaultBoundaryConditions(eltype(grid)),
+        V = DefaultBoundaryConditions(eltype(grid)),
+        S = DefaultBoundaryConditions(eltype(grid)),
+        T = DefaultBoundaryConditions(eltype(grid)),
+        e = DefaultBoundaryConditions(eltype(grid))
+    )
+
+     Kϕ = (U=K, V=K, T=K, S=K, e=K)
+     Rϕ = (U=RU, V=RV, T=nothing, S=nothing, e=Re)
+    eqn = Equation(R=Rϕ, K=Kϕ, update=update_state!)
     lhs = OceanTurb.build_lhs(solution)
 
     timestepper = Timestepper(stepper, eqn, solution, lhs)
 
-    return ZeroPlumeModel(Clock(), grid, timestepper, solution, bcs, parameters, constants, State())
+    return Model(Clock(), grid, timestepper, solution, bcs, parameters, constants, State())
 end
-
 
 # Note: to increase readability, we use 'm' to refer to 'model' in function
 # definitions below.

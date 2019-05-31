@@ -65,7 +65,7 @@ Field(::Type{Cell}, grid) = CellField(grid)
 """
     FaceField(grid)
 
-Return a `Field{Face}` on `grid` with its data initialized to 0.
+Return a `FaceField` on `grid` with its data initialized to 0.
 """
 function FaceField(A::DataType, grid)
     data = convert(A, fill(0, face_size(grid)))
@@ -75,7 +75,7 @@ end
 """
     CellField(grid)
 
-Return a `Field{Cell}` on `grid` with its data initialized to 0.
+Return a `CellField` on `grid` with its data initialized to 0.
 """
 function CellField(A::DataType, grid)
     data = convert(A, fill(0, cell_size(grid)))
@@ -89,9 +89,9 @@ FaceField(grid) = FaceField(default_arraytype(eltype(grid)), grid)
 """
     CellField(data, grid)
 
-Return a `Field{Cell}` with its `data` located on the `grid`.
+Return a `CellField` with its `data` located on the `grid`.
 if `data` is an array, it must be broadcastable to `c.data`, where
-`c` is a `Field{Cell}`.
+`c` is a `CellField`.
 """
 function CellField(data, grid)
     c = CellField(grid)
@@ -102,9 +102,9 @@ end
 """
     FaceField(data, grid)
 
-Return a `Field{Face}` with its `data` located on the `grid`.
+Return a `FaceField` with its `data` located on the `grid`.
 if `data` is an array, it must be broadcastable to `f.data`, where
-`f` is a `Field{Face}`.
+`f` is a `FaceField`.
 """
 function FaceField(data, grid)
     f = FaceField(grid)
@@ -304,8 +304,8 @@ end
 
 Return the discrete derivative of `a` at grid point `i`.
 
-The derivative of a `Field{Cell}` is computed at face points,
-and the derviative of a `Field{Face}` is computed at cell points.
+The derivative of a `CellField` is computed at face points,
+and the derviative of a `FaceField` is computed at cell points.
 """
 ∂z(a, i) = throw("∂z is not defined for arbitrary fields.")
 
@@ -349,31 +349,19 @@ function ∂z(f::FaceField)
 end
 
 #
-# A bunch of (unsafe) diffusive flux operators
+# Advection and diffusion operators
 #
 
-# ∇K∇c for c::CellField
 @propagate_inbounds K∂z(K, ϕ, i) = K*∂z(ϕ, i)
-@propagate_inbounds ∇K∇ϕ(Kᵢ₊₁, Kᵢ, ϕ, i)            = ( K∂z(Kᵢ₊₁, ϕ, i+1) -    K∂z(Kᵢ, ϕ, i)     ) /    Δf(ϕ, i)
-@propagate_inbounds ∇K∇ϕ_top(Kᴺ, ϕ, top_flux)       = (     -top_flux     - K∂z(Kᴺ, ϕ, ϕ.grid.N) ) / Δf(ϕ, ϕ.grid.N)
-@propagate_inbounds ∇K∇ϕ_bottom(K₂, ϕ, bottom_flux) = (   K∂z(K₂, ϕ, 2)   +     bottom_flux      ) /    Δf(ϕ, 1)
 
+"Return the diffusive flux divergence at cell i."
+@propagate_inbounds ∇K∇ϕ(Kᵢ₊₁, Kᵢ, ϕ, i) = (K∂z(Kᵢ₊₁, ϕ, i+1) - K∂z(Kᵢ, ϕ, i)) / Δf(ϕ, i)
 
-## Top and bottom flux estimates for constant (Dirichlet) boundary conditions
-bottom_flux(K, ϕ, ϕ_bndry, Δf) = -2K*( bottom(ϕ) - ϕ_bndry ) / Δf # -K*∂ϕ/∂z at the bottom
-top_flux(K, ϕ, ϕ_bndry, Δf)    = -2K*(  ϕ_bndry  -  top(ϕ) ) / Δf # -K*∂ϕ/∂z at the top
-
-@propagate_inbounds ∇K∇ϕ_top(Kᴺ⁺¹, Kᴺ, ϕ, bϕ, model) = ∇K∇ϕ_top(Kᴺ, ϕ, -Kᴺ⁺¹*getbϕ(model, bϕ))
-@propagate_inbounds ∇K∇ϕ_bottom(K₂, K₁, ϕ, bϕ, model) = ∇K∇ϕ_bottom(K₂, ϕ, -K₁*getbϕ(model, bϕ))
+"Return the upwind advective flux divergence at cell i for M<0."
+@propagate_inbounds ∂zM(Mᵢ₊₁, Mᵢ, ϕ, i) = (Mᵢ₊₁ * ϕ[i+1] - Mᵢ * ϕ[i]) / Δc(ϕ, i+1)
 
 "Return the total flux (advective + diffusive) across face i."
-@propagate_inbounds flux(w, κ, ϕ, i) = w * onface(ϕ, i) - κ * ∂z(ϕ, i)
-@propagate_inbounds top_flux_div(wtop, κtop, ϕ) = -flux(wtop, κtop, ϕ, ϕ.grid.N) / Δf(ϕ, ϕ.grid.N)
-@propagate_inbounds bottom_flux_div(wbottom, κbottom, ϕ) = flux(wbottom, κbottom, ϕ, 1) / Δf(ϕ, 1)
-
-const ∇K∇c = ∇K∇ϕ
-const ∇K∇c_top = ∇K∇ϕ_top
-const ∇K∇c_bottom = ∇K∇ϕ_bottom
+@propagate_inbounds flux(M, K, ϕ, i) = M * onface(ϕ, i) - K * ∂z(ϕ, i)
 
 #
 # Convenience functions
@@ -393,7 +381,7 @@ bottom(a::Union{AbstractField, AbstractArray}) = @inbounds a[1]
 
 Return the interpolation of `c` onto face point `i`.
 """
-@propagate_inbounds onface(c::CellField, i) = 0.5*(c.data[i] + c.data[i-1])
+@propagate_inbounds onface(c::CellField, i) = (c.data[i] + c.data[i-1])/2
 @propagate_inbounds onface(f::FaceField, i) = f[i]
 
 """
@@ -401,7 +389,7 @@ Return the interpolation of `c` onto face point `i`.
 
 Return the interpolation of `f` onto cell point `i`.
 """
-@propagate_inbounds oncell(f::FaceField, i) = 0.5*(f.data[i+1] + f.data[i])
+@propagate_inbounds oncell(f::FaceField, i) = (f.data[i+1] + f.data[i])/2
 @propagate_inbounds oncell(c::CellField, i) = c[i]
 
 """
@@ -409,7 +397,7 @@ Return the interpolation of `f` onto cell point `i`.
 
 Compute the absolute error between `c` and `d` with norm `p`, defined as
 
-error = (L^{-1} int (c-d)^p dz)^(1/p) .
+``\\mathrm{abs \\, error} = \\left ( L^{-1} \\int_{-L}^0 (c-d)^p \\, \\mathrm{d} z \\right )^(1/p)``.
 """
 function absolute_error(c::CellField, d::CellField, p=2)
     if length(c) != length(d)
@@ -427,4 +415,16 @@ function absolute_error(c::CellField, d::CellField, p=2)
     return  ( total / height(c) )^(1/p)
 end
 
+"""
+    relative_error(c, d, p=2)
+
+Compute the relative error between `c` and `d` with norm `p`, defined as
+
+```math
+\\beq
+\\mathrm{rel \\, error} = \\frac{\\left ( int_{-L}^0 (c-d)^p \\, \\mathrm{d} z \\right )^(1/p)}
+                             {\\left ( int_{-L}^0 d^p \\, \\mathrm{d} z \\right )^(1/p)}
+\\eeq
+```
+"""
 relative_error(c::CellField, d::CellField, p=2) = absolute_error(c, d, p) / mean(x -> x^p, d)^(1/p)

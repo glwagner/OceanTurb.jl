@@ -66,8 +66,8 @@ where ``\Phi_i`` denotes the value of ``\Phi`` at cell ``i``, and
 ``\Delta c_i = z_{c, i} - z_{c, i-1}`` is the vertical separation between
 node ``i`` and cell point ``i-1``.
 
-With diffusivity given on cell interfaces, the diffusive flux
-at face ``i`` is just ``K_i \left ( \d_z \Phi \right )_i``.
+With diffusivities defined on cell interfaces, the diffusive flux
+across face ``i`` is ``K_i \left ( \d_z \Phi \right )_i``.
 The (negative of the) divergence of the diffusive flux at node ``i`` is therefore
 
 ```math
@@ -102,6 +102,14 @@ In the bottom cell where ``i=1``, on the other hand, the diffusive flux is
 \end{align}
 ```
 
+For negative advective mass fluxes ``M`` defined at cell centers (corresponding
+to downdrafts or down-travelling plumes) imply an advective flux divergence
+
+```math
+\beq
+\d_z \left ( M \Phi \right )_i = \frac{M_{i+1} \Phi_{i+1} - M_i \Phi_i}{\Delta c_{i+1}}
+\eeq
+```
 
 # Time integration
 
@@ -157,7 +165,7 @@ obtains ``\Phi`` at time-step ``n+1`` using the formula
 ```
 
 The ``z``-derivatives in the advective and diffusive terms generate
-and elliptic problem to be solved for ``\Phi^{n+1}`` at each time-step.
+an elliptic problem to be solved for ``\Phi^{n+1}`` at each time-step.
 In the finite volume discretization used by `OceanTurb.jl`, this elliptic
 problem becomes a matrix problem of the form
 
@@ -179,22 +187,26 @@ L^n_{ij} \Phi_j^{n+1} &= \left [ 1 + \Delta t \left ( \d_z M^n - \d_z K^n \d_z \
 
 &= \left [ \begin{matrix}
 
-1 + \Delta t \tfrac{K^n_2}{\Delta f_1 \Delta c_2}
-  & -\Delta t \tfrac{K^n_2}{\Delta f_1 \Delta c_2}
+1 + \Delta t \left ( \tfrac{K^n_2}{\Delta f_1 \Delta c_2} - \tfrac{M_1^n}{\Delta c_2} \right )
+  & \Delta t \left ( \tfrac{M_2^n}{\Delta c_2} - \tfrac{K^n_2}{\Delta f_1 \Delta c_2} \right )
     & \cdot & \cdot & \cdot & \cdot \\
 
 \ddots & \ddots & \ddots & \cdot & \cdot & \cdot \\
 
 \cdot
   & - \Delta t \tfrac{K^n_i}{\Delta c_i \Delta f_i}
-  & 1 + \tfrac{\Delta t}{\Delta f_i} \left ( \tfrac{K^n_{i+1}}{\Delta c_{i+1}} + \tfrac{K^n_i}{\Delta c_i} \right )
-  & - \Delta t \tfrac{K^n_{i+1}}{\Delta c_{i+1} \Delta f_{i+1}} & \cdot & \cdot \\
+  & 1 + \Delta t
+    \left [ \tfrac{K^n_{i+1}}{\Delta f_i \Delta c_{i+1}} + \tfrac{K^n_i}{\Delta f_i \Delta c_i} - \frac{M^n_i}{\Delta c_{i+1}} \right ]
+  & \Delta t \left ( \tfrac{M^n_{i+1}}{\Delta c_{i+1}} - \tfrac{K^n_{i+1}}{\Delta c_{i+1} \Delta f_{i+1}} \right ) & \cdot & \cdot \\
 
 \cdot & \cdot & \ddots & \ddots & \ddots & \cdot \\
 
-\cdot & \cdot & \cdot & \cdot & - \Delta t \tfrac{K^n_N}{\Delta c_N \Delta f_N}
-  & 1 + \Delta t \tfrac{K^n_N}{\Delta c_N \Delta f_N}
+\cdot & \cdot & \cdot & \cdot
+  & - \Delta t \tfrac{K^n_N}{\Delta c_N \Delta f_N}
+  & 1 + \Delta t \left (\tfrac{K^n_N}{\Delta c_N \Delta f_N} - \tfrac{M^n_N}{\Delta c_{N+1}} \right )
+
 \end{matrix} \right ]
+
 \left [ \begin{matrix}
 \Phi^{n+1}_1 \\[1.1ex]
 \vdots \\[1.1ex]

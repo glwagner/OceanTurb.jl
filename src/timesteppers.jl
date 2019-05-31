@@ -43,20 +43,22 @@ function calc_explicit_rhs!(rhs, eqn, solution, m)
 
     # Function barrier for better performance and forced specialization
     # on Kϕ and Rϕ
-    function kernel!(rhs, ϕ, K::KF, R::RF, m) where {KF, RF}
+    function kernel!(rhs, ϕ, M::MF, K::KF, R::RF, m) where {MF, KF, RF}
         for i in eachindex(ϕ)
-            @inbounds rhs[i] = ∇K∇ϕ(K(m, i+1), K(m, i), ϕ, i) + R(m, i)
+            @inbounds rhs[i] = (-∂zM(M(m, i+1), M(m, i), ϕ, i)
+                                    + ∇K∇ϕ(K(m, i+1), K(m, i), ϕ, i) + R(m, i))
         end
     end
 
     ntuple(Val(length(solution))) do j
         Base.@_inline_meta
-        ϕ = solution[j]
+           ϕ = solution[j]
         rhsϕ = rhs[j]
-        Kϕ = eqn.K[j]
-        Rϕ = eqn.R[j]
+          Mϕ = eqn.M[j]
+          Kϕ = eqn.K[j]
+          Rϕ = eqn.R[j]
 
-        kernel!(rhsϕ, ϕ, Kϕ, Rϕ, m)
+        kernel!(rhsϕ, ϕ, Mϕ, Kϕ, Rϕ, m)
     end
     return nothing
 end
@@ -68,47 +70,54 @@ function calc_implicit_rhs!(rhs, eqn, solution, m)
 
     ntuple(Val(length(solution))) do j
         Base.@_inline_meta
-        ϕ = solution[j]
+           ϕ = solution[j]
         rhsϕ = rhs[j]
-        Kϕ = eqn.K[j]
-        Rϕ = eqn.R[j]
+          Mϕ = eqn.M[j]
+          Kϕ = eqn.K[j]
+          Rϕ = eqn.R[j]
 
         for i in eachindex(rhsϕ)
             @inbounds rhsϕ[i] = Rϕ(m, i)
         end
 
-        @inbounds rhsϕ[N] = ∇K∇ϕ(Kϕ(m, N+1), 0, ϕ, N) + Rϕ(m, N)
-        @inbounds rhsϕ[1] = ∇K∇ϕ(0, Kϕ(m, 1), ϕ, 1) + Rϕ(m, 1)
+        @inbounds rhsϕ[N] = (-∂zM(Mϕ(m, N+1), Mϕ(m, N), ϕ, N)
+                                + ∇K∇ϕ(Kϕ(m, N+1), -zero(eltype(ϕ)), ϕ, N) + Rϕ(m, N))
+
+        # Advective divergence included in lhs
+        @inbounds rhsϕ[1] = ∇K∇ϕ(-zero(eltype(ϕ)), Kϕ(m, 1), ϕ, 1) + Rϕ(m, 1)
+                                
     end
     return nothing
 end
 
-@inline flux_div_op(m, K::Function, face, cell) = K(m, face) / Δc(m.grid, face) / Δf(m.grid, cell)
-@inline flux_div_op(m, K::Number, face, cell) = K / Δc(m.grid, face) / Δf(m.grid, cell)
+@inline K_op(m, K, iᶠ, iᶜ) = K(m, iᶠ) / Δc(m.grid, iᶠ) / Δf(m.grid, iᶜ)
+@inline M_op(m, M, iᴹ, iᶜ) = M(m, iᴹ) / Δc(m.grid, iᶜ)
 
 "Build backward Euler operator for diffusive problems."
-function calc_diffusive_lhs!(lhs, K, solution, Δt::T, m) where T
+function calc_diffusive_lhs!(lhs, M, K, solution, Δt::T, m) where T
     ntuple(Val(length(solution))) do j
         Base.@_inline_meta
-        ϕ = solution[j]
+         ϕ = solution[j]
+        Mϕ = M[j]
         Kϕ = K[j]
-        L = lhs[j]
+         L = lhs[j]
 
         for i in interiorindices(ϕ)
             @inbounds begin
-                L.du[i]   = -Δt * flux_div_op(m, Kϕ, i+1, i)
-                L.d[i]    = one(T) + Δt * (flux_div_op(m, Kϕ, i+1, i) + flux_div_op(m, Kϕ, i, i))
-                L.dl[i-1] = -Δt * flux_div_op(m, Kϕ, i, i)
+                L.du[i]   = Δt * (M_op(m, Mϕ, i+1, i+1) - K_op(m, Kϕ, i+1, i))
+                L.d[i]    = one(T) + Δt * (K_op(m, Kϕ, i+1, i) + K_op(m, Kϕ, i, i) - M_op(m, Mϕ, i, i+1))
+                L.dl[i-1] = -Δt * K_op(m, Kϕ, i, i)
             end
         end
 
         # Bottom row
-        @inbounds L.du[1] = -Δt*flux_div_op(m, Kϕ, 2, 1)
-        @inbounds L.d[1] = one(T) + Δt*flux_div_op(m, Kϕ, 2, 1)
+        @inbounds L.du[1] = Δt * (M_op(m, Mϕ, 2, 2) - K_op(m, Kϕ, 2, 1))
+        @inbounds L.d[1] = one(T) + Δt*(K_op(m, Kϕ, 2, 1) - M_op(m, Mϕ, 1, 2))
 
         # Top row
-        @inbounds L.dl[end] = -Δt*flux_div_op(m, Kϕ, length(ϕ), length(ϕ))
-        @inbounds L.d[end]  = one(T) + Δt*flux_div_op(m, Kϕ, length(ϕ), length(ϕ))
+        N = length(ϕ)
+        @inbounds L.dl[end] = -Δt * K_op(m, Kϕ, N, N)
+        @inbounds L.d[end]  = one(T) + Δt * (K_op(m, Kϕ, N, N) - M_op(m, Mϕ, N, N+1))
     end
 
     return nothing
@@ -233,7 +242,7 @@ end
 function iterate!(m::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimestepper
     update!(m.bcs, m.timestepper.eqn, m.solution, m)
     calc_implicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m.solution, m)
-    calc_diffusive_lhs!(m.timestepper.lhs, m.timestepper.eqn.K, m.solution, Δt, m)
+    calc_diffusive_lhs!(m.timestepper.lhs, m.timestepper.eqn.M, m.timestepper.eqn.K, m.solution, Δt, m)
     backward_euler_step!(m.timestepper.rhs, m.timestepper.lhs, m.solution, Δt)
     tick!(m.clock, Δt)
     return nothing
