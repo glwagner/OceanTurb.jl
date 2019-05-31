@@ -107,7 +107,7 @@ to downdrafts or down-travelling plumes) imply an advective flux divergence
 
 ```math
 \beq
-\d_z \left ( M \Phi \right )_i = \frac{M_i \Phi_i - M_{i-1} \Phi_{i-1}}{\Delta c_i}
+\d_z \left ( M \Phi \right )_i = \frac{M_{i+1} \Phi_{i+1} - M_i \Phi_i}{\Delta c_{i+1}}
 \eeq
 ```
 
@@ -165,7 +165,7 @@ obtains ``\Phi`` at time-step ``n+1`` using the formula
 ```
 
 The ``z``-derivatives in the advective and diffusive terms generate
-and elliptic problem to be solved for ``\Phi^{n+1}`` at each time-step.
+an elliptic problem to be solved for ``\Phi^{n+1}`` at each time-step.
 In the finite volume discretization used by `OceanTurb.jl`, this elliptic
 problem becomes a matrix problem of the form
 
@@ -187,23 +187,23 @@ L^n_{ij} \Phi_j^{n+1} &= \left [ 1 + \Delta t \left ( \d_z M^n - \d_z K^n \d_z \
 
 &= \left [ \begin{matrix}
 
-1 + \Delta t \left ( \tfrac{M_1^n}{\Delta c_1} + \tfrac{K^n_2}{\Delta f_1 \Delta c_2} \right )
-  & -\Delta t \tfrac{K^n_2}{\Delta f_1 \Delta c_2}
+1 + \Delta t \left ( \tfrac{K^n_2}{\Delta f_1 \Delta c_2} - \tfrac{M_1^n}{\Delta c_2} \right )
+  & \Delta t \left ( \tfrac{M_2^n}{\Delta c_2} - \tfrac{K^n_2}{\Delta f_1 \Delta c_2} \right )
     & \cdot & \cdot & \cdot & \cdot \\
 
 \ddots & \ddots & \ddots & \cdot & \cdot & \cdot \\
 
 \cdot
-  & - \Delta t \left ( \tfrac{M^n_{i-1}}{\Delta c_i} + \tfrac{K^n_i}{\Delta c_i \Delta f_i} \right )
+  & - \Delta t \tfrac{K^n_i}{\Delta c_i \Delta f_i}
   & 1 + \Delta t
-    \left [ \frac{M^n_i}{\Delta c_i} + \tfrac{K^n_{i+1}}{\Delta f_i \Delta c_{i+1}} + \tfrac{K^n_i}{\Delta f_i \Delta c_i} \right ]
-  & -\Delta t \tfrac{K^n_{i+1}}{\Delta c_{i+1} \Delta f_{i+1}} & \cdot & \cdot \\
+    \left [ \tfrac{K^n_{i+1}}{\Delta f_i \Delta c_{i+1}} + \tfrac{K^n_i}{\Delta f_i \Delta c_i} - \frac{M^n_i}{\Delta c_{i+1}} \right ]
+  & \Delta t \left ( \tfrac{M^n_{i+1}}{\Delta c_{i+1}} - \tfrac{K^n_{i+1}}{\Delta c_{i+1} \Delta f_{i+1}} \right ) & \cdot & \cdot \\
 
 \cdot & \cdot & \ddots & \ddots & \ddots & \cdot \\
 
 \cdot & \cdot & \cdot & \cdot
-  & - \Delta t \left( \tfrac{M_{N-1}^n}{\Delta c_N} + \tfrac{K^n_N}{\Delta c_N \Delta f_N} \right )
-  & 1 + \Delta t \left ( \tfrac{M^n_N}{\Delta c_N} + \tfrac{K^n_N}{\Delta c_N \Delta f_N} \right )
+  & - \Delta t \tfrac{K^n_N}{\Delta c_N \Delta f_N}
+  & 1 + \Delta t \left (\tfrac{K^n_N}{\Delta c_N \Delta f_N} - \tfrac{M^n_N}{\Delta c_{N+1}} \right )
 
 \end{matrix} \right ]
 
