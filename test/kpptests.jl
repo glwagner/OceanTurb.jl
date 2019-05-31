@@ -6,7 +6,7 @@ function test_constants(; kwargs...)
     constants = KPP.Constants(; kwargs...)
     result = true
     for (k, v) in kwargs
-        if !result
+        if result
             result = getproperty(constants, k) == v
         end
     end
