@@ -357,8 +357,8 @@ end
 "Return the diffusive flux divergence at cell i."
 @propagate_inbounds ∇K∇ϕ(Kᵢ₊₁, Kᵢ, ϕ, i) = (K∂z(Kᵢ₊₁, ϕ, i+1) - K∂z(Kᵢ, ϕ, i)) / Δf(ϕ, i)
 
-"Return the advective flux divergence at cell i for M<0."
-@propagate_inbounds ∂zM(Mᵢ, Mᵢ₋₁, ϕ, i) = (Mᵢ * ϕ[i] - Mᵢ₋₁ * ϕ[i-1]) / Δc(ϕ, i)
+"Return the upwind advective flux divergence at cell i for M<0."
+@propagate_inbounds ∂zM(Mᵢ₊₁, Mᵢ, ϕ, i) = (Mᵢ₊₁ * ϕ[i+1] - Mᵢ * ϕ[i]) / Δc(ϕ, i+1)
 
 "Return the total flux (advective + diffusive) across face i."
 @propagate_inbounds flux(M, K, ϕ, i) = M * onface(ϕ, i) - K * ∂z(ϕ, i)
@@ -397,7 +397,7 @@ Return the interpolation of `f` onto cell point `i`.
 
 Compute the absolute error between `c` and `d` with norm `p`, defined as
 
-``\mathrm{abs \, error} = \left ( L^{-1} int_{-L}^0 (c-d)^p \, \mathrm{d} z \right )^(1/p)``.
+``\\mathrm{abs \\, error} = \\left ( L^{-1} \\int_{-L}^0 (c-d)^p \\, \\mathrm{d} z \\right )^(1/p)``.
 """
 function absolute_error(c::CellField, d::CellField, p=2)
     if length(c) != length(d)
@@ -421,10 +421,10 @@ end
 Compute the relative error between `c` and `d` with norm `p`, defined as
 
 ```math
-\beq
-\mathrm{rel \, error} = \frac{\left ( int_{-L}^0 (c-d)^p \, \mathrm{d} z \right )^(1/p)}
-                             {\left ( int_{-L}^0 d^p \, \mathrm{d} z \right )^(1/p)}
-\eeq
+\\beq
+\\mathrm{rel \\, error} = \\frac{\\left ( int_{-L}^0 (c-d)^p \\, \\mathrm{d} z \\right )^(1/p)}
+                             {\\left ( int_{-L}^0 d^p \\, \\mathrm{d} z \\right )^(1/p)}
+\\eeq
 ```
 """
 relative_error(c::CellField, d::CellField, p=2) = absolute_error(c, d, p) / mean(x -> x^p, d)^(1/p)

@@ -45,7 +45,7 @@ function calc_explicit_rhs!(rhs, eqn, solution, m)
     # on Kϕ and Rϕ
     function kernel!(rhs, ϕ, M::MF, K::KF, R::RF, m) where {MF, KF, RF}
         for i in eachindex(ϕ)
-            @inbounds rhs[i] = (-∂zM(M(m, i), M(m, i-1), ϕ, i)
+            @inbounds rhs[i] = (-∂zM(M(m, i+1), M(m, i), ϕ, i)
                                     + ∇K∇ϕ(K(m, i+1), K(m, i), ϕ, i) + R(m, i))
         end
     end
@@ -80,18 +80,18 @@ function calc_implicit_rhs!(rhs, eqn, solution, m)
             @inbounds rhsϕ[i] = Rϕ(m, i)
         end
 
-        @inbounds rhsϕ[N] = (-∂zM(Mϕ(m, N), Mϕ(m, N-1), ϕ, N)
+        @inbounds rhsϕ[N] = (-∂zM(Mϕ(m, N+1), Mϕ(m, N), ϕ, N)
                                 + ∇K∇ϕ(Kϕ(m, N+1), -zero(eltype(ϕ)), ϕ, N) + Rϕ(m, N))
 
-        @inbounds rhsϕ[1] = (-∂zM(Mϕ(m, 1), -zero(eltype(ϕ)), ϕ, 1)
-                                + ∇K∇ϕ(-zero(eltype(ϕ)), Kϕ(m, 1), ϕ, 1) + Rϕ(m, 1))
+        # Advective divergence included in lhs
+        @inbounds rhsϕ[1] = ∇K∇ϕ(-zero(eltype(ϕ)), Kϕ(m, 1), ϕ, 1) + Rϕ(m, 1)
+                                
     end
     return nothing
 end
 
-@inline K_op(m, K::Function, face, cell) = K(m, face) / Δc(m.grid, face) / Δf(m.grid, cell)
-@inline M_op(m, M::Function, cell_M, cell_c) = M(m, cell_M) / Δc(m.grid, cell_c)
-#@inline K_op(m, K::Number, face, cell) = K / Δc(m.grid, face) / Δf(m.grid, cell)
+@inline K_op(m, K, iᶠ, iᶜ) = K(m, iᶠ) / Δc(m.grid, iᶠ) / Δf(m.grid, iᶜ)
+@inline M_op(m, M, iᴹ, iᶜ) = M(m, iᴹ) / Δc(m.grid, iᶜ)
 
 "Build backward Euler operator for diffusive problems."
 function calc_diffusive_lhs!(lhs, M, K, solution, Δt::T, m) where T
@@ -104,20 +104,20 @@ function calc_diffusive_lhs!(lhs, M, K, solution, Δt::T, m) where T
 
         for i in interiorindices(ϕ)
             @inbounds begin
-                L.du[i]   = -Δt * K_op(m, Kϕ, i+1, i)
-                L.d[i]    = one(T) + Δt * (M_op(m, Mϕ, i, i) + K_op(m, Kϕ, i+1, i) + K_op(m, Kϕ, i, i))
-                L.dl[i-1] = -Δt * (M_op(m, Mϕ, i-1, i) + K_op(m, Kϕ, i, i))
+                L.du[i]   = Δt * (M_op(m, Mϕ, i+1, i+1) - K_op(m, Kϕ, i+1, i))
+                L.d[i]    = one(T) + Δt * (K_op(m, Kϕ, i+1, i) + K_op(m, Kϕ, i, i) - M_op(m, Mϕ, i, i+1))
+                L.dl[i-1] = -Δt * K_op(m, Kϕ, i, i)
             end
         end
 
         # Bottom row
-        @inbounds L.du[1] = -Δt * K_op(m, Kϕ, 2, 1)
-        @inbounds L.d[1] = one(T) + Δt*(M_op(m, Mϕ, 1, 1) + K_op(m, Kϕ, 2, 1))
+        @inbounds L.du[1] = Δt * (M_op(m, Mϕ, 2, 2) - K_op(m, Kϕ, 2, 1))
+        @inbounds L.d[1] = one(T) + Δt*(K_op(m, Kϕ, 2, 1) - M_op(m, Mϕ, 1, 2))
 
         # Top row
         N = length(ϕ)
-        @inbounds L.dl[end] = -Δt*(M_op(m, Mϕ, N-1, N) + K_op(m, Kϕ, N, N))
-        @inbounds L.d[end]  = one(T) + Δt*(M_op(m, Mϕ, N, N) + K_op(m, Kϕ, N, N))
+        @inbounds L.dl[end] = -Δt * K_op(m, Kϕ, N, N)
+        @inbounds L.d[end]  = one(T) + Δt * (K_op(m, Kϕ, N, N) - M_op(m, Mϕ, N, N+1))
     end
 
     return nothing

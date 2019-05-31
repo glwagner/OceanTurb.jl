@@ -5,8 +5,9 @@ using OceanTurb
 # Just one field: "c"
 @solution c
 
-struct Parameters{T} <: AbstractParameters
-    K::T
+Base.@kwdef struct Parameters{T} <: AbstractParameters
+    K :: T
+    W :: T
 end
 
 struct Model{P, TS, G, T} <: AbstractModel{TS, G, T}
@@ -18,9 +19,9 @@ struct Model{P, TS, G, T} <: AbstractModel{TS, G, T}
     parameters  :: P
 end
 
-function Model(; N=10, L=1.0, K=0.1,
+function Model(; N=10, L=1.0, K=0.1, W=0.0,
           grid = UniformGrid(N, L),
-    parameters = Parameters(K),
+    parameters = Parameters(K, W),
        stepper = :ForwardEuler,
            bcs = BoundaryConditions(ZeroFluxBoundaryConditions())
     )
@@ -28,7 +29,8 @@ function Model(; N=10, L=1.0, K=0.1,
     solution = Solution(CellField(grid))
 
       K = (Kc,)
-    eqn = Equation(K=K)
+      W = (Wc,)
+    eqn = Equation(K=K, M=W)
     lhs = build_lhs(solution) #LeftHandSide(solution)
 
     timestepper = Timestepper(stepper, eqn, solution, lhs)
@@ -37,5 +39,6 @@ function Model(; N=10, L=1.0, K=0.1,
 end
 
 @inline Kc(m, i) = m.parameters.K
+@inline Wc(m, i) = m.parameters.W
 
 end # module
