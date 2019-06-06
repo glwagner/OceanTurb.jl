@@ -45,6 +45,8 @@ import OceanTurb.KPP: 𝒲_unstable, 𝒲_stable, ωτ, ωb, d,
                       isunstable, isforced, unresolved_kinetic_energy,
                       ∂B∂z
 
+abstract type AbstractModularKPPModel{K, H, N, TS, G, T} <: AbstractModel{TS, G, T} end
+
 const nsol = 4
 @solution U V T S
 
@@ -139,7 +141,7 @@ function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
             h_crit, plume_T, plume_S, plume_w²)
 end
 
-struct Model{KP, NP, HP, SO, BC, ST, TS, G, T} <: AbstractModel{TS, G, T}
+struct Model{KP, NP, HP, SO, BC, ST, TS, G, T} <: AbstractModularKPPModel{KP, NP, HP, TS, G, T}
     clock        :: Clock{T}
     grid         :: G
     timestepper  :: TS
@@ -158,19 +160,25 @@ function Model(; N=10, L=1.0,
      diffusivity = LMDDiffusivityParameters(),
     nonlocalflux = LMDCounterGradientFluxParameters(),
      mixingdepth = LMDMixingDepthParameters(),
-         stepper = :BackwardEuler,
-             bcs = BoundaryConditions((FluxBoundaryConditions(0) for i=1:nsol)...)
+         stepper = :BackwardEuler
     )
 
-      K = Accessory{Function}(KU, KV, KT, KS)
-      R = Accessory{Function}(RU, RV, RT, RS)
-    eqn = Equation(K=K, R=R, update=update_state!)
+     K = Accessory{Function}(KU, KV, KT, KS)
+     R = Accessory{Function}(RU, RV, RT, RS)
+    eq = Equation(K=K, R=R, update=update_state!)
+
+    bcs = (
+        U = DefaultBoundaryConditions(eltype(grid)),
+        V = DefaultBoundaryConditions(eltype(grid)),
+        T = DefaultBoundaryConditions(eltype(grid)),
+        S = DefaultBoundaryConditions(eltype(grid))
+    )
 
        state = State(diffusivity, nonlocalflux, mixingdepth, grid)
     solution = Solution((CellField(grid) for i=1:nsol)...)
          lhs = OceanTurb.build_lhs(solution)
 
-    timestepper = Timestepper(stepper, eqn, solution, lhs)
+    timestepper = Timestepper(stepper, eq, solution, lhs)
 
     return Model(Clock(), grid, timestepper, solution, bcs,
                  diffusivity, nonlocalflux, mixingdepth, constants, state)
@@ -262,7 +270,7 @@ update_nonlocal_flux!(m) = nothing
 # Mixing depth
 #
 
-bulk_richardson_number(m::Model, i) = KPP.bulk_richardson_number(
+bulk_richardson_number(m::AbstractModel, i) = KPP.bulk_richardson_number(
     m.solution.U, m.solution.V, m.solution.T, m.solution.S,
     m.state.Fb, m.mixingdepth.CKE, m.mixingdepth.CKE₀, m.mixingdepth.CSL, m.constants.g,
     m.constants.α, m.constants.β, i)
@@ -388,14 +396,23 @@ RU(m, i) =   m.constants.f * m.solution.V[i]
 RV(m, i) = - m.constants.f * m.solution.U[i]
 
 # K_{U,V,T,S} is calculated at face points
-KU(m::Model{<:LMDDiffusivityParameters}, i)      = KPP.K_KPP(m.state.h, 𝒲_LMD_U(m, i),    d(m, i)) + m.diffusivity.KU₀
-KT(m::Model{<:LMDDiffusivityParameters}, i)      = KPP.K_KPP(m.state.h, 𝒲_LMD_T(m, i),    d(m, i)) + m.diffusivity.KT₀
-KS(m::Model{<:LMDDiffusivityParameters}, i)      = KPP.K_KPP(m.state.h, 𝒲_LMD_S(m, i),    d(m, i)) + m.diffusivity.KS₀
+KU(m::AbstractModularKPPModel{<:LMDDiffusivityParameters}, i) =
+    KPP.K_KPP(m.state.h, 𝒲_LMD_U(m, i),    d(m, i)) + m.diffusivity.KU₀
 
-KU(m::Model{<:HoltslagDiffusivityParameters}, i) = KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KU₀
-KT(m::Model{<:HoltslagDiffusivityParameters}, i) = KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KT₀
-KS(m::Model{<:HoltslagDiffusivityParameters}, i) = KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KS₀
+KT(m::AbstractModularKPPModel{<:LMDDiffusivityParameters}, i) =
+    KPP.K_KPP(m.state.h, 𝒲_LMD_T(m, i),    d(m, i)) + m.diffusivity.KT₀
 
+KS(m::AbstractModularKPPModel{<:LMDDiffusivityParameters}, i) =
+    KPP.K_KPP(m.state.h, 𝒲_LMD_S(m, i),    d(m, i)) + m.diffusivity.KS₀
+
+Kl(m::AbstractModularKPPModel{<:HoltslagDiffusivityParameters}, i) =
+    KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KU₀
+
+KT(m::AbstractModularKPPModel{<:HoltslagDiffusivityParameters}, i) =
+    KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KT₀
+
+KS(m::AbstractModularKPPModel{<:HoltslagDiffusivityParameters}, i) =
+    KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KS₀
 
 const KV = KU
 
