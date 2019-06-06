@@ -27,7 +27,7 @@ function atomic_backward_euler_benchmark(m, Δt)
     @btime OceanTurb.calc_implicit_rhs!($(m.timestepper.rhs), $(m.timestepper.eqn), $(m.solution), $m)
 
     @printf "% 24s:" "calc diffusive lhs"
-    @btime OceanTurb.calc_diffusive_lhs!($(m.timestepper.lhs), $(m.timestepper.eqn.K), $(m.solution), $Δt, $m)
+    @btime OceanTurb.calc_diffusive_lhs!($(m.timestepper.lhs), $(m.timestepper.eqn.M), $(m.timestepper.eqn.K), $(m.solution), $Δt, $m)
 
     @printf "% 24s:" "update solution"
     @btime OceanTurb.backward_euler_step!($(m.timestepper.rhs), $(m.timestepper.lhs), $(m.solution), $Δt)
