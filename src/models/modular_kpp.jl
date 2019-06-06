@@ -32,10 +32,11 @@ For nonlocal flux models we have
 module ModularKPP
 
 export
-    LMDMixingDepthParameters,
-    LMDCounterGradientFluxParameters,
-    LMDDiffusivityParameters,
-    HoltslagDiffusivityParameters
+    LMDMixingDepth,
+    LMDCounterGradientFlux,
+    LMDDiffusivity,
+    ROMSMixingDepth,
+    HoltslagDiffusivity
 
 using
     OceanTurb,
@@ -50,25 +51,25 @@ abstract type AbstractModularKPPModel{K, H, N, TS, G, T} <: AbstractModel{TS, G,
 const nsol = 4
 @solution U V T S
 
-Base.@kwdef struct LMDMixingDepthParameters{T} <: AbstractParameters
+Base.@kwdef struct LMDMixingDepth{T} <: AbstractParameters
      CSL :: T = 0.1   # Surface layer fraction
      CRi :: T = 0.3   # Critical bulk Richardson number
      CKE :: T = 4.32  # Unresolved turbulence parameter
     CKE₀ :: T = 1e-11 # Minimum unresolved turbulence kinetic energy
 end
 
-Base.@kwdef struct ROMSMixingDepthParameters{T} <: AbstractParameters
+Base.@kwdef struct ROMSMixingDepth{T} <: AbstractParameters
      CSL :: T = 0.1  # Surface layer fraction
      CRi :: T = 0.3  # Critical bulk Richardson number
      CKE :: T = 5.07 # Minimum unresolved turbulence kinetic energy
      CEk :: T = 211. # Unresolved turbulence parameter
 end
 
-Base.@kwdef struct LMDCounterGradientFluxParameters{T} <: AbstractParameters
+Base.@kwdef struct LMDCounterGradientFlux{T} <: AbstractParameters
     CNL :: T = 6.33 # Mass flux proportionality constant
 end
 
-Base.@kwdef struct LMDDiffusivityParameters{T}
+Base.@kwdef struct LMDDiffusivity{T}
      CKSL :: T = 0.1   # Surface layer fraction
        Cτ :: T = 0.4   # Von Karman constant
 
@@ -94,7 +95,7 @@ Base.@kwdef struct LMDDiffusivityParameters{T}
       KS₀ :: T = 1e-9 # Interior diffusivity for salinity
 end
 
-Base.@kwdef struct HoltslagDiffusivityParameters{T} <: AbstractParameters
+Base.@kwdef struct HoltslagDiffusivity{T} <: AbstractParameters
      Cτ :: T = 0.4
     Cτb :: T = 15.6
     KU₀ :: T = 1e-6 # Interior viscosity for velocity
@@ -132,7 +133,7 @@ end
 
 plumes(args...) = nothing, nothing, nothing
 h_criterion(args...) = nothing
-h_criterion(::ROMSMixingDepthParameters, grid) = FaceField(grid)
+h_criterion(::ROMSMixingDepth, grid) = FaceField(grid)
 
 function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
     plume_T, plume_S, plume_w² = plumes(nonlocalflux, grid)
@@ -142,24 +143,24 @@ function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
 end
 
 struct Model{KP, NP, HP, SO, BC, ST, TS, G, T} <: AbstractModularKPPModel{KP, NP, HP, TS, G, T}
-    clock        :: Clock{T}
-    grid         :: G
-    timestepper  :: TS
-    solution     :: SO
-    bcs          :: BC
-    diffusivity  :: KP
+           clock :: Clock{T}
+            grid :: G
+     timestepper :: TS
+        solution :: SO
+             bcs :: BC
+     diffusivity :: KP
     nonlocalflux :: NP
-    mixingdepth  :: HP
-    constants    :: Constants{T}
-    state        :: ST
+     mixingdepth :: HP
+       constants :: Constants{T}
+           state :: ST
 end
 
 function Model(; N=10, L=1.0,
             grid = UniformGrid(N, L),
        constants = Constants(),
-     diffusivity = LMDDiffusivityParameters(),
-    nonlocalflux = LMDCounterGradientFluxParameters(),
-     mixingdepth = LMDMixingDepthParameters(),
+     diffusivity = LMDDiffusivity(),
+    nonlocalflux = LMDCounterGradientFlux(),
+     mixingdepth = LMDMixingDepth(),
          stepper = :BackwardEuler
     )
 
@@ -201,7 +202,7 @@ function update_state!(m)
     return nothing
 end
 
-function update_mixing_depth!(m::Model{K, NL, <:LMDMixingDepthParameters}) where {K, NL}
+function update_mixing_depth!(m::Model{K, NL, <:LMDMixingDepth}) where {K, NL}
     m.state.h  = mixing_depth(m)
     return nothing
 end
@@ -240,7 +241,7 @@ end
 
 linear_interp(y★, x₀, y₀, Δx, Δy) = x₀ + Δx * (y★ - y₀) / Δy
 
-function mixing_depth(m::Model{K, NL, <:ROMSMixingDepthParameters}) where {K, NL}
+function mixing_depth(m::Model{K, NL, <:ROMSMixingDepth}) where {K, NL}
     ih₁ = findprev(x -> x<=0, m.state.h_crit.data, m.grid.N)
     @inbounds begin
         if ih₁ === nothing # Mixing depth is entire grid
@@ -257,7 +258,7 @@ function mixing_depth(m::Model{K, NL, <:ROMSMixingDepthParameters}) where {K, NL
     return -z★
 end
 
-function update_mixing_depth!(m::Model{K, NL, <:ROMSMixingDepthParameters}) where {K, NL}
+function update_mixing_depth!(m::Model{K, NL, <:ROMSMixingDepth}) where {K, NL}
     mixing_depth_criterion!(m.state.h_crit, m)
     m.state.h = mixing_depth(m)
     return nothing
@@ -372,11 +373,11 @@ const 𝒲_LMD_S = 𝒲_LMD_T
 # Mass flux
 #
 
-function ∂NLT∂z(m::Model{K, <:LMDCounterGradientFluxParameters}, i) where K
+function ∂NLT∂z(m::Model{K, <:LMDCounterGradientFlux}, i) where K
     KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Fθ, d(m, i), Δf(m.grid, i), m)
 end
 
-function ∂NLS∂z(m::Model{K, <:LMDCounterGradientFluxParameters}, i) where K
+function ∂NLS∂z(m::Model{K, <:LMDCounterGradientFlux}, i) where K
     KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Fs, d(m, i), Δf(m.grid, i), m)
 end
 
@@ -396,22 +397,22 @@ RU(m, i) =   m.constants.f * m.solution.V[i]
 RV(m, i) = - m.constants.f * m.solution.U[i]
 
 # K_{U,V,T,S} is calculated at face points
-KU(m::AbstractModularKPPModel{<:LMDDiffusivityParameters}, i) =
+KU(m::AbstractModularKPPModel{<:LMDDiffusivity}, i) =
     KPP.K_KPP(m.state.h, 𝒲_LMD_U(m, i),    d(m, i)) + m.diffusivity.KU₀
 
-KT(m::AbstractModularKPPModel{<:LMDDiffusivityParameters}, i) =
+KT(m::AbstractModularKPPModel{<:LMDDiffusivity}, i) =
     KPP.K_KPP(m.state.h, 𝒲_LMD_T(m, i),    d(m, i)) + m.diffusivity.KT₀
 
-KS(m::AbstractModularKPPModel{<:LMDDiffusivityParameters}, i) =
+KS(m::AbstractModularKPPModel{<:LMDDiffusivity}, i) =
     KPP.K_KPP(m.state.h, 𝒲_LMD_S(m, i),    d(m, i)) + m.diffusivity.KS₀
 
-Kl(m::AbstractModularKPPModel{<:HoltslagDiffusivityParameters}, i) =
+KU(m::AbstractModularKPPModel{<:HoltslagDiffusivity}, i) =
     KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KU₀
 
-KT(m::AbstractModularKPPModel{<:HoltslagDiffusivityParameters}, i) =
+KT(m::AbstractModularKPPModel{<:HoltslagDiffusivity}, i) =
     KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KT₀
 
-KS(m::AbstractModularKPPModel{<:HoltslagDiffusivityParameters}, i) =
+KS(m::AbstractModularKPPModel{<:HoltslagDiffusivity}, i) =
     KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KS₀
 
 const KV = KU

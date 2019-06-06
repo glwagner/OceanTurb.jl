@@ -1,6 +1,6 @@
-using Pkg; Pkg.activate(".."); Pkg.instantiate()
-
 using OceanTurb, Printf
+
+using OceanTurb.ModularKPP: HoltslagDiffusivity, ROMSMixingDepth
 
 @use_pyplot_utils
 
@@ -8,21 +8,24 @@ usecmbright()
 
 modelsetup = (N=100, L=100, stepper=:BackwardEuler)
 
-Fb = 2e-8
-Fu = 0.0
-Tz = 0.001
+name = "Windy convection" #-driven mixing" #Free convection"
+Fb = 5e-9 #0.0 #2e-8
+Fu = -1e-4 #0.0
+Tz = 0.010
 Δt = 10*minute
 tf = 8*hour
 
         cvmix = ModularKPP.Model(; modelsetup...)
 
-     holtslag = ModularKPP.Model(; modelsetup..., diffusivity = ModularKPP.HoltslagDiffusivityParameters())
+     holtslag = ModularKPP.Model(; modelsetup...,
+                                   diffusivity = HoltslagDiffusivity())
 
-         roms = ModularKPP.Model(; modelsetup..., mixingdepth = ModularKPP.ROMSMixingDepthParameters())
+         roms = ModularKPP.Model(; modelsetup...,
+                                   mixingdepth = ROMSMixingDepth())
 
-holtslag_roms = ModularKPP.Model(; modelsetup..., diffusivity = ModularKPP.HoltslagDiffusivityParameters(),
-                                                  mixingdepth = ModularKPP.ROMSMixingDepthParameters())
-
+holtslag_roms = ModularKPP.Model(; modelsetup...,
+                                   diffusivity = HoltslagDiffusivity(),
+                                   mixingdepth = ROMSMixingDepth())
 
 # Initial condition and fluxes
 T₀(z) = 20 + Tz*z
@@ -47,7 +50,7 @@ ylabel(L"z \, \mathrm{(m)}")
 for i = 1:5
     if i > 1
         for model in models
-            run_until!(model, Δt, (i-1)*10hour)
+            run_until!(model, Δt, i * 10hour)
         end
     end
 
@@ -96,5 +99,7 @@ for i = 1:5
     plot(holtslag_roms.solution.T,  "--", color=defaultcolors[i], label=mlabel, alpha=0.8, markersize=1.5)
 end
 
+title(name)
 legend(fontsize=10)
 gcf()
+savefig("$name.png", dpi=480)
