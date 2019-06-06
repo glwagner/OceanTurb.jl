@@ -341,16 +341,19 @@ For example, positive heat flux out of the surface implies cooling.
 """
 @inline NL(CNL, flux, d, shape=default_NL_shape) = CNL * flux * shape(d)
 
-@inline function ∂NL∂z(CNL::T, Fϕ, d, Δf, m) where T
+@inline function ∂NL∂z(CNL::T, Fϕ, dᵢ₊₁, dᵢ, Δf, m) where T
     if isunstable(m)
-        return (NL(CNL, Fϕ, d) - NL(CNL, Fϕ, d)) / Δf
+        return (NL(CNL, Fϕ, dᵢ₊₁) - NL(CNL, Fϕ, dᵢ)) / Δf
     else
         return -zero(T)
     end
 end
 
-@propagate_inbounds ∂NLT∂z(m, i) = ∂NL∂z(m.parameters.CNL, m.state.Fθ, d(m, i), Δf(m.grid, i), m)
-@propagate_inbounds ∂NLS∂z(m, i) = ∂NL∂z(m.parameters.CNL, m.state.Fs, d(m, i), Δf(m.grid, i), m)
+@propagate_inbounds ∂NLT∂z(m, i) =
+    ∂NL∂z(m.parameters.CNL, m.state.Fθ, d(m, i+1), d(m, i), Δf(m.grid, i), m)
+
+@propagate_inbounds ∂NLS∂z(m, i) =
+    ∂NL∂z(m.parameters.CNL, m.state.Fs, d(m, i+1), d(m, i), Δf(m.grid, i), m)
 
 #
 # Equation specification
