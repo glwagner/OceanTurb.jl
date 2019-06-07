@@ -69,7 +69,7 @@ Base.@kwdef struct LMDCounterGradientFlux{T} <: AbstractParameters
     CNL :: T = 6.33 # Mass flux proportionality constant
 end
 
-Base.@kwdef struct LMDDiffusivity{T}
+Base.@kwdef struct LMDDiffusivity{T} <: AbstractParameters
      CKSL :: T = 0.1   # Surface layer fraction
        Cτ :: T = 0.4   # Von Karman constant
 
