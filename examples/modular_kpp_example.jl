@@ -8,14 +8,18 @@ usecmbright()
 
 modelsetup = (N=100, L=100, stepper=:BackwardEuler)
 
+name = "Free convection
+    \\small{with \$ \\overline{w b} |_{z=0} = 10^{-8} \\, \\mathrm{m^2 \\, s^{-3}}\$}"
+
 #name = "Windy convection, Holtslag vs Large et al" #-driven mixing" #Free convection"
-name = "Stable wind, Holtslag vs Large et al" #-driven mixing" #Free convection"
+#name = "Stable wind, Holtslag vs Large et al" #-driven mixing" #Free convection"
 #name = "Neutral wind"
-Fb = -1e-9 #0.0 #2e-8
-Fu = -2e-4 #0.0
-Tz = 0.010
+
+Fb = 2e-8
+Fu = 0.0
+Tz = 0.001
 Δt = 10*minute
-Δi = 8hour
+Δi = 10hour
 
         cvmix = ModularKPP.Model(; modelsetup...)
 
@@ -49,7 +53,7 @@ end
 fig, axs = subplots()
 
 removespines("top", "right")
-xlabel("Temperature")
+xlabel("Temperature \$ \\, {}^\\circ \\mathrm{C} \$")
 ylabel(L"z \, \mathrm{(m)}")
 
 for i = 1:5
@@ -100,11 +104,12 @@ for i = 1:5
 
     plot(cvmix.solution.T,          "-",  color=defaultcolors[i], label=vlabel, alpha=0.8, markersize=1.5)
     plot(holtslag.solution.T,       "-.", color=defaultcolors[i], label=hlabel, alpha=0.8, markersize=1.5)
-    #plot(roms.solution.T,           ":",  color=defaultcolors[i], label=rlabel, alpha=0.8, markersize=1.5)
-    #plot(holtslag_roms.solution.T,  "--", color=defaultcolors[i], label=mlabel, alpha=0.8, markersize=1.5)
+    plot(roms.solution.T,           ":",  color=defaultcolors[i], label=rlabel, alpha=0.8, markersize=1.5)
+    plot(holtslag_roms.solution.T,  "--", color=defaultcolors[i], label=mlabel, alpha=0.8, markersize=1.5)
 end
 
 title(name)
 legend(fontsize=10)
 gcf()
+#savefig("free_convection.png", dpi=480)
 savefig("$name.png", dpi=480)
