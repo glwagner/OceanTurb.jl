@@ -55,12 +55,12 @@ ylabel(L"z \, \mathrm{(m)}")
 
 to make this plot:
 
-![Simple free convection](examples/kpp_free_convection.png)
+<img src="examples/kpp_free_convection.png" width="600">
 
 For a more complicated example, see `examples/modular_kpp_example.jl`
 to produce
 
-![Free convection](examples/free_convection.png)
+<img src="examples/free_convection_intermodel.png" width="600">
 
 which compares various flavors of the 'KPP' boundary layer model
 with one another.
