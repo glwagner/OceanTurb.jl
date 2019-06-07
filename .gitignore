@@ -4,3 +4,6 @@ docs/build
 examples/.ipynb_checkpoints/
 
 *.mem
+*.png
+*.jld
+*.jld2

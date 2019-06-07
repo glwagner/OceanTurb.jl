@@ -12,6 +12,7 @@ const nsol = 5
 Base.@kwdef struct TKEParameters{T} <: AbstractParameters
         CLz :: T = 0.4    # Dissipation parameter
         CLb :: T = 0.7    # Dissipation parameter
+         Cτ :: T = 400.0  # Dissipation parameter
 
         CDe :: T = 2.0    # Dissipation parameter
         Ke₀ :: T = 1e-6   # Interior diffusivity for salinity
@@ -58,7 +59,7 @@ struct Model{KP, HP, S, BC, TS, G, T} <: AbstractModularKPPModel{KP, HP, Nothing
         solution :: S
              bcs :: BC
              tke :: TKEParameters{T}
-    diffusivity  :: KP
+     diffusivity :: KP
      mixingdepth :: HP
        constants :: Constants{T}
            state :: State{T}
@@ -68,8 +69,8 @@ function Model(; N=10, L=1.0,
             grid = UniformGrid(N, L),
        constants = Constants(),
              tke = TKEParameters(),
-     diffusivity = ModularKPP.LMDDiffusivityParameters(),
-     mixingdepth = ModularKPP.LMDMixingDepthParameters(),
+     diffusivity = ModularKPP.LMDDiffusivity(),
+     mixingdepth = ModularKPP.LMDMixingDepth(),
          stepper = :ForwardEuler,
     )
 
@@ -98,17 +99,15 @@ end
 # definitions below.
 #
 
-sqrt_e(m, i) = sqrt(m.solution.e[i])
-
-function mixing_time(m, i)
+@inline function mixing_time(m, i)
     N = sqrt( max(0, ∂B∂z(m, i)) )
-    @inbounds ũ = sqrt( max(0, m.solution.e[i]) )
-    return @inbounds min(m.tke.CLz * abs(m.grid.zf[i]) / ũ, m.tke.CLb / N)
+    @inbounds ũ = sqrt( max(0, m.solution.e[i]) ) + 1e-16
+    return @inbounds min(m.tke.Cτ, m.tke.CLz * abs(m.grid.zf[i]) / ũ, m.tke.CLb / N)
+    #return @inbounds min(m.tke.Cτ, m.tke.CLb / N)
 end
 
-K_mixing_time(m, i) = mixing_time(m, i) * onface(m.solution.e, i) + m.tke.KU₀
-
-@inline mixing_time_scale(m::Model, i) = 0.0
+@inline K_mixing_time(m::AbstractModel{TS, G, T}, i) where {TS, G, T} =
+    max(zero(T), mixing_time(m, i) * onface(m.solution.e, i)) + m.tke.KU₀
 
 @inline oncell(f::Function, m, i) = 0.5 * (f(m, i) + f(m, i+1))
 @inline onface(f::Function, m, i) = 0.5 * (f(m, i) + f(m, i-1))
@@ -127,7 +126,7 @@ K_mixing_time(m, i) = mixing_time(m, i) * onface(m.solution.e, i) + m.tke.KU₀
 # Equation entry
 #
 
-@inline K(m, i) = @inbounds mixing_time_scale(m, i) * m.solution.e[i]
+@inline K(m, i) = @inbounds mixing_time(m, i) * m.solution.e[i]
 
 #=
 @inline KU(m, i) = m.tke.KU₀ #+ m.tke.CK_U * K(m, i)
@@ -148,7 +147,8 @@ const KV = KU
 @inline RT(m, i) = 0
 @inline RS(m, i) = 0
 
-@inline De(m, i) = @inbounds m.tke.CDe * m.solution.e[i] / mixing_time_scale(m, i)
-@inline Re(m, i) = @inbounds oncell(turb_production, m, i) + oncell(wb, m, i) - De(m, i)
+@inline De(m, i) = @inbounds m.tke.CDe * m.solution.e[i] / mixing_time(m, i)
+
+@inline Re(m, i) = oncell(turb_production, m, i) + oncell(wb, m, i) - De(m, i)
 
 end # module

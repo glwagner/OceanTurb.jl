@@ -13,24 +13,24 @@ usecmbright()
 
 c = Constants(f=1e-4, β=0.0)
 
-modelsetup = (N=100, L=100, stepper=:BackwardEuler, constants=c)
+modelsetup = (N=128, L=128, stepper=:BackwardEuler, constants=c)
 
 Fb = 0.0 #-1e-7
-Fu = -1e-5
-Fe = -1e-9
+Fu = -1e-4
+Fe = 0.0 #-1e-9
 N² = 1e-6
-Δt = 10minute
+Δt = 1
 times = (0, 2, 8, 32) .* hour
 
-K₀ = 1e-3
+K₀ = 1e-5
 
 kpp = ModularKPP.Model(; modelsetup...,
-    diffusivity=ModularKPP.LMDDiffusivityParameters(KU₀=K₀, KT₀=K₀, KS₀=K₀)
+    diffusivity = ModularKPP.LMDDiffusivity(KU₀=K₀, KT₀=K₀, KS₀=K₀)
     )
 
 tke = KPP_TKE.Model(; modelsetup...,
-    diffusivity=ModularKPP.LMDDiffusivityParameters(KU₀=K₀, KT₀=K₀, KS₀=K₀),
-    tke=KPP_TKE.TKEParameters(KU₀=K₀, KT₀=K₀, KS₀=K₀, Ke₀=K₀)
+    diffusivity = ModularKPP.LMDDiffusivity(KU₀=K₀, KT₀=K₀, KS₀=K₀),
+            tke = KPP_TKE.TKEParameters(Cτ=Inf, CDe=0.5, KU₀=K₀, KT₀=K₀, KS₀=K₀, Ke₀=1e-3)
     )
 
 tkeK = FaceField(tke.grid)
@@ -56,11 +56,11 @@ end
 
 tke.bcs.e.top = FluxBoundaryCondition(Fe)
 
-fig, axs = subplots(ncols=4, figsize=(12, 6))
+fig, axs = subplots(ncols=4, figsize=(8, 6))
 
 sca(axs[1])
 removespines("top", "right")
-xlabel("Temperature")
+xlabel(L"T")
 ylabel(L"z \, \mathrm{(m)}")
 
 sca(axs[2])
@@ -84,6 +84,7 @@ sca(axs[4])
 removespines("top", "left")
 axs[4].tick_params(left=false, labelleft=false, right=true, labelright=true)
 xlabel(L"K")
+ylabel(L"z \, \mathrm{(m)}")
 
 for i = 1:length(times)
     for model in models
