@@ -9,7 +9,7 @@ usecmbright()
 modelsetup = (N=100, L=100, stepper=:BackwardEuler)
 
 name = "Free convection
-    \\small{with \$ \\overline{w b} |_{z=0} = 10^{-8} \\, \\mathrm{m^2 \\, s^{-3}}\$}"
+    \\small{with \$ \\overline{w b} |_{z=0} = 2 \\times 10^{-8} \\, \\mathrm{m^2 \\, s^{-3}}\$}"
 
 #name = "Windy convection, Holtslag vs Large et al" #-driven mixing" #Free convection"
 #name = "Stable wind, Holtslag vs Large et al" #-driven mixing" #Free convection"
@@ -97,7 +97,7 @@ for i = 1:5
             @sprintf("\$ t = %.0f \$ hours", time(cvmix)/hour),
             verticalalignment="bottom", horizontalalignment="center", color=defaultcolors[i])
     else
-        tlabel = text(maximum(cvmix.solution.T.data)-0.003, -holtslag.state.h,
+        tlabel = text(maximum(cvmix.solution.T.data)-0.001, -holtslag.state.h,
             @sprintf("\$ t = %.0f \$ hours", time(cvmix)/hour),
             verticalalignment="bottom", horizontalalignment="left", color=defaultcolors[i])
     end
@@ -111,5 +111,5 @@ end
 title(name)
 legend(fontsize=10)
 gcf()
-#savefig("free_convection.png", dpi=480)
-savefig("$name.png", dpi=480)
+savefig("free_convection_intermodel.png", dpi=480)
+#savefig("$name.png", dpi=480)
