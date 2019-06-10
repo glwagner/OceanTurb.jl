@@ -151,7 +151,7 @@ end
             surface_layer_integral += frac * Δf(c, face-1) * c[face-1]
         else
             face = 1
-        else
+        end
 
         # Add cells above face, if there are any.
         for j = face:length(c)
