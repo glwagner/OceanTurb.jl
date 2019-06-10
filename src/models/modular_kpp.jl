@@ -373,11 +373,11 @@ const 𝒲_LMD_S = 𝒲_LMD_T
 # Mass flux
 #
 
-function ∂NLT∂z(m::Model{K, <:LMDCounterGradientFluxParameters}, i) where K
+function ∂NLT∂z(m::Model{K, <:LMDCounterGradientFlux}, i) where K
     KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Fθ, d(m, i+1), d(m, i), Δf(m.grid, i), m)
 end
 
-function ∂NLS∂z(m::Model{K, <:LMDCounterGradientFluxParameters}, i) where K
+function ∂NLS∂z(m::Model{K, <:LMDCounterGradientFlux}, i) where K
     KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Fs, d(m, i+1), d(m, i), Δf(m.grid, i), m)
 end
 
