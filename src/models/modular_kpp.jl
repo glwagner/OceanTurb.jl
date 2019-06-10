@@ -62,7 +62,7 @@ Base.@kwdef struct ROMSMixingDepth{T} <: AbstractParameters
      CSL :: T = 0.1  # Surface layer fraction
      CRi :: T = 0.3  # Critical bulk Richardson number
      CKE :: T = 5.07 # Minimum unresolved turbulence kinetic energy
-     CEk :: T = 211. # Unresolved turbulence parameter
+     CEk :: T = 0.0  # Turbulent Ekman depth parameter
 end
 
 Base.@kwdef struct LMDCounterGradientFlux{T} <: AbstractParameters

@@ -8,18 +8,18 @@ usecmbright()
 
 modelsetup = (N=128, L=128, stepper=:BackwardEuler)
 
-name = "Free convection
-    \\small{with \$ \\overline{w b} |_{z=0} = 1 \\times 10^{-8} \\, \\mathrm{m^2 \\, s^{-3}}\$}"
+#name = "Free convection
+#    \\small{with \$ \\overline{w b} |_{z=0} = 10^{-8} \\, \\mathrm{m^2 \\, s^{-3}}\$}"
 
-#name = "Windy convection"
+name = "Windy convection"
 #name = "Stable wind, Holtslag vs Large et al" #-driven mixing" #Free convection"
 #name = "Neutral wind"
 
 Fb = 1e-8
-Fu = 0.0 #-1e-4
-N² = 1e-6
+Fu = -1e-4
+N² = 5e-6
 Δt = 10minute
-Δi = 24hour
+Δi = 8hour
 
         cvmix = ModularKPP.Model(; modelsetup...)
 
@@ -37,7 +37,8 @@ holtslag_roms = ModularKPP.Model(; modelsetup...,
 dTdz = N² / (cvmix.constants.α * cvmix.constants.g)
 T₀(z) = 20 + dTdz*z
 
-models = (cvmix, holtslag, roms, holtslag_roms)
+#models = (cvmix, holtslag, roms, holtslag_roms)
+models = (cvmix, roms)
 
 for model in models
     model.solution.T = T₀
@@ -97,19 +98,20 @@ for i = 1:5
             @sprintf("\$ t = %.0f \$ hours", time(cvmix)/hour),
             verticalalignment="bottom", horizontalalignment="center", color=defaultcolors[i])
     else
-        tlabel = text(maximum(cvmix.solution.T.data)-0.001, -holtslag.state.h,
+        tlabel = text(maximum(cvmix.solution.T.data)-0.001, -cvmix.state.h,
             @sprintf("\$ t = %.0f \$ hours", time(cvmix)/hour),
             verticalalignment="bottom", horizontalalignment="left", color=defaultcolors[i])
     end
 
     plot(cvmix.solution.T,          "-",  color=defaultcolors[i], label=vlabel, alpha=0.8, markersize=1.5)
-    plot(holtslag.solution.T,       "-.", color=defaultcolors[i], label=hlabel, alpha=0.8, markersize=1.5)
-    plot(roms.solution.T,           ":",  color=defaultcolors[i], label=rlabel, alpha=0.8, markersize=1.5)
-    plot(holtslag_roms.solution.T,  "--", color=defaultcolors[i], label=mlabel, alpha=0.8, markersize=1.5)
+    #plot(holtslag.solution.T,       "-.", color=defaultcolors[i], label=hlabel, alpha=0.8, markersize=1.5)
+    plot(roms.solution.T,           "--",  color=defaultcolors[i], label=rlabel, alpha=0.8, markersize=1.5)
+    #plot(holtslag_roms.solution.T,  ":", color=defaultcolors[i], label=mlabel, alpha=0.8, markersize=1.5)
 end
 
 title(name)
 legend(fontsize=10)
 gcf()
+
 #savefig("free_convection_intermodel.png", dpi=480)
-savefig("$name.png", dpi=480)
+#savefig("$name.png", dpi=480)
