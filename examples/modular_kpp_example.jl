@@ -6,20 +6,20 @@ using OceanTurb.ModularKPP: HoltslagDiffusivity, ROMSMixingDepth
 
 usecmbright()
 
-modelsetup = (N=100, L=100, stepper=:BackwardEuler)
+modelsetup = (N=128, L=128, stepper=:BackwardEuler)
 
 name = "Free convection
-    \\small{with \$ \\overline{w b} |_{z=0} = 2 \\times 10^{-8} \\, \\mathrm{m^2 \\, s^{-3}}\$}"
+    \\small{with \$ \\overline{w b} |_{z=0} = 1 \\times 10^{-8} \\, \\mathrm{m^2 \\, s^{-3}}\$}"
 
-#name = "Windy convection, Holtslag vs Large et al" #-driven mixing" #Free convection"
+#name = "Windy convection"
 #name = "Stable wind, Holtslag vs Large et al" #-driven mixing" #Free convection"
 #name = "Neutral wind"
 
-Fb = 2e-8
-Fu = 0.0
-Tz = 0.001
-Δt = 10*minute
-Δi = 10hour
+Fb = 1e-8
+Fu = 0.0 #-1e-4
+N² = 1e-6
+Δt = 10minute
+Δi = 24hour
 
         cvmix = ModularKPP.Model(; modelsetup...)
 
@@ -34,8 +34,8 @@ holtslag_roms = ModularKPP.Model(; modelsetup...,
                                    mixingdepth = ROMSMixingDepth())
 
 # Initial condition and fluxes
-@show N² = Tz * cvmix.constants.α * cvmix.constants.g
-T₀(z) = 20 + Tz*z
+dTdz = N² / (cvmix.constants.α * cvmix.constants.g)
+T₀(z) = 20 + dTdz*z
 
 models = (cvmix, holtslag, roms, holtslag_roms)
 
@@ -46,7 +46,7 @@ for model in models
     model.bcs.U.top = FluxBoundaryCondition(Fu)
 
     model.bcs.T.top = FluxBoundaryCondition(Fθ)
-    model.bcs.T.bottom = GradientBoundaryCondition(Tz)
+    model.bcs.T.bottom = GradientBoundaryCondition(dTdz)
 
 end
 
@@ -111,5 +111,5 @@ end
 title(name)
 legend(fontsize=10)
 gcf()
-savefig("free_convection_intermodel.png", dpi=480)
-#savefig("$name.png", dpi=480)
+#savefig("free_convection_intermodel.png", dpi=480)
+savefig("$name.png", dpi=480)
