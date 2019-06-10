@@ -142,7 +142,7 @@ function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
             h_crit, plume_T, plume_S, plume_w²)
 end
 
-struct Model{KP, NP, HP, SO, BC, ST, TS, G, T} <: AbstractModularKPPModel{KP, NP, HP, TS, G, T}
+mutable struct Model{KP, NP, HP, SO, BC, ST, TS, G, T} <: AbstractModularKPPModel{KP, NP, HP, TS, G, T}
            clock :: Clock{T}
             grid :: G
      timestepper :: TS
