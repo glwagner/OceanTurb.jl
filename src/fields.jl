@@ -352,7 +352,7 @@ end
 # Advection and diffusion operators
 #
 
-@propagate_inbounds K∂z(K, ϕ, i) = K*∂z(ϕ, i)
+@propagate_inbounds K∂z(K, ϕ, i) = K * ∂z(ϕ, i)
 
 "Return the diffusive flux divergence at cell i."
 @propagate_inbounds ∇K∇ϕ(Kᵢ₊₁, Kᵢ, ϕ, i) = (K∂z(Kᵢ₊₁, ϕ, i+1) - K∂z(Kᵢ, ϕ, i)) / Δf(ϕ, i)

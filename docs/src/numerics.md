@@ -121,11 +121,12 @@ Timesteppers in `OceanTurb.jl` integrate equations of the form
 
 ```math
 \beq \label{equationform}
-\d_t \Phi + \d_z \left ( M \Phi \right )= \left ( \d_z K \d_z \right ) \Phi + R(\Phi) \c
+\d_t \Phi = - \d_z \left ( M \Phi \right ) + \left ( \d_z K \d_z \right ) \Phi - L \Phi + R(\Phi) \c
 \eeq
 ```
 where ``\Phi(z, t)`` is a variable like velocity, temperature, or salinity,
-``M`` and ``K`` are an advective 'mass flux' and a diffusivity
+``M``, ``K``, and ``L`` are an advective 'mass flux', diffusivity,
+and damping coefficient
 which are a general nonlinear functions of ``\Phi``, ``z``, and external parameters,
 and ``R`` is an arbitrary function representing any number of processes,
 including the Coriolis force or external forcing.
@@ -144,7 +145,7 @@ obtains ``\Phi`` at time-step ``n+1`` using the formula
 
 ```math
 \beq
-\Phi^{n+1} = \Phi^{n} + \Delta t \, \big [ - \d_z \left ( M^n \Phi^n \right ) + \left ( \d_z K^n \d_z \right ) \Phi^n + R \left ( \Phi^n \right ) \big ]
+\Phi^{n+1} = \Phi^{n} + \Delta t \, \big [ - \d_z \left ( M^n \Phi^n \right ) + \left ( \d_z K^n \d_z \right ) \Phi^n - L^n \Phi^n + R \left ( \Phi^n \right ) \big ]
 \eeq
 ```
 
@@ -159,7 +160,7 @@ obtains ``\Phi`` at time-step ``n+1`` using the formula
 ```math
 \beq
 \Phi^{n+1}
-  + \Delta t \left [ \d_z \left ( M^n \Phi^{n+1} \right ) - \left ( \d_z K^n \d_z \right ) \Phi^{n+1} \right ]
+  + \Delta t \left [ \d_z \left ( M^n \Phi^{n+1} \right ) - \left ( \d_z K^n \d_z \right ) \Phi^{n+1} + L^n \Phi^{n+1} \right ]
     = \Phi^n + \Delta t R \left ( \Phi^n \right )
 \eeq
 ```
@@ -171,23 +172,23 @@ problem becomes a matrix problem of the form
 
 ```math
 \beq
-L^n_{ij} \Phi^{n+1}_j = \left [ \Phi^n + \Delta t R \left ( \Phi^n \right ) \right ]_i
+\mathcal{L}^n_{ij} \Phi^{n+1}_j = \left [ \Phi^n + \Delta t R \left ( \Phi^n \right ) \right ]_i
 \eeq
 ```
 
-where ``L^n_{ij}`` is a matrix operator at time-step ``n``, and the subscripts ``i`` or ``j`` denote grid points
+where ``\mathcal{L}^n_{ij}`` is a matrix operator at time-step ``n``, and the subscripts ``i`` or ``j`` denote grid points
 ``i`` or ``j``.
 For the diffusive problems considered by our backward Euler solver, the matrix
-multiplication ``L^n_{ij} \Phi_j^{n+1}`` has the form
+multiplication ``\mathcal{L}^n_{ij} \Phi_j^{n+1}`` has the form
 
 
 ```math
 \begin{align}
-L^n_{ij} \Phi_j^{n+1} &= \left [ 1 + \Delta t \left ( \d_z M^n - \d_z K^n \d_z \right ) \right ]_{ij} \Phi_j^{n+1} \\
+\mathcal{L}^n_{ij} \Phi_j^{n+1} &= \left [ 1 + \Delta t \left ( \d_z M^n - \d_z K^n \d_z + L^n \right ) \right ]_{ij} \Phi_j^{n+1} \\
 
 &= \left [ \begin{matrix}
 
-1 + \Delta t \left ( \tfrac{K^n_2}{\Delta f_1 \Delta c_2} - \tfrac{M_1^n}{\Delta c_2} \right )
+1 + \Delta t \left ( L^n_1 + \tfrac{K^n_2}{\Delta f_1 \Delta c_2} - \tfrac{M_1^n}{\Delta c_2} \right )
   & \Delta t \left ( \tfrac{M_2^n}{\Delta c_2} - \tfrac{K^n_2}{\Delta f_1 \Delta c_2} \right )
     & \cdot & \cdot & \cdot & \cdot \\
 
@@ -196,14 +197,14 @@ L^n_{ij} \Phi_j^{n+1} &= \left [ 1 + \Delta t \left ( \d_z M^n - \d_z K^n \d_z \
 \cdot
   & - \Delta t \tfrac{K^n_i}{\Delta c_i \Delta f_i}
   & 1 + \Delta t
-    \left [ \tfrac{K^n_{i+1}}{\Delta f_i \Delta c_{i+1}} + \tfrac{K^n_i}{\Delta f_i \Delta c_i} - \frac{M^n_i}{\Delta c_{i+1}} \right ]
+    \left [ L^n_i + \tfrac{K^n_{i+1}}{\Delta f_i \Delta c_{i+1}} + \tfrac{K^n_i}{\Delta f_i \Delta c_i} - \frac{M^n_i}{\Delta c_{i+1}} \right ]
   & \Delta t \left ( \tfrac{M^n_{i+1}}{\Delta c_{i+1}} - \tfrac{K^n_{i+1}}{\Delta c_{i+1} \Delta f_{i+1}} \right ) & \cdot & \cdot \\
 
 \cdot & \cdot & \ddots & \ddots & \ddots & \cdot \\
 
 \cdot & \cdot & \cdot & \cdot
   & - \Delta t \tfrac{K^n_N}{\Delta c_N \Delta f_N}
-  & 1 + \Delta t \left (\tfrac{K^n_N}{\Delta c_N \Delta f_N} - \tfrac{M^n_N}{\Delta c_{N+1}} \right )
+  & 1 + \Delta t \left ( L^n_N + \tfrac{K^n_N}{\Delta c_N \Delta f_N} - \tfrac{M^n_N}{\Delta c_{N+1}} \right )
 
 \end{matrix} \right ]
 
