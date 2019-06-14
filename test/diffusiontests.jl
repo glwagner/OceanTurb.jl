@@ -68,7 +68,24 @@ function test_advection(stepper=:ForwardEuler)
     norm(data(c_answer) .- data(model.solution.c)) < 0.05
 end
 
+function test_damping(stepper=:ForwardEuler)
+    L = 1.0
+    μ = 0.1
 
+    model = Diffusion.Model(N=3, L=L, K=0.0, μ=μ, stepper=stepper,
+                            bcs = Diffusion.BoundaryConditions(FieldBoundaryConditions(
+                                    GradientBoundaryCondition(0.0),
+                                    GradientBoundaryCondition(0.0))))
 
+    c_damp(t) = exp(-μ*t)
+    c₀(z) = c_damp(0)
+    model.solution.c = c₀
 
+    iterate!(model, 1e-3, 100)
 
+    c_current(t) = c_damp(time(model))
+    c_answer = CellField(model.grid)
+    set!(c_answer, c_current)
+
+    all(abs.(data(c_answer) .- data(model.solution.c)) .< 1e-6)
+end

@@ -71,6 +71,7 @@ end
         @test test_diffusive_flux(stepper, top_flux=0, bottom_flux=0)
         @test test_diffusive_flux(stepper)
         @test test_advection(stepper)
+        @test test_damping(stepper)
     end
 end
 

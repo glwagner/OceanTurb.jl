@@ -1,3 +1,5 @@
+*.png
+*.jld2
 *.swp
 docs/build
 *.DS_Store
