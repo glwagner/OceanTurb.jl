@@ -69,6 +69,11 @@ Base.@kwdef struct LMDCounterGradientFlux{T} <: AbstractParameters
     CNL :: T = 6.33 # Mass flux proportionality constant
 end
 
+Base.@kwdef struct DiffusivityShape{T} <: AbstractParameters
+    CS0 :: T = 0.0
+    CS1 :: T = 1.0
+end
+
 Base.@kwdef struct LMDDiffusivity{T} <: AbstractParameters
      CKSL :: T = 0.1   # Surface layer fraction
        Cτ :: T = 0.4   # Von Karman constant
@@ -113,11 +118,6 @@ Base.@kwdef struct BulkPlumeParameters{T} <: AbstractParameters
     Cσb :: T = 1.0
 end
 
-# Shape functions (these shoul become parameters eventually).
-# 'd' is a non-dimensional depth coordinate.
-default_shape_M(d) = 0 < d < 1 ? d*(1-d)^2 : 0
-const default_shape_K = default_shape_M
-
 mutable struct State{T, H, U, W}
           Fu :: T
           Fv :: T
@@ -142,7 +142,7 @@ function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
             h_crit, plume_T, plume_S, plume_w²)
 end
 
-mutable struct Model{KP, NP, HP, SO, BC, ST, TS, G, T} <: AbstractModularKPPModel{KP, NP, HP, TS, G, T}
+mutable struct Model{KP, NP, HP, SP, SO, BC, ST, TS, G, T} <: AbstractModularKPPModel{KP, NP, HP, TS, G, T}
            clock :: Clock{T}
             grid :: G
      timestepper :: TS
@@ -151,6 +151,7 @@ mutable struct Model{KP, NP, HP, SO, BC, ST, TS, G, T} <: AbstractModularKPPMode
      diffusivity :: KP
     nonlocalflux :: NP
      mixingdepth :: HP
+        kprofile :: SP
        constants :: Constants{T}
            state :: ST
 end
@@ -161,6 +162,7 @@ function Model(; N=10, L=1.0,
      diffusivity = LMDDiffusivity(),
     nonlocalflux = LMDCounterGradientFlux(),
      mixingdepth = LMDMixingDepth(),
+        kprofile = DiffusivityShape(),
          stepper = :BackwardEuler
     )
 
@@ -182,7 +184,7 @@ function Model(; N=10, L=1.0,
     timestepper = Timestepper(stepper, eq, solution, lhs)
 
     return Model(Clock(), grid, timestepper, solution, bcs,
-                 diffusivity, nonlocalflux, mixingdepth, constants, state)
+                 diffusivity, nonlocalflux, mixingdepth, kprofile, constants, state)
 end
 
 """
@@ -320,6 +322,11 @@ end
 # Diffusivity
 #
 
+k_profile(d, p::DiffusivityShape) = d * (1-d) * ( p.CS0 + p.CS1*(1-d) )
+
+## ** The K-Profile-Parameterization **
+K_KPP(h, 𝒲, d::T, p) where T = 0<d<1 ? max(zero(T), h * 𝒲 * k_profile(d, p)) : -zero(T)
+
 𝒲_Holtslag(Cτ, Cτb, ωτ, ωb, d) = Cτ * (ωτ^3 + Cτb * d * ωb^3)^(1/3)
 𝒲_Holtslag(m, i) = 𝒲_Holtslag(m.diffusivity.Cτ, m.diffusivity.Cτb, KPP.ωτ(m), KPP.ωb(m), KPP.d(m, i))
 
@@ -373,6 +380,11 @@ const 𝒲_LMD_S = 𝒲_LMD_T
 # Mass flux
 #
 
+# Shape functions (these shoul become parameters eventually).
+# 'd' is a non-dimensional depth coordinate.
+default_shape_M(d) = 0 < d < 1 ? d * (1-d)^2 : 0
+
+
 function ∂NLT∂z(m::Model{K, <:LMDCounterGradientFlux}, i) where K
     KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Fθ, d(m, i+1), d(m, i), Δf(m.grid, i), m)
 end
@@ -398,22 +410,22 @@ RV(m, i) = - m.constants.f * m.solution.U[i]
 
 # K_{U,V,T,S} is calculated at face points
 KU(m::AbstractModularKPPModel{<:LMDDiffusivity}, i) =
-    KPP.K_KPP(m.state.h, 𝒲_LMD_U(m, i),    d(m, i)) + m.diffusivity.KU₀
+    K_KPP(m.state.h, 𝒲_LMD_U(m, i), d(m, i), m.kprofile) + m.diffusivity.KU₀
 
 KT(m::AbstractModularKPPModel{<:LMDDiffusivity}, i) =
-    KPP.K_KPP(m.state.h, 𝒲_LMD_T(m, i),    d(m, i)) + m.diffusivity.KT₀
+    K_KPP(m.state.h, 𝒲_LMD_T(m, i), d(m, i), m.kprofile) + m.diffusivity.KT₀
 
 KS(m::AbstractModularKPPModel{<:LMDDiffusivity}, i) =
-    KPP.K_KPP(m.state.h, 𝒲_LMD_S(m, i),    d(m, i)) + m.diffusivity.KS₀
+    K_KPP(m.state.h, 𝒲_LMD_S(m, i), d(m, i), m.kprofile) + m.diffusivity.KS₀
 
 KU(m::AbstractModularKPPModel{<:HoltslagDiffusivity}, i) =
-    KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KU₀
+    K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i), m.kprofile) + m.diffusivity.KU₀
 
 KT(m::AbstractModularKPPModel{<:HoltslagDiffusivity}, i) =
-    KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KT₀
+    K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i), m.kprofile) + m.diffusivity.KT₀
 
 KS(m::AbstractModularKPPModel{<:HoltslagDiffusivity}, i) =
-    KPP.K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i)) + m.diffusivity.KS₀
+    K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i), m.kprofile) + m.diffusivity.KS₀
 
 const KV = KU
 
