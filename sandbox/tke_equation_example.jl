@@ -18,7 +18,7 @@ modelsetup = (N=128, L=128, stepper=:BackwardEuler, constants=c)
 Fb = 0.0 #-1e-7
 Fu = -1e-4
 Fe = 0.0 #-1e-9
-N² = 1e-6
+N² = 5e-6
 Δt = 1
 times = (0, 2, 8, 32) .* hour
 
@@ -30,7 +30,7 @@ kpp = ModularKPP.Model(; modelsetup...,
 
 tke = KPP_TKE.Model(; modelsetup...,
     diffusivity = ModularKPP.LMDDiffusivity(KU₀=K₀, KT₀=K₀, KS₀=K₀),
-            tke = KPP_TKE.TKEParameters(Cτ=Inf, CDe=0.5, KU₀=K₀, KT₀=K₀, KS₀=K₀, Ke₀=1e-3)
+            tke = KPP_TKE.TKEParameters(Cτ=Inf, CDe=0.5, KU₀=K₀, KT₀=K₀, KS₀=K₀, Ke₀=1e-5)
     )
 
 tkeK = FaceField(tke.grid)

@@ -33,9 +33,9 @@ mutable struct State{T} <: FieldVector{6, T}
     Fs :: T
     Fb :: T
      h :: T
-     function State(T=Float64)
-         new{T}(0, 0, 0, 0, 0, 0)
-     end
+    function State(T=Float64)
+        new{T}(0, 0, 0, 0, 0, 0)
+    end
 end
 
 """
@@ -54,13 +54,14 @@ function update_state!(m)
     return nothing
 end
 
-struct Model{KP, HP, S, BC, TS, G, T} <: AbstractModularKPPModel{KP, HP, Nothing, TS, G, T}
+struct Model{KP, HP, SP, S, BC, TS, G, T} <: AbstractModularKPPModel{KP, HP, Nothing, TS, G, T}
       @add_clock_grid_timestepper
         solution :: S
              bcs :: BC
              tke :: TKEParameters{T}
      diffusivity :: KP
      mixingdepth :: HP
+        kprofile :: SP
        constants :: Constants{T}
            state :: State{T}
 end
@@ -71,6 +72,7 @@ function Model(; N=10, L=1.0,
              tke = TKEParameters(),
      diffusivity = ModularKPP.LMDDiffusivity(),
      mixingdepth = ModularKPP.LMDMixingDepth(),
+        kprofile = ModularKPP.DiffusivityShape(),
          stepper = :ForwardEuler,
     )
 
@@ -92,7 +94,7 @@ function Model(; N=10, L=1.0,
     timestepper = Timestepper(stepper, eq, solution, lhs)
 
     return Model(Clock(), grid, timestepper, solution, bcs, tke,
-                    diffusivity, mixingdepth, constants, State())
+                    diffusivity, mixingdepth, kprofile, constants, State())
 end
 
 # Note: to increase readability, we use 'm' to refer to 'model' in function
@@ -100,9 +102,10 @@ end
 #
 
 @inline function mixing_time(m, i)
-    N = sqrt( max(0, ∂B∂z(m, i)) )
-    @inbounds ũ = sqrt( max(0, m.solution.e[i]) ) + 1e-16
-    return @inbounds min(m.tke.Cτ, m.tke.CLz * abs(m.grid.zf[i]) / ũ, m.tke.CLb / N)
+    return 400.0
+    #N = sqrt( max(0, ∂B∂z(m, i)) )
+    #@inbounds ũ = sqrt( max(0, m.solution.e[i]) ) + 1e-16
+    #return @inbounds min(m.tke.Cτ, m.tke.CLz * abs(m.grid.zf[i]) / ũ, m.tke.CLb / N)
     #return @inbounds min(m.tke.Cτ, m.tke.CLb / N)
 end
 
@@ -115,18 +118,20 @@ end
 @inline ∂B∂z(m, i) = ∂B∂z(m.solution.T, m.solution.S, m.constants.g, m.constants.α,
                             m.constants.β, i)
 
-@inline turb_production(m, i) = KU(m, i) * (∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2)
+@inline production(m, i) = KU(m, i) * (∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2)
 
-@inline wb(m, i) = - m.constants.g * (
+@inline buoyancy_flux(m, i) = - m.constants.g * (
       m.constants.α * KT(m, i) * ∂z(m.solution.T, i)
     - m.constants.β * KS(m, i) * ∂z(m.solution.S, i)
     )
+
+@inline dissipation(m, i) = @inbounds m.tke.CDe * m.solution.e[i] / mixing_time(m, i)
 
 #
 # Equation entry
 #
 
-@inline K(m, i) = @inbounds mixing_time(m, i) * m.solution.e[i]
+@inline K(m, i) = @inbounds mixing_time(m, i) * onface(m.solution.e, i)
 
 #=
 @inline KU(m, i) = m.tke.KU₀ #+ m.tke.CK_U * K(m, i)
@@ -147,8 +152,7 @@ const KV = KU
 @inline RT(m, i) = 0
 @inline RS(m, i) = 0
 
-@inline De(m, i) = @inbounds m.tke.CDe * m.solution.e[i] / mixing_time(m, i)
 
-@inline Re(m, i) = oncell(turb_production, m, i) + oncell(wb, m, i) - De(m, i)
+@inline Re(m, i) = oncell(production, m, i) + oncell(buoyancy_flux, m, i) - dissipation(m, i)
 
 end # module

@@ -207,11 +207,8 @@ end
 #
 
 include("models/diffusion.jl")
-
 include("models/k_profile_parameterization.jl")
 include("models/modular_kpp.jl")
-include("models/kpp_plus_tke.jl")
-
 include("models/pacanowski_philander.jl")
 
 # Convenient utilities for plotting
