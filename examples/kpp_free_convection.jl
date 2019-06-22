@@ -29,4 +29,4 @@ xlabel("Temperature (\$ {}^\\circ \\mathrm{C} \$)")
 ylabel(L"z \, \mathrm{(m)}")
 
 gcf()
-savefig("kpp_free_convection.png", dpi=480)
+savefig("figs/kpp_free_convection.png", dpi=480)
