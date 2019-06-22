@@ -130,8 +130,3 @@ end
     @test test_pp_basic()
     @test test_pp_diffusion_cosine()
 end
-
-@testset "EDMF" begin
-    include("edmftests.jl")
-    @test test_edmf_basic()
-end

@@ -147,7 +147,11 @@ end
         surface_layer_integral = zero(T)
 
         # Contribution of fractional cell to total integral
-        surface_layer_integral += frac * Δf(c, face-1) * c[face-1]
+        if face > 1
+            surface_layer_integral += frac * Δf(c, face-1) * c[face-1]
+        else
+            face = 1
+        end
 
         # Add cells above face, if there are any.
         for j = face:length(c)
