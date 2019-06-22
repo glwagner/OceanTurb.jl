@@ -11,9 +11,6 @@ model = Diffusion.Model(
     stepper = :BackwardEuler)
 
 c₀(z) = exp(-(z + model.grid.L/2)^2/(2*(model.grid.L/20)^2))
-
-c₀(z) = exp(-(im*z + model.grid.L/2)^2/(2*(model.grid.L/10)^2))
-
 model.solution.c = c₀
 
 fig, axs = subplots()
