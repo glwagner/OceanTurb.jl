@@ -7,6 +7,8 @@ using
 # Run tests
 #
 
+timesteppers = (:ForwardEuler, :BackwardEuler, :SBDF)
+
 @testset "Utils" begin
     include("utilstests.jl")
     @test test_zeros(Float64)
@@ -66,7 +68,7 @@ end
     @test test_diffusion_basic()
     @test test_diffusion_set_c()
 
-    for stepper in (:ForwardEuler, :BackwardEuler)
+    for stepper in timesteppers
         @test test_diffusion_cosine(stepper)
         @test test_diffusive_flux(stepper, top_flux=0, bottom_flux=0)
         @test test_diffusive_flux(stepper)
@@ -115,7 +117,7 @@ end
 
     @test test_diffusivity_plain()
 
-    for stepper in (:ForwardEuler, :BackwardEuler)
+    for stepper in timesteppers
         @test test_kpp_diffusion_cosine(stepper)
         for fieldname in (:U, :V, :T, :S)
             for top_flux in (0.3, -0.3)
