@@ -223,11 +223,45 @@ To form the matrix operator in \eqref{implicitoperatormatrix}, we have used
 the second-order flux divergence finite difference operators in
 \eqref{fluxdivop}--\eqref{fluxdivop_bottom}.
 
-It is crucial to note that the diffusive operator that contributes to ``L^n_{ij}``
+It is crucial to note that the diffusive operator that contributes to
+``\mathcal{L}^n_{ij}``
 does not include fluxes across boundary faces.
-In particular, ``L^n_{ij}`` in \eqref{implicitoperatormatrix} enforces a
+In particular, ``\mathcal{L}^n_{ij}`` in \eqref{implicitoperatormatrix} enforces a
 no-flux condition across the top and bottom faces.
 Accordingly, fluxes through boundary faces due either to Dirichlet (Value)
 boundary conditions or non-zero fluxes are accounted for
 by adding the contribution of the flux diverence across
 the top and bottom face to ``R \left ( \Phi \right )``.
+
+## Second-order backward difference formula (SBDF)
+
+The second-order backward difference formula
+([Ascher et al. 1995](https://epubs.siam.org/doi/abs/10.1137/0732037))
+is
+
+```math
+\beq
+\Phi^{n+1}
+  + \tfrac{2}{3} \Delta t
+    \left [ \d_z \left ( M^n \Phi^{n+1} \right )
+            - \left ( \d_z K^n \d_z \right ) \Phi^{n+1}
+            + L^n \Phi^{n+1} \right ]
+    = \tfrac{4}{3} \Phi^n - \tfrac{1}{3} \Phi^{n-1}
+      + \tfrac{2}{3} \Delta t \left [ 2 R \left ( \Phi^n \right ) - R \left ( \Phi^{n-1} \right ) \right ]
+      \label{SBDF}
+\eeq
+
+```
+
+We use a similar method as for the Backward Euler method to perform
+the implicit solve associated with the left side of \eqref{SBDF}
+during advancement to time-step ``n+1``.
+In addition, we introduce a scratch variable to store the quantity
+
+```math
+\beq
+- \tfrac{1}{3} \Phi^{n-1} - \tfrac{2}{3} \Delta t R \left ( \Phi^{n-1} \right )
+\eeq
+```
+
+after each time-step for use during the next time-step.

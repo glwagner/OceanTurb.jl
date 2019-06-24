@@ -95,7 +95,7 @@ end
 @inline M_op(m, M, iᴹ, iᶜ) = M(m, iᴹ) / Δc(m.grid, iᶜ)
 
 "Build backward Euler operator for diffusive problems."
-function calc_diffusive_lhs!(lhs, eqn, solution, Δt::T, m) where T
+function calc_diffusive_lhs!(lhs, eqn, solution, cΔt::T, m) where T
     ntuple(Val(length(solution))) do j
         Base.@_inline_meta
          ϕ = solution[j]
@@ -106,20 +106,20 @@ function calc_diffusive_lhs!(lhs, eqn, solution, Δt::T, m) where T
 
         for i in interiorindices(ϕ)
             @inbounds begin
-                L.du[i]   = Δt * (M_op(m, Mϕ, i+1, i+1) - K_op(m, Kϕ, i+1, i))
-                L.d[i]    = one(T) + Δt * (Lϕ(m, i) + K_op(m, Kϕ, i+1, i) + K_op(m, Kϕ, i, i) - M_op(m, Mϕ, i, i+1))
-                L.dl[i-1] = -Δt * K_op(m, Kϕ, i, i)
+                L.du[i]   = cΔt * (M_op(m, Mϕ, i+1, i+1) - K_op(m, Kϕ, i+1, i))
+                L.d[i]    = one(T) + cΔt * (Lϕ(m, i) + K_op(m, Kϕ, i+1, i) + K_op(m, Kϕ, i, i) - M_op(m, Mϕ, i, i+1))
+                L.dl[i-1] = -cΔt * K_op(m, Kϕ, i, i)
             end
         end
 
         # Bottom row
-        @inbounds L.du[1] = Δt * (M_op(m, Mϕ, 2, 2) - K_op(m, Kϕ, 2, 1))
-        @inbounds L.d[1] = one(T) + Δt*(Lϕ(m, 1) + K_op(m, Kϕ, 2, 1) - M_op(m, Mϕ, 1, 2))
+        @inbounds L.du[1] = cΔt * (M_op(m, Mϕ, 2, 2) - K_op(m, Kϕ, 2, 1))
+        @inbounds L.d[1] = one(T) + cΔt*(Lϕ(m, 1) + K_op(m, Kϕ, 2, 1) - M_op(m, Mϕ, 1, 2))
 
         # Top row
         N = length(ϕ)
-        @inbounds L.dl[end] = -Δt * K_op(m, Kϕ, N, N)
-        @inbounds L.d[end]  = one(T) + Δt * (Lϕ(m, N) + K_op(m, Kϕ, N, N) - M_op(m, Mϕ, N, N+1))
+        @inbounds L.dl[end] = -cΔt * K_op(m, Kϕ, N, N)
+        @inbounds L.d[end]  = one(T) + cΔt * (Lϕ(m, N) + K_op(m, Kϕ, N, N) - M_op(m, Mϕ, N, N+1))
     end
 
     return nothing
@@ -247,5 +247,88 @@ function iterate!(m::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimesteppe
     calc_diffusive_lhs!(m.timestepper.lhs, m.timestepper.eqn, m.solution, Δt, m)
     backward_euler_step!(m.timestepper.rhs, m.timestepper.lhs, m.solution, Δt)
     tick!(m.clock, Δt)
+    return nothing
+end
+
+#
+# Second-order Backward Difference Formula (SBDF)
+#
+
+struct SBDFTimestepper{E, R, L} <: Timestepper
+       eqn :: E
+       rhs :: R
+        Rⁿ :: R
+      Rⁿ⁻¹ :: R
+      Φⁿ⁻¹ :: R
+       lhs :: L
+    function SBDFTimestepper(eqn, solution, lhs)
+        rhs = deepcopy(solution)
+        Rⁿ = deepcopy(solution)
+        Rⁿ⁻¹ = deepcopy(solution)
+        Φⁿ⁻¹ = deepcopy(solution)
+        [ set!(fld, 0) for fld in rhs   ]
+        [ set!(fld, 0) for fld in Rⁿ ]
+        [ set!(fld, 0) for fld in Rⁿ⁻¹ ]
+        [ set!(fld, 0) for fld in Φⁿ⁻¹ ]
+        new{typeof(eqn), typeof(rhs), typeof(lhs)}(eqn, rhs, Rⁿ, Rⁿ⁻¹, Φⁿ⁻¹, lhs)
+    end
+end
+
+"Update solution by inverting Tridiagonal lhs matrix."
+function sbdf_euler_step!(rhs, lhs, Φⁿ, Φⁿ⁻¹, Rⁿ, Rⁿ⁻¹, Δt)
+    ntuple(Val(length(solution))) do j
+        Base.@_inline_meta
+         lhsϕ = lhs[j]
+         rhsϕ = data( rhs[j]  )
+          Rϕⁿ = data( Rⁿ[j]   )
+        Rϕⁿ⁻¹ = data( Rⁿ⁻¹[j] )
+           ϕⁿ = data( Φⁿ[j]   )
+         ϕⁿ⁻¹ = data( Φⁿ⁻¹[j] )
+
+        for i in eachindex(ϕ)
+            @inbounds rhsϕ[i] = (4ϕⁿ[i] - ϕⁿ⁻¹[i] + 4Δt * Rϕⁿ[i] - 2Δt * Rϕⁿ⁻¹[i]) / 3
+        end
+
+        ldiv!(ϕⁿ, lhsϕ, rhsϕ)
+    end
+    return nothing
+end
+
+function store_sbdf_intermediates!(Rⁿ, Rⁿ⁻¹, Φⁿ, Φⁿ⁻¹)
+    ntuple(Val(length(solution))) do j
+        Base.@_inline_meta
+
+          Rϕⁿ = data( Rⁿ[j]   )
+        Rϕⁿ⁻¹ = data( Rⁿ⁻¹[j] )
+           ϕⁿ = data( Φⁿ[j]   )
+         ϕⁿ⁻¹ = data( Φⁿ⁻¹[j] )
+
+        for i in eachindex(ϕ)
+            @inbounds Rϕⁿ⁻¹[i] = Rϕⁿ[i]
+            @inbounds ϕⁿ⁻¹[i] = ϕⁿ[i]
+        end
+    end
+    return nothing
+end
+
+
+"Step forward `m` by `Δt` with the backward Euler method."
+function iterate!(m::AbstractModel{TS}, Δt) where TS <: SBDFTimestepper
+    update!(m.bcs, m.timestepper.eqn, m.solution, m)
+    calc_implicit_rhs!(m.timestepper.Rⁿ, m.timestepper.eqn, m.solution, m)
+
+    if m.clock.iter == 1 # take Backward Euler step
+        calc_diffusive_lhs!(m.timestepper.lhs, m.timestepper.eqn, m.solution, Δt, m)
+        store_sbdf_intermediates!(m.timestepper.Rⁿ, m.timestepper.Rⁿ⁻¹, m.solution, m.timestepper.Φⁿ⁻¹)
+        backward_euler_step!(m.timestepper.Rⁿ, m.timestepper.lhs, m.solution, Δt) # overwrites Rⁿ
+    else
+        calc_diffusive_lhs!(m.timestepper.lhs, m.timestepper.eqn, m.solution, 2Δt/3, m)
+        sbdf_step!(m.timestepper.rhs, m.timestepper.lhs, m.solution,
+                   m.timestepper.Φⁿ⁻¹, m.timestepper.Rⁿ, m.timestepper.Rⁿ⁻¹, Δt)
+        store_sbdf_intermediates!(m.timestepper.Rⁿ, m.timestepper.Rⁿ⁻¹, m.solution, m.timestepper.Φⁿ⁻¹)
+    end
+
+    tick!(m.clock, Δt)
+
     return nothing
 end
