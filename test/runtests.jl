@@ -7,7 +7,7 @@ using
 # Run tests
 #
 
-timesteppers = (:ForwardEuler, :BackwardEuler, :SBDF)
+timesteppers = (:ForwardEuler, :BackwardEuler, :SBDF2)
 
 @testset "Utils" begin
     include("utilstests.jl")

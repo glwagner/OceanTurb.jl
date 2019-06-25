@@ -251,17 +251,17 @@ function iterate!(m::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimesteppe
 end
 
 #
-# Second-order Backward Difference Formula (SBDF)
+# Second-order Semi-implicit Backward Difference Formula (SBDF2)
 #
 
-struct SBDFTimestepper{E, R, L} <: Timestepper
+struct SBDF2Timestepper{E, R, L} <: Timestepper
        eqn :: E
        rhs :: R
         Rⁿ :: R
       Rⁿ⁻¹ :: R
       Φⁿ⁻¹ :: R
        lhs :: L
-    function SBDFTimestepper(eqn, solution, lhs)
+    function SBDF2Timestepper(eqn, solution, lhs)
         rhs = deepcopy(solution)
         Rⁿ = deepcopy(solution)
         Rⁿ⁻¹ = deepcopy(solution)
@@ -274,18 +274,17 @@ struct SBDFTimestepper{E, R, L} <: Timestepper
     end
 end
 
-"Update solution by inverting Tridiagonal lhs matrix."
-function sbdf_euler_step!(rhs, lhs, Φⁿ, Φⁿ⁻¹, Rⁿ, Rⁿ⁻¹, Δt)
-    ntuple(Val(length(solution))) do j
+function sbdf_step!(rhs, lhs, Φⁿ, Φⁿ⁻¹, Rⁿ, Rⁿ⁻¹, Δt)
+    ntuple(Val(length(Φⁿ))) do j
         Base.@_inline_meta
          lhsϕ = lhs[j]
-         rhsϕ = data( rhs[j]  )
-          Rϕⁿ = data( Rⁿ[j]   )
+         rhsϕ = data(  rhs[j] )
+          Rϕⁿ = data(   Rⁿ[j] )
         Rϕⁿ⁻¹ = data( Rⁿ⁻¹[j] )
-           ϕⁿ = data( Φⁿ[j]   )
+           ϕⁿ = data(   Φⁿ[j] )
          ϕⁿ⁻¹ = data( Φⁿ⁻¹[j] )
 
-        for i in eachindex(ϕ)
+        for i in eachindex(ϕⁿ)
             @inbounds rhsϕ[i] = (4ϕⁿ[i] - ϕⁿ⁻¹[i] + 4Δt * Rϕⁿ[i] - 2Δt * Rϕⁿ⁻¹[i]) / 3
         end
 
@@ -294,16 +293,16 @@ function sbdf_euler_step!(rhs, lhs, Φⁿ, Φⁿ⁻¹, Rⁿ, Rⁿ⁻¹, Δt)
     return nothing
 end
 
-function store_sbdf_intermediates!(Rⁿ, Rⁿ⁻¹, Φⁿ, Φⁿ⁻¹)
-    ntuple(Val(length(solution))) do j
+function store_past_data!(Rⁿ, Rⁿ⁻¹, Φⁿ, Φⁿ⁻¹)
+    ntuple(Val(length(Φⁿ))) do j
         Base.@_inline_meta
 
-          Rϕⁿ = data( Rⁿ[j]   )
+          Rϕⁿ = data(   Rⁿ[j] )
         Rϕⁿ⁻¹ = data( Rⁿ⁻¹[j] )
-           ϕⁿ = data( Φⁿ[j]   )
+           ϕⁿ = data(   Φⁿ[j] )
          ϕⁿ⁻¹ = data( Φⁿ⁻¹[j] )
 
-        for i in eachindex(ϕ)
+        for i in eachindex(ϕⁿ)
             @inbounds Rϕⁿ⁻¹[i] = Rϕⁿ[i]
             @inbounds ϕⁿ⁻¹[i] = ϕⁿ[i]
         end
@@ -311,23 +310,43 @@ function store_sbdf_intermediates!(Rⁿ, Rⁿ⁻¹, Φⁿ, Φⁿ⁻¹)
     return nothing
 end
 
+function store_a_b!(a, b)
+    ntuple(Val(length(a))) do j
+        Base.@_inline_meta
+         aϕ = data(a[j])
+         bϕ = data(b[j])
+
+        for i in eachindex(aϕ)
+            @inbounds aϕ[i] = bϕ[i]
+        end
+    end
+    return nothing
+end
+
+function unpack(m::AbstractModel{TS}) where TS <: SBDF2Timestepper
+    return  (m.timestepper.eqn, m.timestepper.solution, m.timestepper.Φⁿ⁻¹,
+             m.timestepper.rhs, m.timestepper.lhs,
+             m.timestepper.Rⁿ, m.timestepper.Rⁿ⁻¹)
+end
 
 "Step forward `m` by `Δt` with the backward Euler method."
-function iterate!(m::AbstractModel{TS}, Δt) where TS <: SBDFTimestepper
-    update!(m.bcs, m.timestepper.eqn, m.solution, m)
-    calc_implicit_rhs!(m.timestepper.Rⁿ, m.timestepper.eqn, m.solution, m)
+function iterate!(m::AbstractModel{TS}, Δt) where TS <: SBDF2Timestepper
 
-    if m.clock.iter == 1 # take Backward Euler step
-        calc_diffusive_lhs!(m.timestepper.lhs, m.timestepper.eqn, m.solution, Δt, m)
-        store_sbdf_intermediates!(m.timestepper.Rⁿ, m.timestepper.Rⁿ⁻¹, m.solution, m.timestepper.Φⁿ⁻¹)
-        backward_euler_step!(m.timestepper.Rⁿ, m.timestepper.lhs, m.solution, Δt) # overwrites Rⁿ
-    else
-        calc_diffusive_lhs!(m.timestepper.lhs, m.timestepper.eqn, m.solution, 2Δt/3, m)
-        sbdf_step!(m.timestepper.rhs, m.timestepper.lhs, m.solution,
-                   m.timestepper.Φⁿ⁻¹, m.timestepper.Rⁿ, m.timestepper.Rⁿ⁻¹, Δt)
-        store_sbdf_intermediates!(m.timestepper.Rⁿ, m.timestepper.Rⁿ⁻¹, m.solution, m.timestepper.Φⁿ⁻¹)
+    eqn, Φⁿ, Φⁿ⁻¹, rhs, lhs, Rⁿ, Rⁿ⁻¹ = unpack(m)
+
+    update!(m.bcs, eqn, Φⁿ, m)
+    calc_implicit_rhs!(Rⁿ, eqn, Φⁿ, m)
+
+    if m.clock.iter == 0 # take Backward Euler step
+        calc_diffusive_lhs!(lhs, eqn, Φⁿ, Δt, m)
+        store_a_b!(rhs, Rⁿ)
+        backward_euler_step!(rhs, lhs, Φⁿ, Δt)
+    else # sbdf step
+        calc_diffusive_lhs!(lhs, eqn, Φⁿ, 2Δt/3, m)
+        sbdf_step!(rhs, lhs, Φⁿ, Φⁿ⁻¹, Rⁿ, Rⁿ⁻¹, Δt)
     end
 
+    store_past_data!(Rⁿ, Rⁿ⁻¹, Φⁿ, Φⁿ⁻¹)
     tick!(m.clock, Δt)
 
     return nothing
