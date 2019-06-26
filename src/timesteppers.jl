@@ -102,24 +102,24 @@ function calc_diffusive_lhs!(lhs, eqn, solution, cΔt::T, m) where T
         Mϕ = eqn.M[j]
         Lϕ = eqn.L[j]
         Kϕ = eqn.K[j]
-         L = lhs[j]
+         ℒ = lhs[j]
 
         for i in interiorindices(ϕ)
             @inbounds begin
-                L.du[i]   = cΔt * (M_op(m, Mϕ, i+1, i+1) - K_op(m, Kϕ, i+1, i))
-                L.d[i]    = one(T) + cΔt * (Lϕ(m, i) + K_op(m, Kϕ, i+1, i) + K_op(m, Kϕ, i, i) - M_op(m, Mϕ, i, i+1))
-                L.dl[i-1] = -cΔt * K_op(m, Kϕ, i, i)
+                ℒ.du[i]   = cΔt * (M_op(m, Mϕ, i+1, i+1) - K_op(m, Kϕ, i+1, i))
+                ℒ.d[i]    = one(T) + cΔt * (Lϕ(m, i) + K_op(m, Kϕ, i+1, i) + K_op(m, Kϕ, i, i) - M_op(m, Mϕ, i, i+1))
+                ℒ.dl[i-1] = -cΔt * K_op(m, Kϕ, i, i)
             end
         end
 
         # Bottom row
-        @inbounds L.du[1] = cΔt * (M_op(m, Mϕ, 2, 2) - K_op(m, Kϕ, 2, 1))
-        @inbounds L.d[1] = one(T) + cΔt*(Lϕ(m, 1) + K_op(m, Kϕ, 2, 1) - M_op(m, Mϕ, 1, 2))
+        @inbounds ℒ.du[1] = cΔt * (M_op(m, Mϕ, 2, 2) - K_op(m, Kϕ, 2, 1))
+        @inbounds ℒ.d[1] = one(T) + cΔt*(Lϕ(m, 1) + K_op(m, Kϕ, 2, 1) - M_op(m, Mϕ, 1, 2))
 
         # Top row
         N = length(ϕ)
-        @inbounds L.dl[end] = -cΔt * K_op(m, Kϕ, N, N)
-        @inbounds L.d[end]  = one(T) + cΔt * (Lϕ(m, N) + K_op(m, Kϕ, N, N) - M_op(m, Mϕ, N, N+1))
+        @inbounds ℒ.dl[end] = -cΔt * K_op(m, Kϕ, N, N)
+        @inbounds ℒ.d[end]  = one(T) + cΔt * (Lϕ(m, N) + K_op(m, Kϕ, N, N) - M_op(m, Mϕ, N, N+1))
     end
 
     return nothing
@@ -297,10 +297,10 @@ function store_past_data!(Rⁿ, Rⁿ⁻¹, Φⁿ, Φⁿ⁻¹)
     ntuple(Val(length(Φⁿ))) do j
         Base.@_inline_meta
 
-          Rϕⁿ = data(   Rⁿ[j] )
-        Rϕⁿ⁻¹ = data( Rⁿ⁻¹[j] )
-           ϕⁿ = data(   Φⁿ[j] )
-         ϕⁿ⁻¹ = data( Φⁿ⁻¹[j] )
+          Rϕⁿ = parent(   Rⁿ[j] )
+        Rϕⁿ⁻¹ = parent( Rⁿ⁻¹[j] )
+           ϕⁿ = parent(   Φⁿ[j] )
+         ϕⁿ⁻¹ = parent( Φⁿ⁻¹[j] )
 
         for i in eachindex(ϕⁿ)
             @inbounds Rϕⁿ⁻¹[i] = Rϕⁿ[i]
@@ -324,18 +324,25 @@ function store_a_b!(a, b)
 end
 
 function unpack(m::AbstractModel{TS}) where TS <: SBDF2Timestepper
-    return  (m.timestepper.eqn, m.timestepper.solution, m.timestepper.Φⁿ⁻¹,
+    return  (m.timestepper.eqn, m.solution, m.timestepper.Φⁿ⁻¹,
              m.timestepper.rhs, m.timestepper.lhs,
              m.timestepper.Rⁿ, m.timestepper.Rⁿ⁻¹)
 end
 
-"Step forward `m` by `Δt` with the backward Euler method."
+"""
+Step forward `m` by `Δt` using the second-order semi-implicit
+backward difference formula.
+"""
 function iterate!(m::AbstractModel{TS}, Δt) where TS <: SBDF2Timestepper
 
     eqn, Φⁿ, Φⁿ⁻¹, rhs, lhs, Rⁿ, Rⁿ⁻¹ = unpack(m)
 
     update!(m.bcs, eqn, Φⁿ, m)
     calc_implicit_rhs!(Rⁿ, eqn, Φⁿ, m)
+
+    #calc_diffusive_lhs!(lhs, eqn, Φⁿ, Δt, m)
+    #store_a_b!(rhs, Rⁿ)
+    #backward_euler_step!(rhs, lhs, Φⁿ, Δt)
 
     if m.clock.iter == 0 # take Backward Euler step
         calc_diffusive_lhs!(lhs, eqn, Φⁿ, Δt, m)

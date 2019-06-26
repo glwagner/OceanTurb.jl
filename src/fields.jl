@@ -32,7 +32,7 @@ There are two types of fields:
   2. Fields defined at cell interfaces with dimension `N+1`: `Field{Face}`
 =#
 import Base: +, *, -, ^, setindex!, getindex, eachindex, lastindex, similar,
-             eltype, length, @propagate_inbounds
+             parent, eltype, length, @propagate_inbounds
 
 import Statistics: mean
 
@@ -118,6 +118,9 @@ end
 
 data(c::FaceField) = c.data
 data(c::CellField) = view(c.data, 1:c.grid.N)
+
+parent(c::FaceField) = c.data
+parent(c::CellField) = c.data.parent
 
 nodes(c::CellField) = c.grid.zc
 nodes(f::FaceField) = f.grid.zf
