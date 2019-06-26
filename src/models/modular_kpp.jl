@@ -69,9 +69,15 @@ Base.@kwdef struct LMDCounterGradientFlux{T} <: AbstractParameters
     CNL :: T = 6.33 # Mass flux proportionality constant
 end
 
-Base.@kwdef struct DiffusivityShape{T} <: AbstractParameters
+Base.@kwdef struct Cubic{T} <: AbstractParameters
     CS0 :: T = 0.0
     CS1 :: T = 1.0
+end
+
+Base.@kwdef struct CubicExponential{T} <: AbstractParameters
+    CS0 :: T = 1.0
+    CSe :: T = 0.0
+    CSd :: T = 1.0
 end
 
 Base.@kwdef struct LMDDiffusivity{T} <: AbstractParameters
@@ -162,7 +168,7 @@ function Model(; N=10, L=1.0,
      diffusivity = LMDDiffusivity(),
     nonlocalflux = LMDCounterGradientFlux(),
      mixingdepth = LMDMixingDepth(),
-        kprofile = DiffusivityShape(),
+        kprofile = Cubic(),
          stepper = :BackwardEuler
     )
 
@@ -322,7 +328,8 @@ end
 # Diffusivity
 #
 
-k_profile(d, p::DiffusivityShape) = d * (1-d) * ( p.CS0 + p.CS1*(1-d) )
+k_profile(d, p::Cubic) = d * (1-d) * ( p.CS0 + p.CS1*(1-d) )
+k_profile(d, p::CubicExponential) = d * (1-d)^2 * ( p.CS0 + p.CSe * d * exp(-d / p.CSd) )
 
 ## ** The K-Profile-Parameterization **
 K_KPP(h, 𝒲, d::T, p) where T = 0<d<1 ? max(zero(T), h * 𝒲 * k_profile(d, p)) : -zero(T)
@@ -383,7 +390,6 @@ const 𝒲_LMD_S = 𝒲_LMD_T
 # Shape functions (these shoul become parameters eventually).
 # 'd' is a non-dimensional depth coordinate.
 default_shape_M(d) = 0 < d < 1 ? d * (1-d)^2 : 0
-
 
 function ∂NLT∂z(m::Model{K, <:LMDCounterGradientFlux}, i) where K
     KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Fθ, d(m, i+1), d(m, i), Δf(m.grid, i), m)
