@@ -117,7 +117,7 @@ function run_until!(model, dt, tfinal)
     nt = floor(Int, (tfinal - time(model))/dt)
     iterate!(model, dt, nt)
 
-    last_dt = time(model) - tfinal
+    last_dt = tfinal - time(model)
     iterate!(model, last_dt)
     return nothing
 end
