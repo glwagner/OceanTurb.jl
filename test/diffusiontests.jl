@@ -44,6 +44,24 @@ function test_diffusion_cosine(stepper=:ForwardEuler)
     norm(c_ans.(z, time(model)) .- data(model.solution.c)) < model.grid.N*1e-6
 end
 
+function test_diffusion_cosine_run_until(stepper=:ForwardEuler)
+    model = Diffusion.Model(N=100, L=π/2, K=1.0, stepper=stepper)
+    z = model.grid.zc
+
+    c_init(z) = cos(2z)
+    c_ans(z, t) = exp(-4t) * c_init(z)
+
+    model.solution.c = c_init
+
+    dt = 1e-3
+    tfinal = 3dt/2
+    run_until!(model, dt, tfinal)
+
+    # The error tolerance is a bit arbitrary.
+    norm(c_ans.(z, tfinal) .- data(model.solution.c)) < model.grid.N*1e-6
+end
+
+
 function test_advection(stepper=:ForwardEuler)
     L = 1.0
     W = -1.0

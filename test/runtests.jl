@@ -7,10 +7,15 @@ using
 # Run tests
 #
 
+steppers = (:ForwardEuler, :BackwardEuler)
+
 @testset "Utils" begin
     include("utilstests.jl")
     @test test_zeros(Float64)
     @test test_zeros(Float32)
+    for stepper in steppers
+        @test test_run_until(stepper)
+    end
 end
 
 @testset "Solvers" begin
@@ -66,8 +71,9 @@ end
     @test test_diffusion_basic()
     @test test_diffusion_set_c()
 
-    for stepper in (:ForwardEuler, :BackwardEuler)
+    for stepper in steppers
         @test test_diffusion_cosine(stepper)
+        @test test_diffusion_cosine_run_until(stepper)
         @test test_diffusive_flux(stepper, top_flux=0, bottom_flux=0)
         @test test_diffusive_flux(stepper)
         @test test_advection(stepper)
@@ -115,7 +121,7 @@ end
 
     @test test_diffusivity_plain()
 
-    for stepper in (:ForwardEuler, :BackwardEuler)
+    for stepper in steppers
         @test test_kpp_diffusion_cosine(stepper)
         for fieldname in (:U, :V, :T, :S)
             for top_flux in (0.3, -0.3)
