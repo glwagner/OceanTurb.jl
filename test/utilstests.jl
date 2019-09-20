@@ -16,3 +16,11 @@ function test_run_until(stepper=:ForwardEuler)
 
     return time(model) == tfinal
 end
+
+function test_diffusive_flux()
+    model = Diffusion.Model(N=4, L=2, K=0.1)
+    c0(z) = z
+    model.solution.c = c0
+    flux = OceanTurb.diffusive_flux(:c, model)
+    return flux[2] == -0.1
+end

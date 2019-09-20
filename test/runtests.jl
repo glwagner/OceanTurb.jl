@@ -13,6 +13,7 @@ steppers = (:ForwardEuler, :BackwardEuler)
     include("utilstests.jl")
     @test test_zeros(Float64)
     @test test_zeros(Float32)
+    @test test_diffusive_flux()
     for stepper in steppers
         @test test_run_until(stepper)
     end
@@ -129,6 +130,9 @@ end
             end
         end
     end
+
+    @test test_nonlocal_salinity_flux_util()
+    @test test_nonlocal_temperature_flux_util()
 end
 
 @testset "Pacanowski-Philander" begin

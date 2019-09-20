@@ -11,11 +11,11 @@ Base.@kwdef struct Parameters{T} <: AbstractParameters
     μ :: T = 0.0
 end
 
-struct Model{P, TS, G, T} <: AbstractModel{TS, G, T}
+struct Model{P, TS, G, T, S} <: AbstractModel{TS, G, T}
     clock       :: Clock{T}
     grid        :: G
     timestepper :: TS
-    solution    :: Solution
+    solution    :: S
     bcs         :: BoundaryConditions
     parameters  :: P
 end
@@ -29,9 +29,9 @@ function Model(; N=10, L=1.0, K=0.1, W=0.0, μ=0.0,
 
     solution = Solution(CellField(grid))
 
-      K = (Kc,)
-      W = (Wc,)
-      L = (Lc,)
+      K = (c=Kc,)
+      W = (c=Wc,)
+      L = (c=Lc,)
 
     eqn = Equation(K=K, M=W, L=L)
     lhs = build_lhs(solution)
