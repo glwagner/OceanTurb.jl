@@ -374,4 +374,34 @@ const KV = KU
 @propagate_inbounds RT(m, i) = - ∂NLT∂z(m, i)
 @propagate_inbounds RS(m, i) = - ∂NLS∂z(m, i)
 
+#####
+##### Some utilities
+#####
+
+function nonlocal_salinity_flux!(flux, m)
+    for i in interiorindices(flux)
+        @inbounds flux[i] = NL(m.parameters.CNL, m.state.Fs, d(m, i))
+    end
+    return nothing
+end
+
+function nonlocal_temperature_flux!(flux, m)
+    for i in interiorindices(flux)
+        @inbounds flux[i] = NL(m.parameters.CNL, m.state.Fθ, d(m, i))
+    end
+    return nothing
+end
+
+function nonlocal_salinity_flux(model)
+    flux = FaceField(model.grid)
+    nonlocal_salinity_flux!(flux, model)
+    return flux
+end
+
+function nonlocal_temperature_flux(model)
+    flux = FaceField(model.grid)
+    nonlocal_temperature_flux!(flux, model)
+    return flux
+end
+
 end # module

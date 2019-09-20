@@ -142,7 +142,6 @@ function test_Δ3(; CSL=0.5, N=20, L=20)
     KPP.Δ(U, CSL, ih) == U₀
 end
 
-
 function test_buoyancy_gradient(; γ=0.01, g=9.81, ρ₀=1028, α=2e-4, β=0.0, N=10, L=1.0)
     model = KPP.Model(N=N, L=L)
     T₀(z) = γ*z
@@ -562,3 +561,30 @@ function test_flux(stepper=:ForwardEuler; fieldname=:U, top_flux=0.3, bottom_flu
 
     return C(time(model)) ≈ integral(c)
 end
+
+function test_nonlocal_salinity_flux_util(N=4, L=4.3)
+    model = KPP.Model(N=N, L=L)
+
+    try
+        flux = KPP.nonlocal_salinity_flux(model)
+    catch err
+        @error sprint(showerror, err)
+        return false
+    end
+
+    return true
+end
+
+function test_nonlocal_temperature_flux_util(N=4, L=4.3)
+    model = KPP.Model(N=N, L=L)
+
+    try
+        flux = KPP.nonlocal_temperature_flux(model)
+    catch err
+        @error sprint(showerror, err)
+        return false
+    end
+
+    return true
+end
+

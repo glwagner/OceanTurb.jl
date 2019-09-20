@@ -119,5 +119,35 @@ function run_until!(model, dt, tfinal)
 
     last_dt = tfinal - time(model)
     iterate!(model, last_dt)
+
     return nothing
+end
+
+"""
+    diffusive_flux!(flux, fieldname, model)
+
+Calculates the diffusive flux associated with `fieldname` in `model.solution.fieldname`i
+and stores the result in the `FaceField` `flux`.
+"""
+function diffusive_flux!(flux, fieldname, model)
+    field = getproperty(model.solution, fieldname)
+    K = getproperty(model.timestepper.eqn.K, fieldname)
+
+    for i in interiorindices(flux)
+        @inbounds flux[i] = - K(model, i) * ∂z(field, i)
+    end
+
+    return nothing
+end
+
+"""
+    diffusive_flux(fieldname, model)
+
+Returns `flux::FaceField` with the diffusive flux associated with `fieldname` 
+in `model.solution.fieldname`.
+"""
+function diffusive_flux(fieldname, model)
+    flux = FaceField(model.grid)
+    diffusive_flux!(flux, fieldname, model)
+    return flux
 end
