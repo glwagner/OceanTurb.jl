@@ -7,6 +7,7 @@ import OceanTurb: Constants
 using Base: @propagate_inbounds
 
 const nsol = 4
+
 @solution U V T S
 
 """
@@ -73,24 +74,42 @@ mutable struct Model{S, G, T, U, B} <: AbstractModel{S, G, T}
     state       :: State{T}
 end
 
+"""
+    ModelBoundaryConditions([FT=Float64;] U = DefaultBoundaryConditions(FT),
+                                          V = DefaultBoundaryConditions(FT),
+                                          T = DefaultBoundaryConditions(FT),
+                                          S = DefaultBoundaryConditions(FT))
+
+Returns a `NamedTuple` of boundary conditions for a `KPP.Model` with solution
+fields `U`, `V`, `T`, `S`.
+
+Example
+=======
+
+julia> surface_temperature_flux(model) = cos(model.clock.time)
+
+julia> T_bcs = BoundaryConditions(top = FluxBoundaryCondition(surface_flux))
+
+julis> bcs = KPP.ModelBoundaryConditions(T=T_bcs)
+"""
+function ModelBoundaryConditions(FT=Float64; U = DefaultBoundaryConditions(FT),
+                                             V = DefaultBoundaryConditions(FT),
+                                             T = DefaultBoundaryConditions(FT),
+                                             S = DefaultBoundaryConditions(FT))
+    return (U=U, V=V, T=T, S=S)
+end
 
 function Model(; N=10, L=1.0,
             grid = UniformGrid(N, L),
        constants = Constants(),
       parameters = Parameters(),
-         stepper = :ForwardEuler
-              )
+         stepper = :ForwardEuler,
+             bcs = ModelBoundaryConditions(eltype(grid))
+    )
 
      K = (U=KU, V=KV, T=KT, S=KS)
      R = (U=RU, V=RV, T=RT, S=RS)
     eq = Equation(R=R, K=K, update=update_state!)
-
-    bcs = (
-        U = DefaultBoundaryConditions(eltype(grid)),
-        V = DefaultBoundaryConditions(eltype(grid)),
-        T = DefaultBoundaryConditions(eltype(grid)),
-        S = DefaultBoundaryConditions(eltype(grid))
-    )
 
     solution = Solution(
         CellField(grid),

@@ -142,6 +142,31 @@ function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
             h_crit, plume_T, plume_S, plume_w²)
 end
 
+"""
+    ModelBoundaryConditions([FT=Float64;] U = DefaultBoundaryConditions(FT),
+                                          V = DefaultBoundaryConditions(FT),
+                                          T = DefaultBoundaryConditions(FT),
+                                          S = DefaultBoundaryConditions(FT))
+
+Returns a `NamedTuple` of boundary conditions for a `KPP.Model` with solution
+fields `U`, `V`, `T`, `S`.
+
+Example
+=======
+
+julia> surface_temperature_flux(model) = cos(model.clock.time)
+
+julia> T_bcs = BoundaryConditions(top = FluxBoundaryCondition(surface_flux))
+
+julis> bcs = ModularKPP.ModelBoundaryConditions(T=T_bcs)
+"""
+function ModelBoundaryConditions(FT=Float64; U = DefaultBoundaryConditions(FT),
+                                             V = DefaultBoundaryConditions(FT),
+                                             T = DefaultBoundaryConditions(FT),
+                                             S = DefaultBoundaryConditions(FT))
+    return (U=U, V=V, T=T, S=S)
+end
+
 mutable struct Model{KP, NP, HP, SP, SO, BC, ST, TS, G, T} <: AbstractModularKPPModel{KP, NP, HP, TS, G, T}
            clock :: Clock{T}
             grid :: G
@@ -163,19 +188,13 @@ function Model(; N=10, L=1.0,
     nonlocalflux = LMDCounterGradientFlux(),
      mixingdepth = LMDMixingDepth(),
         kprofile = DiffusivityShape(),
-         stepper = :BackwardEuler
+         stepper = :BackwardEuler,
+             bcs = ModelBoundaryConditions(eltype(grid))
     )
 
      K = Accessory{Function}(KU, KV, KT, KS)
      R = Accessory{Function}(RU, RV, RT, RS)
     eq = Equation(K=K, R=R, update=update_state!)
-
-    bcs = (
-        U = DefaultBoundaryConditions(eltype(grid)),
-        V = DefaultBoundaryConditions(eltype(grid)),
-        T = DefaultBoundaryConditions(eltype(grid)),
-        S = DefaultBoundaryConditions(eltype(grid))
-    )
 
        state = State(diffusivity, nonlocalflux, mixingdepth, grid)
     solution = Solution((CellField(grid) for i=1:nsol)...)
