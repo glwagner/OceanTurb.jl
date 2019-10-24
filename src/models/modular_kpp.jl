@@ -156,6 +156,13 @@ mutable struct Model{KP, NP, HP, SP, SO, BC, ST, TS, G, T} <: AbstractModularKPP
            state :: ST
 end
 
+function BoundaryConditions(FT=Float64; U = DefaultBoundaryConditions(FT),
+                                        V = DefaultBoundaryConditions(FT),
+                                        T = DefaultBoundaryConditions(FT),
+                                        S = DefaultBoundaryConditions(FT))
+    return (U=U, V=V, T=T, S=S)
+end
+
 function Model(; N=10, L=1.0,
             grid = UniformGrid(N, L),
        constants = Constants(),
@@ -163,19 +170,13 @@ function Model(; N=10, L=1.0,
     nonlocalflux = LMDCounterGradientFlux(),
      mixingdepth = LMDMixingDepth(),
         kprofile = DiffusivityShape(),
-         stepper = :BackwardEuler
+         stepper = :BackwardEuler,
+             bcs = BoundaryConditions(eltype(grid))
     )
 
      K = Accessory{Function}(KU, KV, KT, KS)
      R = Accessory{Function}(RU, RV, RT, RS)
     eq = Equation(K=K, R=R, update=update_state!)
-
-    bcs = (
-        U = DefaultBoundaryConditions(eltype(grid)),
-        V = DefaultBoundaryConditions(eltype(grid)),
-        T = DefaultBoundaryConditions(eltype(grid)),
-        S = DefaultBoundaryConditions(eltype(grid))
-    )
 
        state = State(diffusivity, nonlocalflux, mixingdepth, grid)
     solution = Solution((CellField(grid) for i=1:nsol)...)
