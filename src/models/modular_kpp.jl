@@ -142,6 +142,31 @@ function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
             h_crit, plume_T, plume_S, plume_w²)
 end
 
+"""
+    ModelBoundaryConditions([FT=Float64;] U = DefaultBoundaryConditions(FT),
+                                          V = DefaultBoundaryConditions(FT),
+                                          T = DefaultBoundaryConditions(FT),
+                                          S = DefaultBoundaryConditions(FT))
+
+Returns a `NamedTuple` of boundary conditions for a `KPP.Model` with solution
+fields `U`, `V`, `T`, `S`.
+
+Example
+=======
+
+julia> surface_temperature_flux(model) = cos(model.clock.time)
+
+julia> T_bcs = BoundaryConditions(top = FluxBoundaryCondition(surface_flux))
+
+julis> bcs = ModularKPP.ModelBoundaryConditions(T=T_bcs)
+"""
+function ModelBoundaryConditions(FT=Float64; U = DefaultBoundaryConditions(FT),
+                                             V = DefaultBoundaryConditions(FT),
+                                             T = DefaultBoundaryConditions(FT),
+                                             S = DefaultBoundaryConditions(FT))
+    return (U=U, V=V, T=T, S=S)
+end
+
 mutable struct Model{KP, NP, HP, SP, SO, BC, ST, TS, G, T} <: AbstractModularKPPModel{KP, NP, HP, TS, G, T}
            clock :: Clock{T}
             grid :: G
@@ -156,13 +181,6 @@ mutable struct Model{KP, NP, HP, SP, SO, BC, ST, TS, G, T} <: AbstractModularKPP
            state :: ST
 end
 
-function BoundaryConditions(FT=Float64; U = DefaultBoundaryConditions(FT),
-                                        V = DefaultBoundaryConditions(FT),
-                                        T = DefaultBoundaryConditions(FT),
-                                        S = DefaultBoundaryConditions(FT))
-    return (U=U, V=V, T=T, S=S)
-end
-
 function Model(; N=10, L=1.0,
             grid = UniformGrid(N, L),
        constants = Constants(),
@@ -171,7 +189,7 @@ function Model(; N=10, L=1.0,
      mixingdepth = LMDMixingDepth(),
         kprofile = DiffusivityShape(),
          stepper = :BackwardEuler,
-             bcs = BoundaryConditions(eltype(grid))
+             bcs = ModelBoundaryConditions(eltype(grid))
     )
 
      K = Accessory{Function}(KU, KV, KT, KS)

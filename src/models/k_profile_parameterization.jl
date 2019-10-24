@@ -74,10 +74,28 @@ mutable struct Model{S, G, T, U, B} <: AbstractModel{S, G, T}
     state       :: State{T}
 end
 
-function BoundaryConditions(FT=Float64; U = DefaultBoundaryConditions(FT),
-                                        V = DefaultBoundaryConditions(FT),
-                                        T = DefaultBoundaryConditions(FT),
-                                        S = DefaultBoundaryConditions(FT))
+"""
+    ModelBoundaryConditions([FT=Float64;] U = DefaultBoundaryConditions(FT),
+                                          V = DefaultBoundaryConditions(FT),
+                                          T = DefaultBoundaryConditions(FT),
+                                          S = DefaultBoundaryConditions(FT))
+
+Returns a `NamedTuple` of boundary conditions for a `KPP.Model` with solution
+fields `U`, `V`, `T`, `S`.
+
+Example
+=======
+
+julia> surface_temperature_flux(model) = cos(model.clock.time)
+
+julia> T_bcs = BoundaryConditions(top = FluxBoundaryCondition(surface_flux))
+
+julis> bcs = KPP.ModelBoundaryConditions(T=T_bcs)
+"""
+function ModelBoundaryConditions(FT=Float64; U = DefaultBoundaryConditions(FT),
+                                             V = DefaultBoundaryConditions(FT),
+                                             T = DefaultBoundaryConditions(FT),
+                                             S = DefaultBoundaryConditions(FT))
     return (U=U, V=V, T=T, S=S)
 end
 
@@ -86,7 +104,7 @@ function Model(; N=10, L=1.0,
        constants = Constants(),
       parameters = Parameters(),
          stepper = :ForwardEuler,
-             bcs = BoundaryConditions(eltype(grid))
+             bcs = ModelBoundaryConditions(eltype(grid))
     )
 
      K = (U=KU, V=KV, T=KT, S=KS)

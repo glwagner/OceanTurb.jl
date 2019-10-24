@@ -78,6 +78,7 @@ export # This file, core functionality:
     Gradient,
     Value,
     BoundaryCondition,
+    BoundaryConditions,
     FluxBoundaryCondition,
     ValueBoundaryCondition,
     GradientBoundaryCondition,
