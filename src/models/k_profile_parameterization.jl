@@ -62,8 +62,9 @@ end
 
 State(T=Float64) = State{T}(0, 0, 0, 0, 0, 0)
 
+Forcing(; U=addzero, V=addzero, T=addzero, S=addzero) = (U=U, V=V, T=T, S=S)
 
-mutable struct Model{S, G, T, U, B} <: AbstractModel{S, G, T}
+mutable struct Model{S, G, T, U, B, F} <: AbstractModel{S, G, T}
     clock       :: Clock{T}
     grid        :: G
     timestepper :: S
@@ -72,6 +73,7 @@ mutable struct Model{S, G, T, U, B} <: AbstractModel{S, G, T}
     parameters  :: Parameters{T}
     constants   :: Constants{T}
     state       :: State{T}
+    forcing     :: F
 end
 
 """
@@ -99,12 +101,15 @@ function ModelBoundaryConditions(FT=Float64; U = DefaultBoundaryConditions(FT),
     return (U=U, V=V, T=T, S=S)
 end
 
+addzero(args...) = 0
+
 function Model(; N=10, L=1.0,
             grid = UniformGrid(N, L),
        constants = Constants(),
       parameters = Parameters(),
          stepper = :ForwardEuler,
-             bcs = ModelBoundaryConditions(eltype(grid))
+             bcs = ModelBoundaryConditions(eltype(grid)),
+         forcing = Forcing()
     )
 
      K = (U=KU, V=KV, T=KT, S=KS)
@@ -123,7 +128,8 @@ function Model(; N=10, L=1.0,
     clock = Clock()
     state = State()
 
-    return Model(clock, grid, timestepper, solution, bcs, parameters, constants, state)
+    return Model(clock, grid, timestepper, solution, bcs, parameters, constants, state, 
+                 forcing)
 end
 
 # Note: we use 'm' to refer to 'model' in function definitions below.
@@ -388,10 +394,10 @@ end
 @propagate_inbounds KS(m, i) = K_KPP(m.state.h, 𝒲_S(m, i), d(m, i)) + m.parameters.KS₀
 const KV = KU
 
-@propagate_inbounds RU(m, i) =   m.constants.f * m.solution.V[i]
-@propagate_inbounds RV(m, i) = - m.constants.f * m.solution.U[i]
-@propagate_inbounds RT(m, i) = - ∂NLT∂z(m, i)
-@propagate_inbounds RS(m, i) = - ∂NLS∂z(m, i)
+@propagate_inbounds RU(m, i) =   m.constants.f * m.solution.V[i] + m.forcing.U(m, i)
+@propagate_inbounds RV(m, i) = - m.constants.f * m.solution.U[i] + m.forcing.V(m, i)
+@propagate_inbounds RT(m, i) = - ∂NLT∂z(m, i) + m.forcing.T(m, i)
+@propagate_inbounds RS(m, i) = - ∂NLS∂z(m, i) + m.forcing.S(m, i)
 
 #####
 ##### Some utilities

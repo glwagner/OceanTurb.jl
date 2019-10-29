@@ -167,7 +167,9 @@ function ModelBoundaryConditions(FT=Float64; U = DefaultBoundaryConditions(FT),
     return (U=U, V=V, T=T, S=S)
 end
 
-mutable struct Model{KP, NP, HP, SP, SO, BC, ST, TS, G, T} <: AbstractModularKPPModel{KP, NP, HP, TS, G, T}
+Forcing(; U=addzero, V=addzero, T=addzero, S=addzero) = (U=U, V=V, T=T, S=S)
+
+mutable struct Model{KP, NP, HP, SP, SO, BC, ST, TS, G, T, F} <: AbstractModularKPPModel{KP, NP, HP, TS, G, T}
            clock :: Clock{T}
             grid :: G
      timestepper :: TS
@@ -179,6 +181,7 @@ mutable struct Model{KP, NP, HP, SP, SO, BC, ST, TS, G, T} <: AbstractModularKPP
         kprofile :: SP
        constants :: Constants{T}
            state :: ST
+         forcing :: F
 end
 
 function Model(; N=10, L=1.0,
@@ -189,7 +192,8 @@ function Model(; N=10, L=1.0,
      mixingdepth = LMDMixingDepth(),
         kprofile = DiffusivityShape(),
          stepper = :BackwardEuler,
-             bcs = ModelBoundaryConditions(eltype(grid))
+             bcs = ModelBoundaryConditions(eltype(grid)),
+         forcing = Forcing()
     )
 
      K = Accessory{Function}(KU, KV, KT, KS)
@@ -203,7 +207,8 @@ function Model(; N=10, L=1.0,
     timestepper = Timestepper(stepper, eq, solution, lhs)
 
     return Model(Clock(), grid, timestepper, solution, bcs,
-                 diffusivity, nonlocalflux, mixingdepth, kprofile, constants, state)
+                 diffusivity, nonlocalflux, mixingdepth, kprofile, constants, state, 
+                 forcing)
 end
 
 """
@@ -424,8 +429,8 @@ end
 # Equation specification
 #
 
-RU(m, i) =   m.constants.f * m.solution.V[i]
-RV(m, i) = - m.constants.f * m.solution.U[i]
+RU(m, i) =   m.constants.f * m.solution.V[i] + m.forcing.U(m, i)  
+RV(m, i) = - m.constants.f * m.solution.U[i] + m.forcing.V(m, i)
 
 # K_{U,V,T,S} is calculated at face points
 KU(m::AbstractModularKPPModel{<:LMDDiffusivity}, i) =
@@ -448,7 +453,7 @@ KS(m::AbstractModularKPPModel{<:HoltslagDiffusivity}, i) =
 
 const KV = KU
 
-RT(m, i) = - ∂NLT∂z(m, i)
-RS(m, i) = - ∂NLS∂z(m, i)
+RT(m, i) = - ∂NLT∂z(m, i) + m.forcing.T(m, i)
+RS(m, i) = - ∂NLS∂z(m, i) + m.forcing.S(m, i)
 
 end # module

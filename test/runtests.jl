@@ -86,6 +86,7 @@ end
     include("kpptests.jl")
     @test test_constants(g=9.81, α=2.1e-4, ρ₀=1028.1, β=0.99, cP=3904.1, f=1e-4)
     @test test_model_init()
+    @test test_model_init_with_forcing()
     @test test_buoyancy_gradient()
     @test test_unresolved_KE()
     @test test_surface_layer_average_simple()
