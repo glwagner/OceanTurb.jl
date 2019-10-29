@@ -167,8 +167,20 @@ function ModelBoundaryConditions(FT=Float64; U = DefaultBoundaryConditions(FT),
     return (U=U, V=V, T=T, S=S)
 end
 
+"""
+    Forcing(; U=addzero, V=addzero, T=addzero, S=addzero)
+
+Construct a `NamedTuple` of forcing functions for KPP `Model`s for each
+field `U, V, T, S`. The functions must have the signature `forcing(model::Model, i)`,
+where `i` is the vertical index at which the forcing is applied.
+"""
 Forcing(; U=addzero, V=addzero, T=addzero, S=addzero) = (U=U, V=V, T=T, S=S)
 
+"""
+    Model{S, G, T, U, B, F} <: AbstractModel{S, G, T}
+
+Struct for KPP models.
+"""
 mutable struct Model{KP, NP, HP, SP, SO, BC, ST, TS, G, T, F} <: AbstractModularKPPModel{KP, NP, HP, TS, G, T}
            clock :: Clock{T}
             grid :: G
@@ -184,6 +196,11 @@ mutable struct Model{KP, NP, HP, SP, SO, BC, ST, TS, G, T, F} <: AbstractModular
          forcing :: F
 end
 
+"""
+    Model(; kwargs...)
+
+Construct a KPP Model.
+"""
 function Model(; N=10, L=1.0,
             grid = UniformGrid(N, L),
        constants = Constants(),

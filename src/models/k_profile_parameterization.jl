@@ -62,19 +62,14 @@ end
 
 State(T=Float64) = State{T}(0, 0, 0, 0, 0, 0)
 
-Forcing(; U=addzero, V=addzero, T=addzero, S=addzero) = (U=U, V=V, T=T, S=S)
+"""
+    Forcing(; U=addzero, V=addzero, T=addzero, S=addzero)
 
-mutable struct Model{S, G, T, U, B, F} <: AbstractModel{S, G, T}
-    clock       :: Clock{T}
-    grid        :: G
-    timestepper :: S
-    solution    :: U
-    bcs         :: B
-    parameters  :: Parameters{T}
-    constants   :: Constants{T}
-    state       :: State{T}
-    forcing     :: F
-end
+Construct a `NamedTuple` of forcing functions for KPP `Model`s for each
+field `U, V, T, S`. The functions must have the signature `forcing(model::Model, i)`,
+where `i` is the vertical index at which the forcing is applied.
+"""
+Forcing(; U=addzero, V=addzero, T=addzero, S=addzero) = (U=U, V=V, T=T, S=S)
 
 """
     ModelBoundaryConditions([FT=Float64;] U = DefaultBoundaryConditions(FT),
@@ -103,6 +98,28 @@ end
 
 addzero(args...) = 0
 
+"""
+    Model{S, G, T, U, B, F} <: AbstractModel{S, G, T}
+
+Struct for KPP models.
+"""
+mutable struct Model{S, G, T, U, B, F} <: AbstractModel{S, G, T}
+    clock       :: Clock{T}
+    grid        :: G
+    timestepper :: S
+    solution    :: U
+    bcs         :: B
+    parameters  :: Parameters{T}
+    constants   :: Constants{T}
+    state       :: State{T}
+    forcing     :: F
+end
+
+"""
+    Model(; kwargs...)
+
+Construct a KPP Model.
+"""
 function Model(; N=10, L=1.0,
             grid = UniformGrid(N, L),
        constants = Constants(),
