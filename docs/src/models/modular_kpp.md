@@ -157,7 +157,7 @@ where ``d = -z/h`` is a non-dimensional depth coordinate and ``\C{\NL}{} = 6.33`
 
 The diagnostic plume model proposed by
 [Siebesma et al (2007)](https://journals.ametsoc.org/doi/full/10.1175/JAS3888.1)
-integrates equations tbreve describe the quasi-equilibrium vertical momentum and 
+integrates equations that describe the quasi-equilibrium vertical momentum and 
 tracer budgets for plumes that plunge downwards from the ocean surface
 due to destabilizing buoyancy flux. 
 
