@@ -140,6 +140,85 @@ where ``d = -z/h``. [Siebesma et al (2007)](https://journals.ametsoc.org/doi/ful
 
 ## Non-local flux models
 
+### 'Countergradient flux' model
+
+As described in 
+['Countergradient' non-local flux model in CVMix KPP](@ref),
+the non-local countergradient flux is defined only for ``T`` and ``S``, and is
+
+```math
+\beq
+NL_\phi = \C{\NL}{} F_\phi d (1 - d)^2 \c
+\eeq
+```
+where ``d = -z/h`` is a non-dimensional depth coordinate and ``\C{\NL}{} = 6.33``.
+
+### Diagnostic plume model
+
+The diagnostic plume model proposed by
+[Siebesma et al (2007)](https://journals.ametsoc.org/doi/full/10.1175/JAS3888.1)
+integrates equations tbreve describe the quasi-equilibrium vertical momentum and 
+tracer budgets for plumes that plunge downwards from the ocean surface
+due to destabilizing buoyancy flux. 
+
+In the diagnostic plume model, the non-local flux of a tracer ``\Phi`` is parameterized as
+```math
+\beq
+    NL_\phi = \breve a \breve W \left ( \Phi - \breve \Phi \right )
+\eeq
+```
+
+The plume-averaged temperature and salinity budgets are
+```math
+\begin{gather}
+    \d_z \breve T = - \epsilon \left ( \breve T - T \right ) \, , \\
+    \d_z \breve S = - \epsilon \left ( \breve S - S \right ) \, ,
+\end{gather}
+```
+where ``\epsilon(z, h)`` is the entrainment rate, ``\breve T`` and ``\breve S``
+are the plume-averaged temperature and salinity, and ``T`` and ``S`` are the 
+ambient temperature and salinity.
+The entrainment rate is defined
+```math
+\beq
+\epsilon = \C{\epsilon}{} 
+    \left [ \frac{1}{\Delta z - z} + \frac{1}{\Delta z + \left ( z + h \right )} \right ]
+\eeq
+```
+
+The budget for plume vertical momentum is
+
+```math
+\beq
+    \d_z \breve W^2 = \frac{1}{\frac{1}{2} - \C{\mu}{}} \left ( 
+                        \breve B - B - \C{\epsilon}{w} \epsilon \, \breve W^2 \right ) 
+\eeq
+```
+where ``\breve B = \alpha \breve T - \beta \breve S`` is the plume-averaged buoyancy and 
+``B`` is the ambient buoyancy.
+
+The plume equations require boundary conditions at ``z=0``; on vertical momentum we have
+no penetration:
+```math
+\beq
+    \breve W^2(z=z_1) = 0
+\eeq
+```
+On tracers, we use
+```math
+\beq
+    \breve \Phi(z=z_1) = \Phi(z=z_1) + \C{\alpha}{} \frac{Q_\phi}{\sigma_w(z_1)} \, ,
+\eeq
+```
+where ``\sigma_w(z)`` is an empirical expression for the vertical velocity standard
+deviation,
+```math
+\beq
+    \sigma_w = \left [ \C{\sigma \tau}{} \omega_\tau^3 + \C{\sigma b} d \omega_b^3 \right ]^{1/3} \left ( 1 - d \right )^{1/2} \, .
+\eeq
+```
+The diagnostic plume equations are discretized with an upwind scheme.
+
 * [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
 * [CVMix documentation](https://github.com/CVMix/CVMix-description/raw/master/cvmix.pdf)
 * [McWilliams et al (2009)](https://journals.ametsoc.org/doi/full/10.1175/2009JPO4130.1)
