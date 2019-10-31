@@ -64,7 +64,7 @@ The
 [CVMix](https://github.com/CVMix/CVMix-description/raw/master/cvmix.pdf)
 mixing depth model uses the 'bulk Richardson number' criterion proposed by
 [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872).
-This model is described in [Mixing depth model in CVMix KPP][@ref].
+This model is described in [Mixing depth model in CVMix KPP](@ref).
 
 ### ROMS mixing depth model
 
@@ -117,14 +117,30 @@ for the free parameters in \eqref{stabilization}.
 
 ## Diffusivity models
 
+### [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
+
+The diffusivity model proposed by 
+[Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
+is described in [``K``-Profile model in CVMix KPP](@ref).
+
+
+### Holtslag (1998)
+
+The diffusivity model proposed by Holtslag in 1998 and described in 
+[Siebesma et al (2007)](https://journals.ametsoc.org/doi/full/10.1175/JAS3888.1)
+uses a cubic shape function and simple stability formulation:
+```math
+\beq
+K_\phi = \C{\tau}{} \left [ \left ( \frac{\omega_\tau}{\omega_b} \right )^3 
+    + \C{\tau b}{} d \right ]^{1/3} d \left ( 1 - d \right )^2
+\eeq
+```
+where ``d = -z/h``. [Siebesma et al (2007)](https://journals.ametsoc.org/doi/full/10.1175/JAS3888.1) use 
+``\C{\tau}{} = 0.4`` and ``\C{\tau b}{} = 15.6``.
+
 ## Non-local flux models
 
 * [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
 * [CVMix documentation](https://github.com/CVMix/CVMix-description/raw/master/cvmix.pdf)
 * [McWilliams et al (2009)](https://journals.ametsoc.org/doi/full/10.1175/2009JPO4130.1)
-* [Regional Ocean Modeling Systeml (ROMS)][https://www.myroms.org]
-
-[^LMD94]: https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872
-[^MHS09]: https://journals.ametsoc.org/doi/full/10.1175/2009JPO4130.1
-[^CVMix]: https://github.com/CVMix/CVMix-description/raw/master/cvmix.pdf
-[^ROMS]: https://www.myroms.org
+* [Regional Ocean Modeling System (ROMS)](https://www.myroms.org)
