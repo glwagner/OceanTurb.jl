@@ -34,12 +34,12 @@
          + \tfrac{K_i}{\Delta c_i} \Phi_{i-1}}{\Delta f_i} \p
  \label{fluxdivop}
 \end{align}\]</div><p>In the top cell where <span>$i=N$</span>, the diffusive flux is</p><div>\[\begin{align}
-\left ( \d_z K \d_z \Phi \right )_N &amp;= \frac{ - F_{\mathrm{top}} - K_N \left ( \d_z \Phi \right )_N}{\Delta f_N} \c \\
-&amp;= -\frac{F_{\mathrm{top}}}{\Delta f_N} - \frac{K_N \Phi_N - K_N \Phi_{N-1}}{\Delta f_N \Delta c_N} \p
+\left ( \d_z K \d_z \Phi \right )_N &amp;= \frac{ - Q_{\mathrm{top}} - K_N \left ( \d_z \Phi \right )_N}{\Delta f_N} \c \\
+&amp;= -\frac{Q_{\mathrm{top}}}{\Delta f_N} - \frac{K_N \Phi_N - K_N \Phi_{N-1}}{\Delta f_N \Delta c_N} \p
  \label{fluxdivop_top}
 \end{align}\]</div><p>In the bottom cell where <span>$i=1$</span>, on the other hand, the diffusive flux is</p><div>\[\begin{align}
-\left ( \d_z K \d_z \Phi \right )_1 &amp;= \frac{  K_2 \left ( \d_z \Phi \right )_2 + F_{\mathrm{bottom}}}{\Delta f_1} \c \\
-&amp;= \frac{F_{\mathrm{bottom}}}{\Delta f_1} + \frac{K_2 \Phi_2 - K_2 \Phi_1}{\Delta f_1 \Delta c_2}
+\left ( \d_z K \d_z \Phi \right )_1 &amp;= \frac{  K_2 \left ( \d_z \Phi \right )_2 + Q_{\mathrm{bottom}}}{\Delta f_1} \c \\
+&amp;= \frac{Q_{\mathrm{bottom}}}{\Delta f_1} + \frac{K_2 \Phi_2 - K_2 \Phi_1}{\Delta f_1 \Delta c_2}
 \label{fluxdivop_bottom}
 \end{align}\]</div><p>For negative advective mass fluxes <span>$M$</span> defined at cell centers (corresponding to downdrafts or down-travelling plumes) imply an advective flux divergence</p><div>\[\beq
 \d_z \left ( M \Phi \right )_i = \frac{M_{i+1} \Phi_{i+1} - M_i \Phi_i}{\Delta c_{i+1}}
