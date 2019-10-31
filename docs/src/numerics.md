@@ -86,8 +86,8 @@ In the top cell where ``i=N``, the diffusive flux is
 
 ```math
 \begin{align}
-\left ( \d_z K \d_z \Phi \right )_N &= \frac{ - F_{\mathrm{top}} - K_N \left ( \d_z \Phi \right )_N}{\Delta f_N} \c \\
-&= -\frac{F_{\mathrm{top}}}{\Delta f_N} - \frac{K_N \Phi_N - K_N \Phi_{N-1}}{\Delta f_N \Delta c_N} \p
+\left ( \d_z K \d_z \Phi \right )_N &= \frac{ - Q_{\mathrm{top}} - K_N \left ( \d_z \Phi \right )_N}{\Delta f_N} \c \\
+&= -\frac{Q_{\mathrm{top}}}{\Delta f_N} - \frac{K_N \Phi_N - K_N \Phi_{N-1}}{\Delta f_N \Delta c_N} \p
  \label{fluxdivop_top}
 \end{align}
 ```
@@ -96,8 +96,8 @@ In the bottom cell where ``i=1``, on the other hand, the diffusive flux is
 
 ```math
 \begin{align}
-\left ( \d_z K \d_z \Phi \right )_1 &= \frac{  K_2 \left ( \d_z \Phi \right )_2 + F_{\mathrm{bottom}}}{\Delta f_1} \c \\
-&= \frac{F_{\mathrm{bottom}}}{\Delta f_1} + \frac{K_2 \Phi_2 - K_2 \Phi_1}{\Delta f_1 \Delta c_2}
+\left ( \d_z K \d_z \Phi \right )_1 &= \frac{  K_2 \left ( \d_z \Phi \right )_2 + Q_{\mathrm{bottom}}}{\Delta f_1} \c \\
+&= \frac{Q_{\mathrm{bottom}}}{\Delta f_1} + \frac{K_2 \Phi_2 - K_2 \Phi_1}{\Delta f_1 \Delta c_2}
 \label{fluxdivop_bottom}
 \end{align}
 ```

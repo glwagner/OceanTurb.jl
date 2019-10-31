@@ -59,10 +59,10 @@ temperature ``T`` are
 
 ```math
 \beqs
-U_t =   f V - \d_z \overline{w u}      \c \label{xmomentum} \\
-V_t = - f U - \d_z \overline{w v}      \c \\
-T_t =       - \d_z \overline{w \theta} + I_\theta \c \label{temperature} \\
-S_t =       - \d_z \overline{w s}      \c \label{salinity} \\
+U_t =   f V - \d_z \overline{w u}      + F_u      \c \label{xmomentum} \\
+V_t = - f U - \d_z \overline{w v}      + F_v      \c \\
+T_t =       - \d_z \overline{w \theta} + F_\theta \c \label{temperature} \\
+S_t =       - \d_z \overline{w s}      + F_s      \c \label{salinity} \\
 \eeqs
 ```
 
@@ -72,7 +72,7 @@ The lowercase variables ``u``, ``v``, ``s``, and ``\theta`` refer to the
 three-dimensional perturbations from horizontal velocity, salinity, and
 temperature, respectively.
 In \eqref{xmomentum}--\eqref{temperature}, internal forcing of
-temperature due to solar radiation is denoted ``I_\Phi``.
+a variable ``\Phi`` is denoted ``F_\phi``.
 
 ## Buoyancy
 
@@ -94,12 +94,12 @@ haline contraction coefficient, respectively.
 
 Turbulence in the ocean surface boundary layer is driven by fluxes from
 the atmosphere above.
-A surface flux of some variable ``\phi`` is denoted ``F_\phi``.
+A surface flux of some variable ``\phi`` is denoted ``Q_\phi``.
 Surface fluxes include
 
-1. Momentum fluxes due to wind, denoted ``F_u \b{x} + F_v \b{y} = -\rho_0 \b{\tau}`` for wind stress ``\b{\tau}``;
-2. Temperature flux ``F_\theta = - Q / \rho_0 c_P`` associated with 'heating' ``Q``;
-3. Salinity flux ``F_s = (E-P)S`` associated evaporation ``E`` and precipitation ``P``.
+1. Momentum fluxes due to wind, denoted ``Q_u \b{x} + Q_v \b{y} = -\rho_0 \b{\tau}`` for wind stress ``\b{\tau}``;
+2. Temperature flux ``Q_\theta = - Q_h / \rho_0 c_P`` associated with 'heating' ``Q_h``;
+3. Salinity flux ``Q_s = (E-P)S`` associated evaporation ``E`` and precipitation ``P``.
 
 We use the traditional convention ordinary to physics, but not always
 ordinary to oceanography, in which a  positive flux corresponds to the
@@ -117,17 +117,17 @@ salinity fluxes:
 
 ```math
 \beq
-F_b = g \left ( \alpha F_\theta - \beta F_s \right ) \p
+Q_b = g \left ( \alpha Q_\theta - \beta Q_s \right ) \p
 \eeq
 ```
 
 The velocity scale of turbulent motions associated with
-buoyancy flux ``F_b`` and velocity fluxes ``F_u`` and
-``F_v`` are
+buoyancy flux ``Q_b`` and velocity fluxes ``Q_u`` and
+``Q_v`` are
 
 ```math
 \beq
-\omega_b \equiv | h F_b |^{1/3} \qquad \text{and} \qquad \omega_\tau \equiv | \b{\tau} / \rho_0 |^{1/2} \p
+\omega_b \equiv | h Q_b |^{1/3} \qquad \text{and} \qquad \omega_\tau \equiv | \b{\tau} / \rho_0 |^{1/2} \p
 \eeq
 ```
 
@@ -136,6 +136,6 @@ turbulent mixing and turbulent fluxes penetrate, ``\b{\tau}`` is wind stress,
 and ``\rho_0 = 1028 \, \mathrm{kg \, m^{-3}}`` is a reference density.
 
 Note that we also define a turbulent velocity scale for
-stabilizing buoyancy fluxes ``F_b < 0``, even though
+stabilizing buoyancy fluxes ``Q_b < 0``, even though
 a stabilizing buoyancy flux suppresses, rather than generates,
 turbulence.
