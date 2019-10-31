@@ -131,7 +131,7 @@ The diffusivity model proposed by Holtslag in 1998 and described in
 uses a cubic shape function and simple stability formulation:
 ```math
 \beq
-K_\phi = \C{\tau}{} \left [ \left ( \frac{\omega_\tau}{\omega_b} \right )^3 
+K_\phi = \C{\tau}{} h \omega_b \left [ \left ( \frac{\omega_\tau}{\omega_b} \right )^3 
     + \C{\tau b}{} d \right ]^{1/3} d \left ( 1 - d \right )^2
 \eeq
 ```
