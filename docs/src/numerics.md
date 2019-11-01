@@ -5,8 +5,6 @@ to discretize momentum, temperature, salinity, and other variables
 in the ``z``-direction.
 A variety of explicit and implicit-explicit schemes are
 implemented for temporal integration.
-At the moment, we only support the treatment of diffusive operators
-implicitly for semi-implicit time-integration.
 
 # Spatial discretization
 
