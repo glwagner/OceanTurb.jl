@@ -25,7 +25,6 @@ function test_pp_diffusion_cosine()
 end
 
 @testset "Pacanowski-Philander" begin
-    include("pptests.jl")
     @test test_pp_basic()
     @test test_pp_diffusion_cosine()
 end

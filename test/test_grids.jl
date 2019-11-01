@@ -34,7 +34,6 @@ function test_uniform_grid_limits_zf_right(T, N, L)
 end
 
 @testset "Grids" begin
-    include("gridtests.jl")
     nz, Lz = 3, 4.2
     for T in (Float64, Float32, Float16)
         @test test_uniform_grid_type(T, nz, Lz)

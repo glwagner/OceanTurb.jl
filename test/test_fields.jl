@@ -184,7 +184,6 @@ function test_relative_error(T)
 end
 
 @testset "Fields" begin
-    include("fieldtests.jl")
     nz, Lz = 3, 4.2
     for T in (Float64,)
         @test test_cell_field_construction(T, nz, Lz)

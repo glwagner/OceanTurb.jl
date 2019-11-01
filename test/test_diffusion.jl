@@ -109,7 +109,6 @@ function test_damping(stepper=:ForwardEuler)
 end
 
 @testset "Diffusion" begin
-    include("diffusiontests.jl")
     @test test_diffusion_basic()
     @test test_diffusion_set_c()
 
