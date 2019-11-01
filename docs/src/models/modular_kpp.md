@@ -24,11 +24,11 @@
 \newcommand{\btau}      {\b{\tau}} % wind stress vector
 
 % Model functions and constants
-\renewcommand{\F}[2]      {\Upsilon^{#1}_{#2}}
-\renewcommand{\C}[2]      {C^{#1}_{#2}}
+\renewcommand{\F}[2]    {\Upsilon^{#1}_{#2}}
+\renewcommand{\C}[2]    {C^{#1}_{#2}}
 
-\newcommand{\uwind}     {\omega_{\tau}}
-\newcommand{\ubuoy}     {\omega_b}
+\newcommand{\uwind}     {u_\star}
+\newcommand{\ubuoy}     {w_\star}
 
 \newcommand{\NL}        {NL}
 ```
@@ -80,21 +80,21 @@ The stabilization function is defined as
 \mathbb M(z) = \int_z^0 \F{\SL}{}(z') \left [
       \left ( \d_z \b{U} \right )^2 - \frac{\d_z B}{\C{\Ri}{}} - \C{\Ek}{} f^2
     \right ] \, \mathrm{d} z'
-    - \C{\K}{} \omega_b^\dagger N^\dagger \c
+    - \C{\K}{} \ubuoy^\dagger N^\dagger \c
 \eeq
 ```
 where
 
 ```math
 \beq
-\omega_b^\dagger(z) \equiv \max \left (0, -z F_b \right )^{1/3} \c
+\ubuoy^\dagger(z) \equiv \max \left (0, -z F_b \right )^{1/3} \c
   \quad \mathrm{and} \quad
 N^\dagger(z) \equiv \max \left (0, \d_z B \right )^{1/2} \p
 \eeq
 ```
 Typically, the mixing function ``\mathbb M(z)`` increases from 0 at ``z=0``
 into the well-mixed region immediately below the surface due to
-``\left ( \d_z \b{U} \right )^2`` and ``\omega_b^\dagger N^\dagger``
+``\left ( \d_z \b{U} \right )^2`` and ``\ubuoy^\dagger N^\dagger``
 during convection, and decreases to negative values in the stratified
 region below the mixing layer due to the stabilizing action of ``-\d_z B / \C{\Ri}{}``.
 The boundary layer depth is defined as the first nonzero depth where ``\mathbb M(z) = 0``.
@@ -121,8 +121,13 @@ for the free parameters in \eqref{stabilization}.
 
 The diffusivity model proposed by 
 [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
-is described in [``K``-Profile model in CVMix KPP](@ref).
-
+(LMD94) is described in [``K``-Profile model in CVMix KPP](@ref).
+(LMD94) propose the ``K``-profile
+```math
+\beq
+K_\phi \propto h \mathcal{W} \Upsilon^d(z, h) \, .
+\eeq
+```
 
 ### Holtslag (1998)
 
@@ -131,7 +136,7 @@ The diffusivity model proposed by Holtslag in 1998 and described in
 uses a cubic shape function and simple stability formulation:
 ```math
 \beq
-K_\phi = \C{\tau}{} h \omega_b \left [ \left ( \frac{\omega_\tau}{\omega_b} \right )^3 
+K_\phi = \C{\tau}{} h \ubuoy \left [ \left ( \frac{\uwind}{\ubuoy} \right )^3 
     + \C{\tau b}{} d \right ]^{1/3} d \left ( 1 - d \right )^2
 \eeq
 ```
@@ -172,6 +177,17 @@ vertical velocity, and ``\breve \Phi`` is plume-averaged concentration of the
 tracer ``\phi``.
 When using a plume model in `ModularKPP`, ``\Phi`` must be interpreted as
 the average concentration of ``\phi`` in the environment, excluding plume regions.
+in `OceanTurb.jl`'s implementation of the
+[Siebesma et al (2007)](https://journals.ametsoc.org/doi/full/10.1175/JAS3888.1)
+the plume vertical velocity variance ``\breve W^2`` is used as a diagnostic variable, 
+rather than ``\breve W``. Due to this, the nonlocal flux in `OceanTurb.jl` becomes
+```math
+\beq
+    NL_\phi = -\C{a}{} \sqrt{\breve W^2} \left ( \Phi - \breve \Phi \right ) \, ,
+\eeq
+```
+where we assume that ``\breve W \le 0``.
+
 
 #### Continuous plume equations
 
@@ -222,7 +238,7 @@ where ``\C{\alpha}{} = 1.0``, and ``\sigma_w(z)`` is an empirical expression for
 vertical velocity standard deviation,
 ```math
 \beq
-    \sigma_w = \left ( \C{\sigma \tau}{} \omega_\tau^3 + \C{\sigma b}{} d \omega_b^3 \right )^{1/3} \left ( 1 - d \right )^{1/2} \, ,
+    \sigma_w = \left ( \C{\sigma \tau}{} \uwind^3 + \C{\sigma b}{} d \ubuoy^3 \right )^{1/3} \left ( 1 - d \right )^{1/2} \, ,
 \eeq
 ```
 with ``\C{\sigma \tau}{} = 2.2`` and ``\C{\sigma b}{} = 1.32``.
@@ -249,14 +265,17 @@ The plume vertical velocity is integrated with an upwind scheme such that
     \left ( \breve B_{i+1} - B_{i+1} - \C{\epsilon}{w} \epsilon(z_{c, i+1}) \breve W^2_{i+1} \right ) \, .
 \eeq
 ```
+The plume integration is stopped if ``\breve W^2[i] \le 0`` for ``i < N-2``, and negative values
+of ``\breve W^2`` are clipped to 0.
 
-For the purpose of numerical integration, the mass flux term is divided into two components, so that
-the environment-averaged scalar equation becomes:
+To numerically integrate the environment-averaged tracer conservation equation, 
+the mass flux term is divided into two components,
 ```math
 \beq
 \partial_t \Phi - \partial_z \left ( K_\Phi \partial_z \Phi \right ) 
-                + \partial_z \left ( \C{a}{} \breve W \Phi \right ) = \C{a}{} \breve W \breve \Phi \, ,
+                + \partial_z \left ( -\C{a}{} \sqrt{\breve W^2} \Phi \right )
+                = - \C{a}{} \sqrt{\breve W^2} \breve \Phi \, ,
 \eeq
 ```
-where the diffusivity and mass flux term on the left are integrate implicitly, and the
-mass flux term on the right is integrated explicitly.
+where the diffusivity and mass flux term on the left are integrated implicitly in time, and the
+mass flux term on the right is integrated explicitly in time.
