@@ -52,11 +52,11 @@ default_NL_shape(d) = ifelse(0<d<1, d*(1-d)^2, -zero(d))
 const default_K_shape = default_NL_shape
 
 mutable struct State{T} <: FieldVector{6, T}
-    Fu :: T
-    Fv :: T
-    Fθ :: T
-    Fs :: T
-    Fb :: T
+    Qu :: T
+    Qv :: T
+    Qθ :: T
+    Qs :: T
+    Qb :: T
     h  :: T
 end
 
@@ -151,7 +151,7 @@ end
 
 # Note: we use 'm' to refer to 'model' in function definitions below.
 
-@inline Fb(g, α, β, Fθ, Fs) = g * (α*Fθ - β*Fs)
+@inline Qb(g, α, β, Qθ, Qs) = g * (α*Qθ - β*Qs)
 
 @propagate_inbounds d(m, i) = ifelse(m.state.h>0, -m.grid.zf[i]/m.state.h, -zero(m.state.h))
 
@@ -165,11 +165,11 @@ Update the top flux conditions and mixing depth for `model`
 and store in `model.state`.
 """
 function update_state!(m)
-    m.state.Fu = getbc(m, m.bcs.U.top)
-    m.state.Fv = getbc(m, m.bcs.V.top)
-    m.state.Fθ = getbc(m, m.bcs.T.top)
-    m.state.Fs = getbc(m, m.bcs.S.top)
-    m.state.Fb = Fb(m.constants.g, m.constants.α, m.constants.β, m.state.Fθ, m.state.Fs)
+    m.state.Qu = getbc(m, m.bcs.U.top)
+    m.state.Qv = getbc(m, m.bcs.V.top)
+    m.state.Qθ = getbc(m, m.bcs.T.top)
+    m.state.Qs = getbc(m, m.bcs.S.top)
+    m.state.Qb = Qb(m.constants.g, m.constants.α, m.constants.β, m.state.Qθ, m.state.Qs)
     m.state.h  = mixing_depth(m)
     return nothing
 end
@@ -213,8 +213,8 @@ i is a face index.
 @propagate_inbounds Δ(c, CSL, i) = surface_layer_average(c, CSL, i) - onface(c, i)
 
 "Returns the parameterization for unresolved KE at face point i."
-@inline function unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β)
-    return CKE * h^(4/3) * sqrt(max(0, Bz)) * max(0, Fb)^(1/3) + CKE₀
+@inline function unresolved_kinetic_energy(h, Bz, Qb, CKE, CKE₀, g, α, β)
+    return CKE * h^(4/3) * sqrt(max(0, Bz)) * max(0, Qb)^(1/3) + CKE₀
 end
 
 """
@@ -223,7 +223,7 @@ end
 Returns the bulk Richardson number of `model` at face `i`.
 """
 @propagate_inbounds function bulk_richardson_number(
-            U, V, T, S, Fb::TT, CKE::TT, CKE₀::TT, CSL::TT,
+            U, V, T, S, Qb::TT, CKE::TT, CKE₀::TT, CSL::TT,
             g::TT, α::TT, β::TT, i) where TT
 
     h = -U.grid.zf[i]
@@ -231,7 +231,7 @@ Returns the bulk Richardson number of `model` at face `i`.
     h⁺ΔB = h * (one(TT) - CSL/2) * g * (α*Δ(T, CSL, i) - β*Δ(S, CSL, i))
 
     KE = (Δ(U, CSL, i)^2 + Δ(V, CSL, i)^2
-              + unresolved_kinetic_energy(h, ∂B∂z(T, S, g, α, β, i), Fb, CKE, CKE₀, g, α, β))
+              + unresolved_kinetic_energy(h, ∂B∂z(T, S, g, α, β, i), Qb, CKE, CKE₀, g, α, β))
 
     if KE == 0 && h⁺ΔB == 0 # Alistar Adcroft's theorem
         return -zero(TT)
@@ -242,7 +242,7 @@ end
 
 @propagate_inbounds bulk_richardson_number(m, i) = bulk_richardson_number(
     m.solution.U, m.solution.V, m.solution.T, m.solution.S,
-    m.state.Fb, m.parameters.CKE, m.parameters.CKE₀, m.parameters.CSL, m.constants.g,
+    m.state.Qb, m.parameters.CKE, m.parameters.CKE₀, m.parameters.CSL, m.constants.g,
     m.constants.α, m.constants.β, i)
 
 """
@@ -290,18 +290,18 @@ end
 #
 
 "Return true if the boundary layer is unstable and convecting."
-@inline isunstable(model) = model.state.Fb > 0
+@inline isunstable(model) = model.state.Qb > 0
 
 "Return true if the boundary layer is forced."
-@inline isforced(model) = model.state.Fu != 0 || model.state.Fv != 0 || model.state.Fb != 0
+@inline isforced(model) = model.state.Qu != 0 || model.state.Qv != 0 || model.state.Qb != 0
 
 "Return the turbuent velocity scale associated with wind stress."
-@inline ωτ(Fu, Fv) = (Fu^2 + Fv^2)^(1/4)
-@inline ωτ(m::AbstractModel) = ωτ(m.state.Fu, m.state.Fv)
+@inline ωτ(Qu, Qv) = (Qu^2 + Qv^2)^(1/4)
+@inline ωτ(m::AbstractModel) = ωτ(m.state.Qu, m.state.Qv)
 
 "Return the turbuent velocity scale associated with convection."
-@inline ωb(Fb, h) = abs(h * Fb)^(1/3)
-@inline ωb(m::AbstractModel) = ωb(m.state.Fb, m.state.h)
+@inline ωb(Qb, h) = abs(h * Qb)^(1/3)
+@inline ωb(m::AbstractModel) = ωb(m.state.Qb, m.state.h)
 
 "Return the vertical velocity scale at depth d for a stable boundary layer."
 @inline 𝒲_stable(Cτ, Cstab, Cn, ωτ, ωb, d) = Cτ * ωτ / (1 + Cstab * d * (ωb/ωτ)^3)^Cn
@@ -387,19 +387,19 @@ For example, positive heat flux out of the surface implies cooling.
 """
 @inline NL(CNL, flux, d, shape=default_NL_shape) = CNL * flux * shape(d)
 
-@inline function ∂NL∂z(CNL::T, Fϕ, dᵢ₊₁, dᵢ, Δf, m) where T
+@inline function ∂NL∂z(CNL::T, Qϕ, dᵢ₊₁, dᵢ, Δf, m) where T
     if isunstable(m)
-        return (NL(CNL, Fϕ, dᵢ₊₁) - NL(CNL, Fϕ, dᵢ)) / Δf
+        return (NL(CNL, Qϕ, dᵢ₊₁) - NL(CNL, Qϕ, dᵢ)) / Δf
     else
         return -zero(T)
     end
 end
 
 @propagate_inbounds ∂NLT∂z(m, i) =
-    ∂NL∂z(m.parameters.CNL, m.state.Fθ, d(m, i+1), d(m, i), Δf(m.grid, i), m)
+    ∂NL∂z(m.parameters.CNL, m.state.Qθ, d(m, i+1), d(m, i), Δf(m.grid, i), m)
 
 @propagate_inbounds ∂NLS∂z(m, i) =
-    ∂NL∂z(m.parameters.CNL, m.state.Fs, d(m, i+1), d(m, i), Δf(m.grid, i), m)
+    ∂NL∂z(m.parameters.CNL, m.state.Qs, d(m, i+1), d(m, i), Δf(m.grid, i), m)
 
 #
 # Equation specification
@@ -422,14 +422,14 @@ const KV = KU
 
 function nonlocal_salinity_flux!(flux, m)
     for i in interiorindices(flux)
-        @inbounds flux[i] = NL(m.parameters.CNL, m.state.Fs, d(m, i))
+        @inbounds flux[i] = NL(m.parameters.CNL, m.state.Qs, d(m, i))
     end
     return nothing
 end
 
 function nonlocal_temperature_flux!(flux, m)
     for i in interiorindices(flux)
-        @inbounds flux[i] = NL(m.parameters.CNL, m.state.Fθ, d(m, i))
+        @inbounds flux[i] = NL(m.parameters.CNL, m.state.Qθ, d(m, i))
     end
     return nothing
 end

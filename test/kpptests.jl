@@ -155,10 +155,10 @@ function test_buoyancy_gradient(; γ=0.01, g=9.81, ρ₀=1028, α=2e-4, β=0.0, 
     model.solution.T = T₀
     Bz_answer = g * α * γ
     Bz = KPP.∂B∂z(model.solution.T, model.solution.S, g, α, β, 3)
-    Bz ≈ Bz_answer
+    return Bz ≈ Bz_answer
 end
 
-function test_unresolved_KE(; CKE=0.1, CKE₀=1e-11, Fb=1e-7, γ=0.01, g=9.81,
+function test_unresolved_KE(; CKE=0.1, CKE₀=1e-11, Qb=1e-7, γ=0.01, g=9.81,
                                 ρ₀=1028, α=2e-4, β=0.0, N=10, L=1.0)
     Bz = g * α * γ
     T₁(z) = γ*z
@@ -172,30 +172,30 @@ function test_unresolved_KE(; CKE=0.1, CKE₀=1e-11, Fb=1e-7, γ=0.01, g=9.81,
     # Test for Bz > 0
     model.solution.T = T₁
     Bz = KPP.∂B∂z(T, S, model.constants.g, model.constants.α, model.constants.β, i)
-    ke₁ = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β)
-    ke₁_answer = CKE * h^(4/3) * sqrt(Bz) * Fb^(1/3) + CKE₀
+    ke₁ = KPP.unresolved_kinetic_energy(h, Bz, Qb, CKE, CKE₀, g, α, β)
+    ke₁_answer = CKE * h^(4/3) * sqrt(Bz) * Qb^(1/3) + CKE₀
 
     # Test for Bz < 0
     model.solution.T = T₂
     Bz = KPP.∂B∂z(T, S, model.constants.g, model.constants.α, model.constants.β, i)
-    ke₂ = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, β)
+    ke₂ = KPP.unresolved_kinetic_energy(h, Bz, Qb, CKE, CKE₀, g, α, β)
     ke₂_answer = CKE₀
 
-    ke₂ ≈ ke₂_answer && ke₁ ≈ ke₁_answer
+    return ke₂ ≈ ke₂_answer && ke₁ ≈ ke₁_answer
 end
 
-function test_update_state(; N=10, L=20, Fθ=5.1e-3)
+function test_update_state(; N=10, L=20, Qθ=5.1e-3)
     model = KPP.Model(N=N, L=L)
-    temperature_bc = FluxBoundaryCondition(Fθ)
+    temperature_bc = FluxBoundaryCondition(Qθ)
     model.bcs.T.top = temperature_bc
 
     KPP.update_state!(model)
 
-    model.state.Fθ == Fθ
+    return model.state.Qθ == Qθ
 end
 
 function test_bulk_richardson_number(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
-                                       CKE₀=0.0, γ=0.01, N=20, L=20, Fb=2.1e-5)
+                                       CKE₀=0.0, γ=0.01, N=20, L=20, Qb=2.1e-5)
     parameters = KPP.Parameters(CRi=CRi, CKE=CKE, CKE₀=CKE₀, CSL=0.1/N)
     constants = KPP.Constants(g=g, α=α)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
@@ -209,8 +209,8 @@ function test_bulk_richardson_number(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
     T_N = T[N]
     B_N = g*α*T[N]
 
-    Fθ = Fb / (g*α)
-    top_bc_T = FluxBoundaryCondition(Fθ)
+    Qθ = Qb / (g*α)
+    top_bc_T = FluxBoundaryCondition(Qθ)
     model.bcs.T.top = top_bc_T
     KPP.update_state!(model)
 
@@ -222,7 +222,7 @@ function test_bulk_richardson_number(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
         h = - model.grid.zf[i]
         h⁺ = h * (1 - 0.5*model.parameters.CSL)
         Bz = KPP.∂B∂z(T, S, model.constants.g, model.constants.α, model.constants.β, i)
-        uke = KPP.unresolved_kinetic_energy(h, Bz, Fb, CKE, CKE₀, g, α, model.constants.β)
+        uke = KPP.unresolved_kinetic_energy(h, Bz, Qb, CKE, CKE₀, g, α, model.constants.β)
         Ri_answer[i] = h⁺ * (B_N - g*α*T₀(-h)) / uke
     end
 
@@ -230,7 +230,7 @@ function test_bulk_richardson_number(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
 end
 
 function test_mixing_depth_convection(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
-                                       γ=0.01, N=200, L=20, Fb=4.1e-5)
+                                       γ=0.01, N=200, L=20, Qb=4.1e-5)
     parameters = KPP.Parameters(CRi=CRi, CKE=CKE, CKE₀=0.0, CSL=0.1/N)
     constants = KPP.Constants(g=g, α=α)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
@@ -240,8 +240,8 @@ function test_mixing_depth_convection(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
     model.solution.T = T₀
     model.solution.T[N] = 0
 
-    Fθ = Fb / (g*α)
-    temperature_bc = FluxBoundaryCondition(Fθ)
+    Qθ = Qb / (g*α)
+    temperature_bc = FluxBoundaryCondition(Qθ)
     model.bcs.T.top = temperature_bc
     KPP.update_state!(model)
 
@@ -251,7 +251,7 @@ function test_mixing_depth_convection(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
     end
 
     h = KPP.mixing_depth(model)
-    h_answer = (CRi*CKE)^(3/2) * (α*g*γ)^(-3/4) * sqrt(Fb) / (1 - 0.5*model.parameters.CSL)
+    h_answer = (CRi*CKE)^(3/2) * (α*g*γ)^(-3/4) * sqrt(Qb) / (1 - 0.5*model.parameters.CSL)
 
     isapprox(h, h_answer, rtol=1e-3)
 end
@@ -308,14 +308,14 @@ function test_convective_velocity()
     T₀(z) = γ*z
     model.solution.T = T₀
 
-    Fb = 2.1
-    Fθ = Fb / (model.constants.α*model.constants.g)
-    model.bcs.T.top = FluxBoundaryCondition(Fθ)
+    Qb = 2.1
+    Qθ = Qb / (model.constants.α*model.constants.g)
+    model.bcs.T.top = FluxBoundaryCondition(Qθ)
     KPP.update_state!(model)
 
     h = KPP.mixing_depth(model)
 
-    KPP.ωb(model) ≈ (h*Fb)^(1/3)
+    KPP.ωb(model) ≈ (h*Qb)^(1/3)
 end
 
 function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, CSL=1e-16)
@@ -329,13 +329,13 @@ function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, CSL=
     model.solution.T = T₀
     model.solution.T[N] = 0
 
-    Fb = 100
-    model.bcs.T.top = FluxBoundaryCondition(Fb)
+    Qb = 100
+    model.bcs.T.top = FluxBoundaryCondition(Qb)
     KPP.update_state!(model)
 
     i = 16
-    h = sqrt(Fb) / (1-0.5CSL) # requires h to be an integer... ?
-    ωb = (h*Fb)^(1/3)
+    h = sqrt(Qb) / (1-0.5CSL) # requires h to be an integer... ?
+    ωb = (h*Qb)^(1/3)
 
     (KPP.𝒲_U(model, i) ≈ Cb_U * CSL^(1/3) * ωb &&
      KPP.𝒲_V(model, i) ≈ Cb_U * CSL^(1/3) * ωb &&
@@ -359,11 +359,11 @@ function test_turb_velocity_pure_wind(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1.0)
     @views T.data[1:ih-1] .= -T₀
     @views U.data[1:ih-1] .= -U₀
 
-    Fu = 2.1
-    model.bcs.U.top = FluxBoundaryCondition(Fu)
+    Qu = 2.1
+    model.bcs.U.top = FluxBoundaryCondition(Qu)
     KPP.update_state!(model)
 
-    𝒲 = Cτ * sqrt(Fu)
+    𝒲 = Cτ * sqrt(Qu)
 
     (KPP.𝒲_U(model, 3) == 𝒲 &&
      KPP.𝒲_V(model, 3) == 𝒲 &&
@@ -388,17 +388,17 @@ function test_turb_velocity_wind_stab(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1.0, C
     @views T.data[1:ih-1] .= -T₀
     @views U.data[1:ih-1] .= -U₀
 
-    Fu = 2.1
-    model.bcs.U.top = FluxBoundaryCondition(Fu)
-    Fθ = -1.3
-    model.bcs.T.top = FluxBoundaryCondition(Fθ)
+    Qu = 2.1
+    model.bcs.U.top = FluxBoundaryCondition(Qu)
+    Qθ = -1.3
+    model.bcs.T.top = FluxBoundaryCondition(Qθ)
     KPP.update_state!(model)
 
-    rb = abs(h*Fθ) / Fu^(3/2)
+    rb = abs(h*Qθ) / Qu^(3/2)
 
     id = 16 # d=5/9
     d = 5/9
-    𝒲 = Cτ * sqrt(Fu) / (1 + Cstab * rb * d)
+    𝒲 = Cτ * sqrt(Qu) / (1 + Cstab * rb * d)
 
     (KPP.𝒲_U(model, id) ≈ 𝒲 &&
      KPP.𝒲_V(model, id) ≈ 𝒲 &&
@@ -424,23 +424,23 @@ function test_turb_velocity_wind_unstab(; CKE=0.0, CSL=0.5, Cτ=0.7, N=20,
     @views T.data[1:ih-1] .= -T₀
     @views U.data[1:ih-1] .= -U₀
 
-    Fu = 2.1
-    model.bcs.U.top = FluxBoundaryCondition(Fu)
-    Fθ = 1.1
-    model.bcs.T.top = FluxBoundaryCondition(Fθ)
+    Qu = 2.1
+    model.bcs.U.top = FluxBoundaryCondition(Qu)
+    Qθ = 1.1
+    model.bcs.T.top = FluxBoundaryCondition(Qθ)
     KPP.update_state!(model)
 
-    rb = abs(h*Fθ) / (Fu)^(3/2)
+    rb = abs(h*Qθ) / (Qu)^(3/2)
     id1 = 16 # d=5/9
     id2 = 18 # d=3/9
     d1 = 5/9
     d2 = 3/9
 
-    𝒲_U1 = Cτ * sqrt(Fu) * (1 + Cunst * rb * CSL)^(1/4)
-    𝒲_T1 = Cτ * sqrt(Fu) * (1 + Cunst * rb * CSL)^(1/2)
+    𝒲_U1 = Cτ * sqrt(Qu) * (1 + Cunst * rb * CSL)^(1/4)
+    𝒲_T1 = Cτ * sqrt(Qu) * (1 + Cunst * rb * CSL)^(1/2)
 
-    𝒲_U2 = Cτ * sqrt(Fu) * (1 + Cunst * rb * d2)^(1/4)
-    𝒲_T2 = Cτ * sqrt(Fu) * (1 + Cunst * rb * d2)^(1/2)
+    𝒲_U2 = Cτ * sqrt(Qu) * (1 + Cunst * rb * d2)^(1/4)
+    𝒲_T2 = Cτ * sqrt(Qu) * (1 + Cunst * rb * d2)^(1/2)
 
     (KPP.𝒲_U(model, id1) ≈ 𝒲_U1 &&
      KPP.𝒲_V(model, id1) ≈ 𝒲_U1 &&
@@ -472,13 +472,13 @@ function test_conv_velocity_wind(; CKE=0.0, CKE₀=0.0, CSL=0.5, Cτ=0.7, N=20, 
     @views T.data[1:ih-1] .= -T₀
     @views U.data[1:ih-1] .= -U₀
 
-    Fu = -2.1
-    model.bcs.U.top = FluxBoundaryCondition(Fu)
-    Fθ = 0.5
-    model.bcs.T.top = FluxBoundaryCondition(Fθ)
+    Qu = -2.1
+    model.bcs.U.top = FluxBoundaryCondition(Qu)
+    Qθ = 0.5
+    model.bcs.T.top = FluxBoundaryCondition(Qθ)
     KPP.update_state!(model)
 
-    rb = abs(h*Fθ) / abs(Fu)^(3/2)
+    rb = abs(h*Qθ) / abs(Qu)^(3/2)
     rτ = 1/rb
     id1 = 16 # d=5/9
     id2 = 18 # d=3/9
@@ -488,20 +488,20 @@ function test_conv_velocity_wind(; CKE=0.0, CKE₀=0.0, CSL=0.5, Cτ=0.7, N=20, 
     Cτb_U = model.parameters.Cτb_U
     Cτb_T = model.parameters.Cτb_T
 
-    𝒲_U1 = Cb_U * abs(h*Fθ)^(1/3) * (CSL + Cτb_U * rτ)^(1/3)
-    𝒲_T1 = Cb_T * abs(h*Fθ)^(1/3) * (CSL + Cτb_T * rτ)^(1/3)
+    𝒲_U1 = Cb_U * abs(h*Qθ)^(1/3) * (CSL + Cτb_U * rτ)^(1/3)
+    𝒲_T1 = Cb_T * abs(h*Qθ)^(1/3) * (CSL + Cτb_T * rτ)^(1/3)
 
-    𝒲_U2 = Cb_U * abs(h*Fθ)^(1/3) * (d2 + Cτb_U * rτ)^(1/3)
-    𝒲_T2 = Cb_T * abs(h*Fθ)^(1/3) * (d2 + Cτb_T * rτ)^(1/3)
+    𝒲_U2 = Cb_U * abs(h*Qθ)^(1/3) * (d2 + Cτb_U * rτ)^(1/3)
+    𝒲_T2 = Cb_T * abs(h*Qθ)^(1/3) * (d2 + Cτb_T * rτ)^(1/3)
 
-    (KPP.𝒲_U(model, id1) ≈ 𝒲_U1 &&
-     KPP.𝒲_V(model, id1) ≈ 𝒲_U1 &&
-     KPP.𝒲_T(model, id1) ≈ 𝒲_T1 &&
-     KPP.𝒲_S(model, id1) ≈ 𝒲_T1 &&
-     KPP.𝒲_U(model, id2) ≈ 𝒲_U2 &&
-     KPP.𝒲_V(model, id2) ≈ 𝒲_U2 &&
-     KPP.𝒲_T(model, id2) ≈ 𝒲_T2 &&
-     KPP.𝒲_S(model, id2) ≈ 𝒲_T2 )
+    return (KPP.𝒲_U(model, id1) ≈ 𝒲_U1 &&
+            KPP.𝒲_V(model, id1) ≈ 𝒲_U1 &&
+            KPP.𝒲_T(model, id1) ≈ 𝒲_T1 &&
+            KPP.𝒲_S(model, id1) ≈ 𝒲_T1 &&
+            KPP.𝒲_U(model, id2) ≈ 𝒲_U2 &&
+            KPP.𝒲_V(model, id2) ≈ 𝒲_U2 &&
+            KPP.𝒲_T(model, id2) ≈ 𝒲_T2 &&
+            KPP.𝒲_S(model, id2) ≈ 𝒲_T2 )
 end
 
 function test_diffusivity_plain(; K₀=1.1)
@@ -521,10 +521,10 @@ function test_diffusivity_plain(; K₀=1.1)
         KS[i] = KPP.KS(model, i)
     end
 
-    (!any(@. KU.data != K₀) &&
-     !any(@. KV.data != K₀) &&
-     !any(@. KT.data != K₀) &&
-     !any(@. KS.data != K₀) )
+    return (!any(@. KU.data != K₀) &&
+            !any(@. KV.data != K₀) &&
+            !any(@. KT.data != K₀) &&
+            !any(@. KS.data != K₀) )
 end
 
 
@@ -548,7 +548,7 @@ function test_kpp_diffusion_cosine(stepper=:ForwardEuler)
     iterate!(model, dt)
 
     # The error tolerance is a bit arbitrary.
-    norm(c_ans.(z, time(model)) .- data(model.solution.T)) < model.grid.N*1e-6
+    return norm(c_ans.(z, time(model)) .- data(model.solution.T)) < model.grid.N*1e-6
 end
 
 function test_flux(stepper=:ForwardEuler; fieldname=:U, top_flux=0.3, bottom_flux=0.13, N=10)
