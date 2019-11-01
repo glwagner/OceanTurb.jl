@@ -101,7 +101,8 @@ function Model(; N=10, L=1.0,
 
      K = Accessory{Function}(KU, KV, KT, KS)
      R = Accessory{Function}(RU, RV, RT, RS)
-    eq = Equation(K=K, R=R, update=update_state!)
+     M = Accessory{Function}(MU, MV, MT, MS)
+    eq = Equation(K=K, R=R, M=M, update=update_state!)
 
        state = State(diffusivity, nonlocalflux, mixingdepth, grid)
     solution = Solution((CellField(grid) for i=1:nsol)...)
