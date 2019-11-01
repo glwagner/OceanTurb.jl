@@ -16,7 +16,7 @@ end
 
 bulk_richardson_number(m::AbstractModel, i) = KPP.bulk_richardson_number(
     m.solution.U, m.solution.V, m.solution.T, m.solution.S,
-    m.state.Fb, m.mixingdepth.CKE, m.mixingdepth.CKE₀, m.mixingdepth.CSL, m.constants.g,
+    m.state.Qb, m.mixingdepth.CKE, m.mixingdepth.CKE₀, m.mixingdepth.CSL, m.constants.g,
     m.constants.α, m.constants.β, i)
 
 """
@@ -92,7 +92,7 @@ h_kernel(m, i) = h_kernel(m.solution.U, m.solution.V, m.solution.T, m.solution.S
 function unresolved_kinetic_energy(m, i)
     @inbounds unresolved_kinetic_energy(-m.grid.zf[i],
         ∂B∂z(m.solution.T, m.solution.S, m.constants.g, m.constants.α, m.constants.β, i),
-        m.state.Fb, m.mixingdepth.CKE, 0, m.constants.g, m.constants.α, m.constants.β)
+        m.state.Qb, m.mixingdepth.CKE, 0, m.constants.g, m.constants.α, m.constants.β)
 end
 
 "Calculate the mixing depth criterion function by integrating from z=0 downwards."
@@ -128,5 +128,3 @@ function mixing_depth(m::Model{K, NL, <:ROMSMixingDepth}) where {K, NL}
 
     return -z★
 end
-
-

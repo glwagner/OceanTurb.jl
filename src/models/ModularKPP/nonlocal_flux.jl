@@ -1,23 +1,31 @@
-# Fallbacks
-update_nonlocal_flux!(m) = nothing
-
-initialize_plumes(args...) = (T=nothing, S=nothing, W²=nothing)
-
-massflux(model, i) = 0
+#####
+##### Counter gradient flux model proposed by Large et al (1994)
+#####
 
 Base.@kwdef struct LMDCounterGradientFlux{T} <: AbstractParameters
     CNL :: T = 6.33 # Mass flux proportionality constant
 end
 
+const CGModel = Model{K, <:LMDCounterGradientFlux} where K
+
+update_nonlocal_flux!(model::CGModel) = nothing
+
+initialize_plumes(::LMDCounterGradientFlux, grid) = (T=nothing, S=nothing, W²=nothing)
+
+mass_flux(m::CGModel, i) = 0
+
 ∂z_explicit_nonlocal_flux_T(m::Model{K, <:LMDCounterGradientFlux}, i) where K =
-    KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Fθ, d(m, i+1), d(m, i), Δf(m.grid, i), m)
+    KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Qθ, d(m, i+1), d(m, i), Δf(m.grid, i), m)
 
 ∂z_explicit_nonlocal_flux_S(m::Model{K, <:LMDCounterGradientFlux}, i) where K =
-    KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Fs, d(m, i+1), d(m, i), Δf(m.grid, i), m)
+    KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Qs, d(m, i+1), d(m, i), Δf(m.grid, i), m)
 
-mass_flux(m::Model{K, <:LMDCounterGradientFlux}, i) where K = 0
+#####
+##### Diagnostic plume model
+#####
 
-Base.@kwdef struct BulkPlumeParameters{T} <: AbstractParameters
+Base.@kwdef struct DiagnosticPlumeModel{T} <: AbstractParameters
+     Ca :: T = 0.1
      Cw :: T = 2.86
      Ce :: T = 0.4
     Cew :: T = 0.2
@@ -26,97 +34,103 @@ Base.@kwdef struct BulkPlumeParameters{T} <: AbstractParameters
     Cσb :: T = 1.32
 end
 
-initialize_plumes(::BulkPlumeParameters, grid) = 
+initialize_plumes(::DiagnosticPlumeModel, grid) = 
     (T=CellField(grid), S=CellField(grid), W²=CellField(grid))
 
 #####
 ##### Empirical standard deviation
 #####
 
-w_standard_dev(ωb, ωτ, Cσ, Cσb, d) = (Cστ * ωτ^3 + Cσb * ωb^3 * d)^(1/3) * (1 - d)^(1/2)
+@inline w_standard_dev(ωb, ωτ, Cστ, Cσb, d) = (Cστ * ωτ^3 + Cσb * ωb^3 * d)^(1/3) * (1 - d)^(1/2)
 
-w_standard_dev(m, i) = w_standard_dev(ωb(m), ωτ(m), m.nonlocalflux.Cσ, 
-                                      m.nonlocalflux.Cσb, d(m, i))
+@inline w_standard_dev(m, i) = w_standard_dev(ωb(m), ωτ(m), m.nonlocalflux.Cστ, 
+                                              m.nonlocalflux.Cσb, d(m, i))
 
 #####
 ##### Entrainment
 #####
 
-entrainment(Ce, h, Δz, z) = Ce * (- 1 / (z + Δz) + 1 / (h + z + Δz))
+@inline entrainment(Ce, h, Δz, z) = Ce * (- 1 / (z + Δz) + 1 / (h + z + Δz))
 
-entrainment(model, i) = @inbounds entrainment(model.nonlocalflux.Ce, model.state.h, 
-                                              Δc(model.grid, 1), model.grid.zc[i])
+@inline entrainment(i, grid, model) = @inbounds entrainment(model.nonlocalflux.Ce, model.state.h, 
+                                                            Δc(grid, 1), grid.zc[i])
 
 #####
 ##### Buoyancy
 #####
 
-plume_buoyancy_excess(T̆, S̆, T, S, α, β, g, i) =
+plume_buoyancy_excess(i, grid, T̆, S̆, T, S, α, β, g) =
     @inbounds g * (α*(T̆[i] - T[i]) - β*(S̆[i] - S[i]))
 
 #####
 ##### Plume boundary conditions
 #####
 
-function scalar_plume_boundary_condition!(ϕ̆, ϕ, Qϕ, Cα)
-    n = model.grid.N
+function set_tracer_plume_bc!(ϕ̆, ϕ, Qϕ, Cα, model)
+    n = ϕ̆.grid.N
 
     # Surface layer model: √w² Δϕ̆ = - C Qϕ, where Δϕ̆ is plume excess.
-    @inbounds ϕ̆[n] = ϕ[n] - Cα * Qϕ / w_standard_dev(m, n)
+    @inbounds ϕ̆[n] = ϕ[n] - Cα * Qϕ / w_standard_dev(model, n)
+
+    # Set halo point just in case to ensure zero mass flux.
+    @inbounds ϕ̆[n+1] = ϕ̆[n]
     return nothing
 end
 
-vertical_momentum_plume_boundary_condition!(Ŵ) = @inbounds Ŵ[model.grid.N] = 0
+function set_vertical_momentum_plume_bc!(W²)
+    @inbounds W²[W².grid.N+1] = 0
+    @inbounds W²[W².grid.N] = 0
+    return nothing
+end
 
 #####
 ##### Plume equations
 #####
 
-function update_nonlocal_flux!(model)
+function update_nonlocal_flux!(model::Model{K, <:DiagnosticPlumeModel}) where K
 
-    scalar_plume_boundary_condition!(model.state.plumes.T, model.solution.T,
-                                     model.state.QT, model.nonlocalflux.Cα)
+    set_tracer_plume_bc!(model.state.plumes.T, model.solution.T,
+                         model.state.Qθ, model.nonlocalflux.Cα, model)
 
-    scalar_plume_boundary_condition!(model.state.plumes.S, model.solution.S,
-                                     model.state.QS, model.nonlocalflux.Cα)
+    set_tracer_plume_bc!(model.state.plumes.S, model.solution.S,
+                         model.state.Qs, model.nonlocalflux.Cα, model)
 
-    vertical_momentum_plume_boundary_condition!(model.state.plumes.W²)
+    set_vertical_momentum_plume_bc!(model.state.plumes.W²)
 
-    T = model.solution.T
-    S = model.solution.S
-
-    T̆  = model.state.plumes.T
-    S̆  = model.state.plumes.S
-    W̆² = model.state.plumes.W²
-
-    # Integrate from surface cell `N` downwards
-    for i in model.grid.N-1:-1:1
-        @inbounds T̆[i] = T̆[i+1] + Δc(grid, i+1) * entrainment(model, i+1) * (T̆[i+1] - T[i+1])
-        @inbounds S̆[i] = S̆[i+1] + Δc(grid, i+1) * entrainment(model, i+1) * (S̆[i+1] - S[i+1])
-
-        ΔB̆ᵢ₊₁ = plume_buoyancy_excess(T̆, S̆, T, S, model.constants.α, model.constants.β, 
-                                      model.constants.g, i+1)
-
-        @inbounds W̆²[i] = (W̆²[i+1] + model.nonlocalflux.Cw * Δc(grid, i+1) * 
-            (ΔB̆ᵢ₊₁ - model.nonlocalflux.Cew * entrainment(model, i+1) * W̆²[i+1]))
-    end
-
-    # Fill halos to ensure zero mass flux in first cell?
-    #@inbounds T̆[0] = T̆[1]
-    #@inbounds S̆[0] = S̆[1]
-    #@inbounds W̆²[0] = 0
+    integrate_plume_equations!(model.state.plumes.T, model.state.plumes.S, model.state.plumes.W²,
+                               model.solution.T, model.solution.S, model.grid, model)
 
     return nothing
 end
 
-mass_flux(m::Model{K, <:BulkPlumeParameters}, i) where K = 
-    @inbounds m.nonlocalflux.Ca * sqrt(model.state.plumes.W̆²[i])
+function integrate_plume_equations!(T̆, S̆, W̆², T, S, grid, model)
+    # Integrate from surface cell `N` downwards
+    for i in grid.N-1:-1:1
+        @inbounds T̆[i] = T̆[i+1] + Δc(grid, i+1) * entrainment(i+1, grid, model) * (T̆[i+1] - T[i+1])
+        @inbounds S̆[i] = S̆[i+1] + Δc(grid, i+1) * entrainment(i+1, grid, model) * (S̆[i+1] - S[i+1])
 
-M_Φ(i, grid, Φ, model) = @inbounds mass_flux(model, i) * Φ[i]
+        ΔB̆ᵢ₊₁ = plume_buoyancy_excess(i+1, grid, T̆, S̆, T, S, model.constants.α, model.constants.β, 
+                                      model.constants.g)
+
+        @inbounds W̆²[i] = (W̆²[i+1] + model.nonlocalflux.Cw * Δc(grid, i+1) * 
+            (ΔB̆ᵢ₊₁ - model.nonlocalflux.Cew * entrainment(i+1, grid, model) * W̆²[i+1]))
+    end
+
+    return nothing
+end
+
+#####
+##### Mass flux contribution to tracer budgets
+#####
+
+mass_flux(m::Model{K, <:DiagnosticPlumeModel}, i) where K = 
+    @inbounds m.nonlocalflux.Ca * sqrt(m.state.plumes.W²[i])
+
+@inline M_Φ(i, grid, Φ, model) = @inbounds mass_flux(model, i) * Φ[i]
 
 # Use upwards-biased difference to effect upwind differencing for downward-travelling plumes:
-∂z_explicit_nonlocal_flux_T(model::Model{K, <:BulkPlumeParameters}, i) where K =
-    @inbounds ∂z⁺(i, grid, M_Φ, m.state.plumes.T, model)
+∂z_explicit_nonlocal_flux_T(m::Model{K, <:DiagnosticPlumeModel}, i) where K =
+    @inbounds ∂z⁺(i, m.grid, M_Φ, m.state.plumes.T, m)
 
-∂z_explicit_nonlocal_flux_S(model::Model{K, <:BulkPlumeParameters}, i) where K =
-    @inbounds ∂z⁺(i, grid, M_Φ, m.state.plumes.S, model)
+∂z_explicit_nonlocal_flux_S(m::Model{K, <:DiagnosticPlumeModel}, i) where K =
+    @inbounds ∂z⁺(i, m.grid, M_Φ, m.state.plumes.S, m)

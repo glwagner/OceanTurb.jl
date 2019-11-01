@@ -92,7 +92,7 @@ function Model(; N=10, L=1.0,
      diffusivity = LMDDiffusivity(),
     nonlocalflux = LMDCounterGradientFlux(),
      mixingdepth = LMDMixingDepth(),
-        kprofile = DiffusivityShape(),
+        kprofile = StandardCubicPolynomial(),
          stepper = :BackwardEuler,
              bcs = ModelBoundaryConditions(eltype(grid)),
          forcing = Forcing()
