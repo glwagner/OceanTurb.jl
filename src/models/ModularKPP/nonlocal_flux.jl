@@ -41,7 +41,13 @@ initialize_plumes(::DiagnosticPlumeModel, grid) =
 ##### Empirical standard deviation
 #####
 
-@inline w_standard_dev(ωb, ωτ, Cστ, Cσb, d) = (Cστ * ωτ^3 + Cσb * ωb^3 * d)^(1/3) * (1 - d)^(1/2)
+@inline function w_standard_dev(ωb, ωτ, Cστ, Cσb, d::T) where T
+    if 0 < d < 1
+        return (Cστ * ωτ^3 + Cσb * ωb^3 * d)^(1/3) * (1 - d)^(1/2)
+    else
+        return zero(T)
+    end
+end
 
 @inline w_standard_dev(m, i) = w_standard_dev(ωb(m), ωτ(m), m.nonlocalflux.Cστ, 
                                               m.nonlocalflux.Cσb, d(m, i))
@@ -54,13 +60,6 @@ initialize_plumes(::DiagnosticPlumeModel, grid) =
 
 @inline entrainment(i, grid, model) = @inbounds entrainment(model.nonlocalflux.Ce, model.state.h, 
                                                             Δc(grid, 1), grid.zc[i])
-
-#####
-##### Buoyancy
-#####
-
-plume_buoyancy_excess(i, grid, T̆, S̆, T, S, α, β, g) =
-    @inbounds g * (α*(T̆[i] - T[i]) - β*(S̆[i] - S[i]))
 
 #####
 ##### Plume boundary conditions
@@ -87,6 +86,13 @@ end
 ##### Plume equations
 #####
 
+#####
+##### Buoyancy
+#####
+
+plume_buoyancy_excess(i, grid, T̆, S̆, T, S, α, β, g) =
+    @inbounds g * (α*(T̆[i] - T[i]) - β*(S̆[i] - S[i]))
+
 function update_nonlocal_flux!(model::Model{K, <:DiagnosticPlumeModel}) where K
 
     set_tracer_plume_bc!(model.state.plumes.T, model.solution.T,
@@ -106,14 +112,23 @@ end
 function integrate_plume_equations!(T̆, S̆, W̆², T, S, grid, model)
     # Integrate from surface cell `N` downwards
     for i in grid.N-1:-1:1
-        @inbounds T̆[i] = T̆[i+1] + Δc(grid, i+1) * entrainment(i+1, grid, model) * (T̆[i+1] - T[i+1])
-        @inbounds S̆[i] = S̆[i+1] + Δc(grid, i+1) * entrainment(i+1, grid, model) * (S̆[i+1] - S[i+1])
+        if i > 2 && W̆²[i+1] == 0 # Plume vanishes at i+1 or above: set plume quantities to zero below.
+            @inbounds W̆²[i] = 0
+            @inbounds T̆[i] = 0
+            @inbounds S̆[i] = 0
+        else # We have a plume
+            @inbounds T̆[i] = T̆[i+1] + Δc(grid, i+1) * entrainment(i+1, grid, model) * (T̆[i+1] - T[i+1])
+            @inbounds S̆[i] = S̆[i+1] + Δc(grid, i+1) * entrainment(i+1, grid, model) * (S̆[i+1] - S[i+1])
 
-        ΔB̆ᵢ₊₁ = plume_buoyancy_excess(i+1, grid, T̆, S̆, T, S, model.constants.α, model.constants.β, 
-                                      model.constants.g)
+            ΔB̆ᵢ₊₁ = plume_buoyancy_excess(i+1, grid, T̆, S̆, T, S, model.constants.α, model.constants.β, 
+                                          model.constants.g)
+            @inbounds W̆²[i] = (W̆²[i+1] + model.nonlocalflux.Cw * Δc(grid, i+1) * 
+                (ΔB̆ᵢ₊₁ - model.nonlocalflux.Cew * entrainment(i+1, grid, model) * W̆²[i+1]))
 
-        @inbounds W̆²[i] = (W̆²[i+1] + model.nonlocalflux.Cw * Δc(grid, i+1) * 
-            (ΔB̆ᵢ₊₁ - model.nonlocalflux.Cew * entrainment(i+1, grid, model) * W̆²[i+1]))
+            if W̆²[i] < 0 # Plume energy is negative:
+                W̆²[i] = 0 # Stop the plume
+            end
+        end
     end
 
     return nothing
@@ -124,7 +139,7 @@ end
 #####
 
 mass_flux(m::Model{K, <:DiagnosticPlumeModel}, i) where K = 
-    @inbounds m.nonlocalflux.Ca * sqrt(m.state.plumes.W²[i])
+    @inbounds -m.nonlocalflux.Ca * sqrt(m.state.plumes.W²[i])
 
 @inline M_Φ(i, grid, Φ, model) = @inbounds mass_flux(model, i) * Φ[i]
 
