@@ -35,7 +35,7 @@
 
 The K-Profile-Parameterization, or "KPP", is proposed by
 [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
-as a mo
+as a model for convective and wind-driven mixing in the ocean surface boundary layer.
 In KPP, vertical turbulent fluxes of a quantity ``\phi`` are parameterized as
 
 ```math
@@ -172,7 +172,7 @@ where
 
 ## Selected tests
 
-See `/test/runtests.jl` for more tests.
+See `/test/test_kpp.jl` for more tests.
 
 ### Linear temperature profile and no velocity field
 
