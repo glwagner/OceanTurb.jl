@@ -299,6 +299,9 @@ end
 @propagate_inbounds Δc(c::AbstractField, i_face) = Δc(c.grid, i_face)
 @propagate_inbounds Δf(c::AbstractField, i_cell) = Δf(c.grid, i_cell)
 
+"Upwards-biased difference."
+∂z⁺(i, grid, f::Function, args...) = (f(i+1, grid, args...) - f(i, grid, args...)) / Δc(grid, i+1)
+
 """
     ∂z(a, i)
 
