@@ -3,17 +3,19 @@ update_nonlocal_flux!(m) = nothing
 
 initialize_plumes(args...) = (T=nothing, S=nothing, W²=nothing)
 
+massflux(model, i) = 0
+
 Base.@kwdef struct LMDCounterGradientFlux{T} <: AbstractParameters
     CNL :: T = 6.33 # Mass flux proportionality constant
 end
 
-function ∂NLT∂z(m::Model{K, <:LMDCounterGradientFlux}, i) where K
+∂z_explicit_nonlocal_flux_T(m::Model{K, <:LMDCounterGradientFlux}, i) where K =
     KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Fθ, d(m, i+1), d(m, i), Δf(m.grid, i), m)
-end
 
-function ∂NLS∂z(m::Model{K, <:LMDCounterGradientFlux}, i) where K
+∂z_explicit_nonlocal_flux_S(m::Model{K, <:LMDCounterGradientFlux}, i) where K =
     KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Fs, d(m, i+1), d(m, i), Δf(m.grid, i), m)
-end
+
+mass_flux(m::Model{K, <:LMDCounterGradientFlux}, i) where K = 0
 
 Base.@kwdef struct BulkPlumeParameters{T} <: AbstractParameters
      Cw :: T = 2.86
@@ -99,6 +101,22 @@ function update_nonlocal_flux!(model)
             (ΔB̆ᵢ₊₁ - model.nonlocalflux.Cew * entrainment(model, i+1) * W̆²[i+1]))
     end
 
+    # Fill halos to ensure zero mass flux in first cell?
+    #@inbounds T̆[0] = T̆[1]
+    #@inbounds S̆[0] = S̆[1]
+    #@inbounds W̆²[0] = 0
+
     return nothing
 end
 
+mass_flux(m::Model{K, <:BulkPlumeParameters}, i) where K = 
+    @inbounds m.nonlocalflux.Ca * sqrt(model.state.plumes.W̆²[i])
+
+M_Φ(i, grid, Φ, model) = @inbounds mass_flux(model, i) * Φ[i]
+
+# Use upwards-biased difference to effect upwind differencing for downward-travelling plumes:
+∂z_explicit_nonlocal_flux_T(model::Model{K, <:BulkPlumeParameters}, i) where K =
+    @inbounds ∂z⁺(i, grid, M_Φ, m.state.plumes.T, model)
+
+∂z_explicit_nonlocal_flux_S(model::Model{K, <:BulkPlumeParameters}, i) where K =
+    @inbounds ∂z⁺(i, grid, M_Φ, m.state.plumes.S, model)

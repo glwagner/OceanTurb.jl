@@ -1,3 +1,5 @@
+addzero(args...) = 0
+
 """
     Forcing(; U=addzero, V=addzero, T=addzero, S=addzero)
 

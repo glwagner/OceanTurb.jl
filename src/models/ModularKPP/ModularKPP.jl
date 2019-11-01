@@ -42,6 +42,8 @@ using
     OceanTurb,
     LinearAlgebra
 
+using OceanTurb: ∂z⁺ # upwards-biased difference
+
 import OceanTurb.KPP: 𝒲_unstable, 𝒲_stable, ωτ, ωb, d,
                       isunstable, isforced, unresolved_kinetic_energy,
                       ∂B∂z
@@ -131,7 +133,12 @@ KS(m::HoltslagModel, i) = K_KPP(m.state.h, 𝒲_Holtslag(m, i), d(m, i), m.kprof
 
 const KV = KU
 
-RT(m, i) = - ∂NLT∂z(m, i) + m.forcing.T(m, i)
-RS(m, i) = - ∂NLS∂z(m, i) + m.forcing.S(m, i)
+RT(m, i) = - ∂z_explicit_nonlocal_flux_T(m, i) + m.forcing.T(m, i)
+RS(m, i) = - ∂z_explicit_nonlocal_flux_S(m, i) + m.forcing.S(m, i)
+
+MU(m, i) = 0
+MV(m, i) = 0
+MT(m, i) = mass_flux(m, i)
+MS(m, i) = mass_flux(m, i)
 
 end # module
