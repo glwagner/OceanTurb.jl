@@ -250,7 +250,13 @@ The plume vertical velocity is integrated with an upwind scheme such that
 \eeq
 ```
 
-* [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
-* [CVMix documentation](https://github.com/CVMix/CVMix-description/raw/master/cvmix.pdf)
-* [McWilliams et al (2009)](https://journals.ametsoc.org/doi/full/10.1175/2009JPO4130.1)
-* [Regional Ocean Modeling System (ROMS)](https://www.myroms.org)
+For the purpose of numerical integration, the mass flux term is divided into two components, so that
+the environment-averaged scalar equation becomes:
+```math
+\beq
+\partial_t \Phi - \partial_z \left ( K_\Phi \partial_z \Phi \right ) 
+                + \partial_z \left ( \C{a}{} \breve W \Phi \right ) = \C{a}{} \breve W \breve \Phi \, ,
+\eeq
+```
+where the diffusivity and mass flux term on the left are integrate implicitly, and the
+mass flux term on the right is integrated explicitly.
