@@ -77,7 +77,8 @@ include("state.jl")
 include("model_boundary_conditions.jl")
 include("forcing.jl")
 include("mixing_depth.jl")
-include("diffusivity_profiles.jl")
+include("diffusivity_models.jl")
+include("shape_functions.jl")
 include("nonlocal_flux.jl")
 
 """

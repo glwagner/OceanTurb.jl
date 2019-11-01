@@ -1,9 +1,3 @@
-
-Base.@kwdef struct DiffusivityShape{T} <: AbstractParameters
-    CS0 :: T = 0.0
-    CS1 :: T = 1.0
-end
-
 Base.@kwdef struct LMDDiffusivity{T} <: AbstractParameters
      CKSL :: T = 0.1   # Surface layer fraction
        Cτ :: T = 0.4   # Von Karman constant
@@ -30,15 +24,8 @@ Base.@kwdef struct LMDDiffusivity{T} <: AbstractParameters
       KS₀ :: T = 1e-9 # Interior diffusivity for salinity
 end
 
-
-#
-# Diffusivity
-#
-
-k_profile(d, p::DiffusivityShape) = d * (1-d) * ( p.CS0 + p.CS1*(1-d) )
-
 ## ** The K-Profile-Parameterization **
-K_KPP(h, 𝒲, d::T, p) where T = 0<d<1 ? max(zero(T), h * 𝒲 * k_profile(d, p)) : -zero(T)
+K_KPP(h, 𝒲, d::T, p) where T = 0<d<1 ? max(zero(T), h * 𝒲 * shape(d, p)) : -zero(T)
 
 𝒲_Holtslag(Cτ, Cτb, ωτ, ωb, d) = Cτ * (ωτ^3 + Cτb * d * ωb^3)^(1/3)
 𝒲_Holtslag(m, i) = 𝒲_Holtslag(m.diffusivity.Cτ, m.diffusivity.Cτb, KPP.ωτ(m), KPP.ωb(m), KPP.d(m, i))
