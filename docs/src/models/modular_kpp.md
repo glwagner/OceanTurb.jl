@@ -53,8 +53,9 @@ plumes.
 ``K``-profile schemes with a non-local flux term thus have three basic components:
 
 1. A model for the mixing layer depth ``h``, over which ``K_\Phi > 0``.
-2. A model for the diffusivity ``K``, which includes the ``K``-profile as well as its magnitude.
-3. A model for the non-local flux, ``\NL_\Phi``.
+2. A model for the magnitude of the diffusivity, ``K``
+3. A model or "shape function" that determines the dependence of ``K`` as a function of ``d=-z/h``.
+4. A model for the non-local flux, ``\NL_\Phi``.
 
 ## Mixing depth models
 
