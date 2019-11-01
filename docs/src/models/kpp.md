@@ -87,6 +87,7 @@ where the critical ``\Ri`` is ``\C{\Ri}{} = 0.3``. The operator ``\Delta`` is de
 where ``\C{\SL}{} = 0.1`` is the surface layer fraction.
 The function ``\K(-h)`` parameterizes unresolved kinetic energy associated with convective
 plumes,
+
 ```math
 \beq  \label{unresolved_ke}
 \K(-h) = \C{\K}{} (-z)^{4/3} \sqrt{ \max \left [ 0, B_z(z) \right ] } \max \left [ 0, Q_b \right ]^{1/3} + \C{\K_0}{} \p
@@ -110,14 +111,15 @@ where ``d = -z/h`` is a non-dimensional depth coordinate and ``\C{\NL}{} = 6.33`
 
 ## ``K``-Profile model in CVMix KPP
 
-The KPP diffusivity is defined
+The KPP diffusivity is
 
 ```math
 \beq
-K_\phi = h \W_\phi d ( 1 - d )^2 \c
+K_\phi = h \W_\Phi(d) d ( 1 - d )^2 \c
 \eeq
 ```
-where ``\W_\phi`` is the turbulent velocity scale for variable ``\phi``.
+
+where ``\W_\Phi(d)`` is the turbulent velocity scale for variable ``\phi``.
 
 We define the ratios
 
@@ -132,7 +134,7 @@ In wind-driven turbulence under stable buoyancy forcing such that ``Q_b < 0``, t
 
 ```math
 \beq
-\W_\phi = \frac{ \C{\tau}{} \uwind}{ \left ( 1 + \C{\mathrm{stab}}{} r_b d \right )^{\C{n}{}}} \p
+\W_\Phi = \frac{ \C{\tau}{} \uwind}{ \left ( 1 + \C{\mathrm{stab}}{} r_b d \right )^{\C{n}{}}} \p
 \eeq
 ```
 
@@ -143,7 +145,7 @@ the turbulent velocity scale is
 
 ```math
 \beq
-\W_\Phi = \C{\tau}{} \uwind \left ( 1 + \C{\mathrm{unst}}{} r_b \min \left [ \C{\SL}{}, d \right ] \right )^{\C{m\tau}{\Phi}} \c
+\W_\Phi(d) = \C{\tau}{} \uwind \left ( 1 + \C{\mathrm{unst}}{} r_b \min \left [ \C{\SL}{}, d \right ] \right )^{\C{m\tau}{\Phi}} \c
 \eeq
 ```
 
@@ -156,7 +158,7 @@ the turbulent velocity scale is
 
 ```math
 \beq
-\W_\Phi = \C{b}{\Phi} \ubuoy \left ( \min \left [ \C{\SL}{}, d \right ] + \C{\tau b}{\Phi} r_\tau \right )^{\C{mb}{\Phi}} \c
+\W_\Phi(d) = \C{b}{\Phi} \ubuoy \left ( \min \left [ \C{\SL}{}, d \right ] + \C{\tau b}{\Phi} r_\tau \right )^{\C{mb}{\Phi}} \c
 \eeq
 ```
 
@@ -247,7 +249,7 @@ U(z) =  \left \{ \begin{matrix}
 ```
 
 so that ``T(z=-h) = U(z=-h) = 0``.
-we then have ``\Delta T(-h) = t_0`` and ``\Delta U^2(-h) = U_0^2``, so that
+We then have ``\Delta T(-h) = T_0`` and ``\Delta U^2(-h) = U_0^2``, so that
 with ``g=\alpha=1``,
 
 ```math
@@ -256,11 +258,13 @@ with ``g=\alpha=1``,
 \label{sheardepth}
 \eeq
 ```
+
 setting ``h = 9``, ``\C{\Ri}{}=1``, ``T_0 = 1``, and ``U_0=3`` yields a consistent solution.
 
 ### Limiting cases for turbulent velocity scales
 
 Under zero momentum forcing, the turbulent vertical velocity scale is
+
 ```math
 \beq
 \W_\phi = \C{b}{\phi} \left ( \C{\ep}{} \right )^{1/3} | h Q_b |^{1/3} \p
@@ -270,6 +274,7 @@ Under zero momentum forcing, the turbulent vertical velocity scale is
 We write the test in \eqref{buoyscaletest} using the depth in \eqref{analyticaldepth}
 
 Under zero buoyancy forcing, the turbulent velocity scale is
+
 ```math
 \beq
 \W_\phi = \C{\tau}{} \uwind \p
