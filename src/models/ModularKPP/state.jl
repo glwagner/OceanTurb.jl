@@ -1,24 +1,21 @@
-mutable struct State{T, H, U, W}
-          Fu :: T
-          Fv :: T
-          Fθ :: T
-          Fs :: T
-          Fb :: T
-           h :: T
-      h_crit :: H
-     plume_T :: U
-     plume_S :: U
-    plume_W² :: W
+mutable struct State{T, H, P}
+        Qu :: T
+        Qv :: T
+        Qθ :: T
+        Qs :: T
+        Qb :: T
+         h :: T
+    h_crit :: H
+    plumes :: P
 end
 
-plumes(args...) = nothing, nothing, nothing
 h_criterion(args...) = nothing
 
 function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
-    plume_T, plume_S, plume_W² = plumes(nonlocalflux, grid)
+    plumes = initialize_plumes(nonlocalflux, grid)
     h_crit = h_criterion(mixingdepth, grid)
     return State(zero(T), zero(T), zero(T), zero(T), zero(T), zero(T),
-                 h_crit, plume_T, plume_S, plume_W²)
+                 h_crit, plumes)
 end
 
 """
@@ -28,14 +25,12 @@ Update the top flux conditions and mixing depth for `model`
 and store in `model.state`.
 """
 function update_state!(m)
-    m.state.Fu = getbc(m, m.bcs.U.top)
-    m.state.Fv = getbc(m, m.bcs.V.top)
-    m.state.Fθ = getbc(m, m.bcs.T.top)
-    m.state.Fs = getbc(m, m.bcs.S.top)
-    m.state.Fb = m.constants.g * (m.constants.α * m.state.Fθ - m.constants.β * m.state.Fs)
+    m.state.Qu = getbc(m, m.bcs.U.top)
+    m.state.Qv = getbc(m, m.bcs.V.top)
+    m.state.Qθ = getbc(m, m.bcs.T.top)
+    m.state.Qs = getbc(m, m.bcs.S.top)
+    m.state.Qb = m.constants.g * (m.constants.α * m.state.Qθ - m.constants.β * m.state.Qs)
     update_mixing_depth!(m)
     update_nonlocal_flux!(m)
     return nothing
 end
-
-
