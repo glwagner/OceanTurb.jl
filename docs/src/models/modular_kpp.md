@@ -169,10 +169,13 @@ In the diagnostic plume model, the non-local flux of a tracer ``\Phi`` is parame
 ```
 where ``\C{a}{} = 0.1`` is the plume area fraction, ``\breve W`` is the plume
 vertical velocity, and ``\breve \Phi`` is plume-averaged concentration of the 
-tracer ``\phi``, while ``\Phi`` acquires the interpretation as the average 
-concentration of ``\phi`` in the environment, excluding plume regions.
+tracer ``\phi``.
+When using a plume model in `ModularKPP`, ``\Phi`` must be interpreted as
+the average concentration of ``\phi`` in the environment, excluding plume regions.
 
-The plume-averaged temperature and salinity budgets are
+#### Continuous plume equations
+
+The diagnostic, steady-state plume-averaged temperature and salinity budgets boil down to
 ```math
 \begin{gather}
     \d_z \breve T = - \epsilon \left ( \breve T - T \right ) \, , \\
@@ -185,11 +188,11 @@ and ``T`` and ``S`` are the environment-averaged temperature and salinity and
 ```math
 \beq
 \epsilon(z) = \C{\epsilon}{} 
-    \left [ \frac{1}{\Delta c(z) - z} + \frac{1}{\Delta c(z) + \left ( z + h \right )} \right ] \, ,
+    \left [ \frac{1}{\Delta c_N - z} + \frac{1}{\Delta c_N + \left ( z + h \right )} \right ] \, ,
 \eeq
 ```
-where ``\C{\epsilon}{} = 0.4``, ``\Delta c(z)`` is the spacing between cell interfaces at 
-``z``, and ``h`` is the mixing depth determined via the chosen mixing depth model.
+where ``\C{\epsilon}{} = 0.4``, ``\Delta c_N`` is the spacing between the boundary and the topmost
+cell interface, and ``h`` is the mixing depth determined via the chosen mixing depth model.
 
 The budget for plume vertical momentum is
 
@@ -202,15 +205,20 @@ where ``\breve B = \alpha \breve T - \beta \breve S`` is the plume-averaged buoy
 ``B = \alpha T - \beta S`` is the environment-averaged buoyancy, ``\C{w}{} = 2.86``, 
 and ``\C{\epsilon}{w} = 0.2``.
 
-The plume equations require boundary conditions at ``z=0``. 
-The plume-averaged tracer concentration, which is defined at cell centers, is parameterized in terms
-of the tracer flux across the boundary, ``Q_\phi``, as
+#### Surface layer plume initialization model and numerical implementation
+
+The plume equations require boundary conditions at ``z=0``, or an initialization model 
+at the topmost node in the interior of the domain. 
+Note that the three plume fields ``\breve T``, ``\breve S``, and ``\breve W^2`` are defined at cell centers.
+
+The plume-averaged tracer concentration in the topmost cell is parameterized in terms
+of the tracer flux across the top boundary, ``Q_\phi``, with the formula
 ```math
 \beq
     \breve \Phi(z=z_N) = \Phi(z=z_N) - \C{\alpha}{} \frac{Q_\phi}{\sigma_w(z_N)} \, ,
 \eeq
 ```
-where ``\C{\alpha}{} - 1.0``, and ``\sigma_w(z)`` is an empirical expression for the 
+where ``\C{\alpha}{} = 1.0``, and ``\sigma_w(z)`` is an empirical expression for the 
 vertical velocity standard deviation,
 ```math
 \beq
@@ -219,8 +227,7 @@ vertical velocity standard deviation,
 ```
 with ``\C{\sigma \tau}{} = 2.2`` and ``\C{\sigma b}{} = 1.32``.
 
-We also assume that the plume vertical velocity, which is defined at cell centers, is 
-zero in the first cell:
+We also assume that the plume vertical velocity in the topmost cell is zero:
 ```math
 \beq
     \breve W(z=z_N) = 0 \, .
@@ -238,13 +245,10 @@ the surface downward, such that the plume-averaged temperature is determined via
 The plume vertical velocity is integrated with an upwind scheme such that
 ```math
 \beq
-\breve W^2_{i} = \breve W^2_{i+1} - \C{w}{} \Delta c_i 
-    \left ( \breve B_{i+1} - B_{i+1} - \C{\epsilon}{w} \epsilon(z_{c, i+1}) \breve W^2_{i+1} \right )
+\breve W^2_{i} = \breve W^2_{i+1} - \C{w}{} \Delta c_{i+1} 
+    \left ( \breve B_{i+1} - B_{i+1} - \C{\epsilon}{w} \epsilon(z_{c, i+1}) \breve W^2_{i+1} \right ) \, .
 \eeq
 ```
-[Siebesma et al (2007)](https://journals.ametsoc.org/doi/full/10.1175/JAS3888.1)
-recommend 
-
 
 * [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
 * [CVMix documentation](https://github.com/CVMix/CVMix-description/raw/master/cvmix.pdf)
