@@ -164,10 +164,10 @@ due to destabilizing buoyancy flux.
 In the diagnostic plume model, the non-local flux of a tracer ``\Phi`` is parameterized as
 ```math
 \beq
-    NL_\phi = \breve a \breve W \left ( \Phi - \breve \Phi \right ) \, ,
+    NL_\phi = \C{a}{} \breve W \left ( \Phi - \breve \Phi \right ) \, ,
 \eeq
 ```
-where ``\breve a`` is the plume area fraction, ``\breve W`` is the plume
+where ``\C{a}{} = 0.1`` is the plume area fraction, ``\breve W`` is the plume
 vertical velocity, and ``\breve \Phi`` is plume-averaged concentration of the 
 tracer ``\phi``, while ``\Phi`` acquires the interpretation as the average 
 concentration of ``\phi`` in the environment, excluding plume regions.
@@ -179,50 +179,72 @@ The plume-averaged temperature and salinity budgets are
     \d_z \breve S = - \epsilon \left ( \breve S - S \right ) \, ,
 \end{gather}
 ```
-where ``\epsilon(z, h)`` is the entrainment rate, ``\breve T`` and ``\breve S``
-are the plume-averaged temperature and salinity, and ``T`` and ``S`` are the 
-environment temperature and salinity.
-The entrainment rate is defined
+where ``\breve T`` and ``\breve S`` are the plume-averaged temperature and salinity, 
+and ``T`` and ``S`` are the environment-averaged temperature and salinity and 
+``\epsilon(z, h)`` is the parameterized entrainment rate, 
 ```math
 \beq
-\epsilon = \C{\epsilon}{} 
-    \left [ \frac{1}{\Delta z - z} + \frac{1}{\Delta z + \left ( z + h \right )} \right ]
+\epsilon(z) = \C{\epsilon}{} 
+    \left [ \frac{1}{\Delta c(z) - z} + \frac{1}{\Delta c(z) + \left ( z + h \right )} \right ] \, ,
 \eeq
 ```
+where ``\C{\epsilon}{} = 0.4``, ``\Delta c(z)`` is the spacing between cell interfaces at 
+``z``, and ``h`` is the mixing depth determined via the chosen mixing depth model.
 
 The budget for plume vertical momentum is
 
 ```math
 \beq
-    \d_z \breve W^2 = \frac{1}{\frac{1}{2} - \C{\mu}{}} \left ( 
-                        \breve B - B - \C{\epsilon}{w} \epsilon \, \breve W^2 \right ) 
+    \d_z \breve W^2 = \C{w}{} \left ( \breve B - B - \C{\epsilon}{w} \epsilon \, \breve W^2 \right ) 
 \eeq
 ```
 where ``\breve B = \alpha \breve T - \beta \breve S`` is the plume-averaged buoyancy and 
-``B = \alpha T - \beta S`` is the environment buoyancy.
+``B = \alpha T - \beta S`` is the environment-averaged buoyancy, ``\C{w}{} = 2.86``, 
+and ``\C{\epsilon}{w} = 0.2``.
 
-The plume equations require boundary conditions at ``z=0``; on vertical momentum, which is
-defined at cell interfaces, satisfies a no penetration condition:
-```math
-\beq
-    \breve W^2(z=0) = 0
-\eeq
-```
-The excess tracer concentration, which is defined at cell centers, is parameterized in terms
+The plume equations require boundary conditions at ``z=0``. 
+The plume-averaged tracer concentration, which is defined at cell centers, is parameterized in terms
 of the tracer flux across the boundary, ``Q_\phi``, as
 ```math
 \beq
     \breve \Phi(z=z_1) = \Phi(z=z_1) - \C{\alpha}{} \frac{Q_\phi}{\sigma_w(z_1)} \, ,
 \eeq
 ```
-where ``\sigma_w(z)`` is an empirical expression for the vertical velocity standard
-deviation,
+where ``\C{\alpha}{} - 1.0``, and ``\sigma_w(z)`` is an empirical expression for the 
+vertical velocity standard deviation,
 ```math
 \beq
-    \sigma_w = \left ( \C{\sigma \tau}{} \omega_\tau^3 + \C{\sigma b}{} d \omega_b^3 \right )^{1/3} \left ( 1 - d \right )^{1/2} \, .
+    \sigma_w = \left ( \C{\sigma \tau}{} \omega_\tau^3 + \C{\sigma b}{} d \omega_b^3 \right )^{1/3} \left ( 1 - d \right )^{1/2} \, ,
 \eeq
 ```
-The diagnostic plume equations are discretized with an upwind scheme.
+with ``\C{\sigma \tau}{} = 2.2`` and ``\C{\sigma b}{} = 1.32``.
+
+We also assume that the plume vertical velocity, which is defined at cell centers, is 
+zero in the first cell:
+```math
+\beq
+    \breve W(z=z_1) = 0 \, .
+\eeq
+```
+
+The diagnostic plume equations are discretized with an upwind scheme that integrates from
+the surface downward, such that the plume-averaged temperature is determined via
+```math
+\beq
+    \breve T_i = \breve T_{i+1} + \Delta c_{i+1} \epsilon \left ( z_{c, i+1} \right ) 
+        \left ( \breve T_{i+1} - T_{i+1} \right )
+\eeq
+```
+The plume vertical velocity is integrated with an upwind scheme such that
+```math
+\beq
+\breve W^2_{i} = \breve W^2_{i+1} - \C{w}{} \Delta c_i 
+    \left ( \breve B_{i+1} - B_{i+1} - \C{\epsilon}{w} \epsilon(z_{c, i+1}) \breve W^2_{i+1} \right )
+\eeq
+```
+[Siebesma et al (2007)](https://journals.ametsoc.org/doi/full/10.1175/JAS3888.1)
+recommend 
+
 
 * [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
 * [CVMix documentation](https://github.com/CVMix/CVMix-description/raw/master/cvmix.pdf)
