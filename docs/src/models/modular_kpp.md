@@ -207,7 +207,7 @@ The plume-averaged tracer concentration, which is defined at cell centers, is pa
 of the tracer flux across the boundary, ``Q_\phi``, as
 ```math
 \beq
-    \breve \Phi(z=z_1) = \Phi(z=z_1) - \C{\alpha}{} \frac{Q_\phi}{\sigma_w(z_1)} \, ,
+    \breve \Phi(z=z_N) = \Phi(z=z_N) - \C{\alpha}{} \frac{Q_\phi}{\sigma_w(z_N)} \, ,
 \eeq
 ```
 where ``\C{\alpha}{} - 1.0``, and ``\sigma_w(z)`` is an empirical expression for the 
@@ -223,7 +223,7 @@ We also assume that the plume vertical velocity, which is defined at cell center
 zero in the first cell:
 ```math
 \beq
-    \breve W(z=z_1) = 0 \, .
+    \breve W(z=z_N) = 0 \, .
 \eeq
 ```
 
