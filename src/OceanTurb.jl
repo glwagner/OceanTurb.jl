@@ -207,10 +207,10 @@ end
 # Ocean Turbulence Models
 #
 
-include("models/diffusion.jl")
-include("models/k_profile_parameterization.jl")
-include("models/modular_kpp.jl")
-include("models/pacanowski_philander.jl")
+include("models/Diffusion.jl")
+include("models/KPP/KPP.jl")
+include("models/ModularKPP/ModularKPP.jl")
+include("models/PacanowskiPhilander.jl")
 
 # Convenient utilities for plotting
 macro use_pyplot_utils()

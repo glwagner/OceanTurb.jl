@@ -128,7 +128,7 @@ mutable struct State{T, H, U, W}
       h_crit :: H
      plume_T :: U
      plume_S :: U
-    plume_w² :: W
+    plume_W² :: W
 end
 
 plumes(args...) = nothing, nothing, nothing
@@ -136,10 +136,10 @@ h_criterion(args...) = nothing
 h_criterion(::ROMSMixingDepth, grid) = FaceField(grid)
 
 function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
-    plume_T, plume_S, plume_w² = plumes(nonlocalflux, grid)
+    plume_T, plume_S, plume_W² = plumes(nonlocalflux, grid)
     h_crit = h_criterion(mixingdepth, grid)
     State(zero(T), zero(T), zero(T), zero(T), zero(T), zero(T),
-            h_crit, plume_T, plume_S, plume_w²)
+            h_crit, plume_T, plume_S, plume_W²)
 end
 
 """

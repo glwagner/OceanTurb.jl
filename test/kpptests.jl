@@ -21,7 +21,7 @@ end
 addone(m, i) = 1
 
 function test_model_init_with_forcing(N=4, L=4.3)
-    model = KPP.Model(N=N, L=L, forcing=Forcing(U=addone))
+    model = KPP.Model(N=N, L=L, forcing=KPP.Forcing(U=addone))
     model.grid.N == N && model.grid.L == L
 end
 
