@@ -20,6 +20,7 @@
 \newcommand{\Ek}        {\mathrm{Ek}}
 \newcommand{\SL}        {\mathrm{SL}}
 \newcommand{\K}         {\mathcal{E}}
+\newcommand{\W}         {\mathcal{W}}
 
 \newcommand{\btau}      {\b{\tau}} % wind stress vector
 
@@ -33,7 +34,7 @@
 \newcommand{\NL}        {NL}
 ```
 
-In `ModularKPP` module, horizontally-averaged vertical turbulent
+In the `ModularKPP` module, horizontally-averaged vertical turbulent
 fluxes are modeled with the combination of a local diffusive flux and a non-local
 non-diffusive flux:
 
@@ -44,9 +45,32 @@ non-diffusive flux:
 \eeq
 ```
 
-where the depth dependence of the eddy diffusivity ``K_\Phi`` is modeled
-with a shape or 'profile' function, which gives rise to the name
+where the depth dependence of the eddy diffusivity ``K_\Phi`` is 
+
+```math
+\beq
+K_\Phi \propto h \, \W_\Phi \, \F{d}{}(d) \, ,
+\eeq
+```
+
+where ``\W_\Phi`` is a turbulent velocity scale that in general depends on 
+``\Phi``, the quantity being diffused, ``d \equiv - z / h`` ,
+and ``h`` is the 'mixing layer depth'.
+Typically ``\F{d}{}`` is the cubic polynomial
+
+```math
+\beq
+\F{d}{}(d) = d ( 1 - d )^2 \, ,
+\eeq
+```
+
+however, `ModularKPP` permits experimentation with different forms.
+
+
+The formulation of diffusivity as the product of a magnitude with a with a shape or 
+'profile' function gives rise to the name.
 ``K``-profile parameterization.
+
 The non-local flux term ``\NL_\Phi`` models the effects of convective
 plumes.
 
@@ -57,9 +81,177 @@ plumes.
 3. A model or "shape function" that determines the dependence of ``K`` as a function of ``d=-z/h``.
 4. A model for the non-local flux, ``\NL_\Phi``.
 
+# Model instantiaton
+
+A `ModularKPP.Model` is instantiated in the default configuration by
+writing 
+
+```julia
+using OceanTurb
+model = ModularKPP.Model()
+```
+
+or,
+
+```julia
+using OceanTurb
+
+model = Model(grid = UniformGrid(N=10, L=1.0),
+         constants = Constants(),
+       diffusivity = LMDDiffusivity(),
+      nonlocalflux = LMDCounterGradientFlux(),
+       mixingdepth = LMDMixingDepth(),
+          kprofile = StandardCubicPolynomial(),
+           stepper = :BackwardEuler,
+               bcs = ModelBoundaryConditions(eltype(grid)),
+           forcing = Forcing())
+```
+
+This builds a model on a `UniformGrid` with `N=10` grid points and `L=1.0` meters deep.
+The keyword arguments `diffusivity`, `nonlocalflux`, `mixingdepth`, and `kprofile` correspond 
+to a specific ``K``-profile configuration proposed by
+[Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872):
+
+* `diffusivity = LMDDiffusivity()` determines the turbulent velocity scale ``W_\Phi`` 
+    using the prescription proposed by LMD94
+
+* `nonlocalflux = LMDCounterGradientFlux()` determines the nonlocal flux ``NL_\Phi``
+    using the prescription proposed by LMD94
+
+* `mixingdepth = LMDMixingDepth()` determines the mixing depth ``h`` using the bulk
+    Richardson number criterion proposed by LMD94
+
+* `kprofile = StandardCubicPolynomial()` uses the cubic polynomial ``d(1-d)^2`` to set the primary 
+    depth dependence of ``K_\Phi``, as proposed by LMD94.
+
+More subcomponent choices and details about their consequences are described in 
+[Sub-components of `ModularKPP.Model`](@ref).
+
+The keyword arguments `constants`, `stepper`, `bcs`, and `forcing` configure the model constants
+time stepper, boundary conditions, and forcing function.
+The only useful time-stepper at the moment is `:BackwardEuler`.
+The procedures for setting boundary conditions and defining forcing functions are described in 
+[Setting boundary conditions](@ref) and [Defining forcing functions](@ref).
+
+The default set of constants is returned by `constants = Constants()`, or
+
+```julia
+constants = Constants(
+     α = 2.5e-4, # thermal expansion coefficient [C⁻¹]
+     β = 8e-5,   # haline contraction coefficient [psu⁻¹]
+    ρ₀ = 1035,   # reference density [kg m⁻³]
+    cP = 3992,   # heat capacity `cP` [...]
+     f = 0,      # Coriolis parameter `f` [s⁻¹]
+     g = 9.81    # gravitational acceleration `g` [m² s⁻¹]
+)
+```
+
+# Setting boundary conditions
+
+Two basic methods may be used to set boundary conditions. 
+
+## Constant and standard boundary conditions
+
+For boundary conditions consisting of constant surface fluxes or constant
+bottom gradients, 
+
+```julia
+using OceanTurb
+
+model = ModularKPP.Model()
+
+model.bcs.U.top = BoundaryCondition(Flux, -1e-4)
+model.bcs.T.top = BoundaryCondition(Flux, 1e-4)
+model.bcs.T.bottom = BoundaryCondition(Gradient, model.constants.α * model.constants.g * 1e-5)
+```
+
+will, for example, set the top boundary condition on temperature `T` to a positive flux
+of ``10^{-4} \, \mathrm{m K \, s^{-2}}``, a bottom temperature gradient that corresponds
+to a bottom buoyancy gradient of ``N^2 = 10^{-5} \, \mathrm{s^{-2}}``,
+and a top boundary condition on the horizontal velocity `U` to a negative flux.
+
+In an oceanic scenario, a positive surface temperature flux of ``Q_\theta = 10^{-4}`` 
+is strongly destabilizing,
+corresponding to a heat flux of ``Q_h = \rho_0 c_P Q_\theta \approx 413 \, \mathrm{W \, m^{-2}}``,
+or in ordinary oceanographic parlance a 'heating' of ``-413 \, \mathrm{W \, m^{-2}}``.
+(A positive surface flux extracts a quantity from the oceanic domain below; therefore 
+positive temperature flux acts to cool and destabilize at the ocean surface.
+This convention is standard --- an upward velocity leads to a positive flux, for example ---
+but is opposite the ordinary convention in oceanography.)
+
+A negative flux of velocity accelerates surface fluid in the positive ``x``-direction.
+A velocity flux, or kinematic stress of ``Q_u = -10^{-4}`` corresponds to a friction velocity
+of ``u_\star = | \boldsymbol{Q}_u |^{1/2} = 0.01 \, \mathrm{m \, s^{-1}}`` and a dynamic stress of
+``\boldsymbol{\tau} = \rho_0 \boldsymbol{Q}_u \approx -10^{-1} \, \mathrm{N \, m^{-2}}``.
+
+## More complex boundary conditions
+
+For non-standard or more complicated boundary conditions that are enforced, for example, by
+time-dependent or nonlinear functions, a variable's boundary condition must be generated
+prior to model instantiation and passed to the model constructor.
+To set a time-dependent surface flux of temperature for example, write
+
+```julia
+using OceanTurb
+
+# Functions-as-boundary-conditions take a single argument of type `ModularKPP.Model`.
+fun_flux(model) = 1e-8 * cos(2π/day * model.clock.time)
+
+# Wrap `fun_flux` in a `BoundaryCondition` and specify its application as a flux.
+top_temperature_bc = BoundaryCondition(Flux, fun_flux)
+
+# Instantiate boundary conditions for temperature with the flux function on top.
+temperature_bcs = BoundaryConditions(top=top_temperature_bc)
+
+# Instantiate a model with the indicated temperature boundary condition and default
+# boundary conditions for all other variables.
+model = Model(bcs = ModelBoundaryConditions(T=temperature_bcs))
+
+# Constant boundary conditions of default type on other variables are still settable.
+model.bcs.T.bottom = BoundaryCondition(Gradient, model.constants.α * model.constants.g * 1e-5)
+```
+
+# Defining forcing functions
+
+Forcing functions have the signature `forcing_func(model, i)`, where `model::ModularKPP.Model`, and `i`
+is the grid point at which the forcing is applied.
+For example, to apply a body force on `U`, write
+
+```julia
+using OceanTurb
+
+@inline body_force(model, i) = @inbounds -1e-1 * model.grid.zc[i] / model.grid.L
+
+model = Model(forcing = Forcing(U=body_force))
+```
+
+This instantiates a model with the specified body force applied to ``U``, such that the ``U`` equation becomes
+
+```math
+\beq
+\partial_t U - f V = \partial_z \left ( K_U \partial_z U \right ) - 10^{-1} \frac{z}{L} \, .
+\eeq
+```
+
+The annotations `@inline` tells the julia compiler to "inline" the function, which typically 
+increases performance, and the `@inbounds` annotation instructs the compiler to elide 
+bounds checking when indexing the range `model.grid.zc`, which also saves time provided
+that `body_force` is never called with `i` out of bounds.
+
+# Sub-components of `ModularKPP.Model`
+
 ## Mixing depth models
 
+The mixing depth model is configured via the keyword argument `mixingdepth` in the `ModularKPP.Model`
+constructor.
+
 ### CVMix mixing depth model
+
+The CVMix mixing depth model is instiated by writing
+
+```julia
+mixingdepth = LMDMixingDepth()
+```
 
 The
 [CVMix](https://github.com/CVMix/CVMix-description/raw/master/cvmix.pdf)
@@ -69,12 +261,18 @@ This model is described in [Mixing depth model in CVMix KPP](@ref).
 
 ### ROMS mixing depth model
 
+The ROMS mixing depth model is instantiated by writing
+
+```julia
+mixingdepth = ROMSMixingDepth()
+```
+
 The mixing depth model used by the [Regional Ocean Modeling System (ROMS)](https://www.myroms.org)
 is described in appendix B of
 [McWilliams et al (2009)](https://journals.ametsoc.org/doi/full/10.1175/2009JPO4130.1).
 The model introduces a 'mixing function' ``\mathbb{M}``, which is increased
 by shear and convection and decreased by stable stratification and rotation.
-The stabilization function is defined as
+``\mathbb{M}`` is defined
 
 ```math
 \beq \label{stabilization}
@@ -112,7 +310,7 @@ acts to exclude the values of
 layer from influencing the diagnosed boundary layer depth.
 
 [McWilliams et al (2009)](https://journals.ametsoc.org/doi/full/10.1175/2009JPO4130.1)
-suggests
+suggest
 ``\C{\SL}{} = 0.1``, ``\C{\K}{} = 5.07``, ``\C{\Ri}{} = 0.3``, and ``\C{\Ek}{} = 211``
 for the free parameters in \eqref{stabilization}.
 
@@ -122,31 +320,62 @@ for the free parameters in \eqref{stabilization}.
 
 The diffusivity model proposed by 
 [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
-(LMD94) is described in [``K``-Profile model in CVMix KPP](@ref).
-(LMD94) propose the ``K``-profile
+(LMD94) is instantiated by writing
+
+```julia
+diffusivity = LMDDiffusivity()
+```
+
+The LMD94 diffusivity model prescribes the turbulent velocity scale
+``\W_\Phi(d)`` in the generic ``K``-profile formulation,
+
 ```math
 \beq
-K_\phi \propto h \mathcal{W} \Upsilon^d(z, h) \, .
+K_\Phi \propto h \W^\text{LMD94}_\Phi(d) \F{d}{}(d) \, .
 \eeq
 ```
+
+The formulation of ``\W^\text{LMD94}_\Phi(d)`` is described in 
+[``K``-Profile model in CVMix KPP](@ref).
+
+`ModularKPP.Model` permits a range of shape functions ``\F{d}{}(d)`` to be used with the
+LMD94 turbulent velocity scale ``\W_\Phi(d)``.
 
 ### Holtslag (1998)
 
 The diffusivity model proposed by Holtslag in 1998 and described in 
 [Siebesma et al (2007)](https://journals.ametsoc.org/doi/full/10.1175/JAS3888.1)
-uses a cubic shape function and simple stability formulation:
+is instantiated by writing
+
+```julia
+diffusivity = HoltslagDiffusivity()
+```
+
+The Holtslag diffusivity uses the simple turublent velocity scale,
+
 ```math
 \beq
-K_\phi = \C{\tau}{} h \ubuoy \left [ \left ( \frac{\uwind}{\ubuoy} \right )^3 
-    + \C{\tau b}{} d \right ]^{1/3} d \left ( 1 - d \right )^2
+\W^\text{Holtslag} = \C{\tau}{} \ubuoy \left [ \left ( \frac{\uwind}{\ubuoy} \right )^3 
+    + \C{\tau b}{} d \right ]^{1/3} \, .
 \eeq
 ```
-where ``d = -z/h``. [Siebesma et al (2007)](https://journals.ametsoc.org/doi/full/10.1175/JAS3888.1) use 
+
+[Siebesma et al (2007)](https://journals.ametsoc.org/doi/full/10.1175/JAS3888.1), which
+pair the turbulent velocity scale ``\W^\text{Holtslag}`` with a cubic shape function, 
+a diagnostic plume model and simple mixing depth model, suggest
 ``\C{\tau}{} = 0.4`` and ``\C{\tau b}{} = 15.6``.
 
 ## Non-local flux models
 
 ### 'Countergradient flux' model
+
+The counter gradient flux model proposed by 
+[Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
+is instantiated by writing
+
+```julia
+nonlocalflux = LMDCounterGradientFlux()
+```
 
 As described in 
 ['Countergradient' non-local flux model in CVMix KPP](@ref),
@@ -163,6 +392,13 @@ where ``d = -z/h`` is a non-dimensional depth coordinate and ``\C{\NL}{} = 6.33`
 
 The diagnostic plume model proposed by
 [Siebesma et al (2007)](https://journals.ametsoc.org/doi/full/10.1175/JAS3888.1)
+is instantiated by writing
+
+```julia
+nonlocalflux = DiagnosticPlumeModel()
+```
+
+The diagnostic plume model
 integrates equations that describe the quasi-equilibrium vertical momentum and 
 tracer budgets for plumes that plunge downwards from the ocean surface
 due to destabilizing buoyancy flux. 
