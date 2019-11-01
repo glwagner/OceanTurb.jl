@@ -164,9 +164,13 @@ due to destabilizing buoyancy flux.
 In the diagnostic plume model, the non-local flux of a tracer ``\Phi`` is parameterized as
 ```math
 \beq
-    NL_\phi = \breve a \breve W \left ( \Phi - \breve \Phi \right )
+    NL_\phi = \breve a \breve W \left ( \Phi - \breve \Phi \right ) \, ,
 \eeq
 ```
+where ``\breve a`` is the plume area fraction, ``\breve W`` is the plume
+vertical velocity, and ``\breve \Phi`` is plume-averaged concentration of the 
+tracer ``\phi``, while ``\Phi`` acquires the interpretation as the average 
+concentration of ``\phi`` in the environment, excluding plume regions.
 
 The plume-averaged temperature and salinity budgets are
 ```math
@@ -177,7 +181,7 @@ The plume-averaged temperature and salinity budgets are
 ```
 where ``\epsilon(z, h)`` is the entrainment rate, ``\breve T`` and ``\breve S``
 are the plume-averaged temperature and salinity, and ``T`` and ``S`` are the 
-ambient temperature and salinity.
+environment temperature and salinity.
 The entrainment rate is defined
 ```math
 \beq
@@ -195,26 +199,27 @@ The budget for plume vertical momentum is
 \eeq
 ```
 where ``\breve B = \alpha \breve T - \beta \breve S`` is the plume-averaged buoyancy and 
-``B`` is the ambient buoyancy.
+``B = \alpha T - \beta S`` is the environment buoyancy.
 
-The plume equations require boundary conditions at ``z=0``; on vertical momentum we have
-no penetration:
+The plume equations require boundary conditions at ``z=0``; on vertical momentum, which is
+defined at cell interfaces, satisfies a no penetration condition:
 ```math
 \beq
-    \breve W^2(z=z_1) = 0
+    \breve W^2(z=0) = 0
 \eeq
 ```
-On tracers, we use
+The excess tracer concentration, which is defined at cell centers, is parameterized in terms
+of the tracer flux across the boundary, ``Q_\phi``, as
 ```math
 \beq
-    \breve \Phi(z=z_1) = \Phi(z=z_1) + \C{\alpha}{} \frac{Q_\phi}{\sigma_w(z_1)} \, ,
+    \breve \Phi(z=z_1) = \Phi(z=z_1) - \C{\alpha}{} \frac{Q_\phi}{\sigma_w(z_1)} \, ,
 \eeq
 ```
 where ``\sigma_w(z)`` is an empirical expression for the vertical velocity standard
 deviation,
 ```math
 \beq
-    \sigma_w = \left [ \C{\sigma \tau}{} \omega_\tau^3 + \C{\sigma b} d \omega_b^3 \right ]^{1/3} \left ( 1 - d \right )^{1/2} \, .
+    \sigma_w = \left ( \C{\sigma \tau}{} \omega_\tau^3 + \C{\sigma b}{} d \omega_b^3 \right )^{1/3} \left ( 1 - d \right )^{1/2} \, .
 \eeq
 ```
 The diagnostic plume equations are discretized with an upwind scheme.
