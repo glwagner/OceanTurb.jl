@@ -127,7 +127,7 @@ buoyancy flux ``Q_b`` and velocity fluxes ``Q_u`` and
 
 ```math
 \beq
-\omega_b \equiv | h Q_b |^{1/3} \qquad \text{and} \qquad \omega_\tau \equiv | \b{\tau} / \rho_0 |^{1/2} \p
+w_\star \equiv | h Q_b |^{1/3} \qquad \text{and} \qquad u_\star \equiv | \b{\tau} / \rho_0 |^{1/2} \p
 \eeq
 ```
 
