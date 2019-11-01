@@ -28,14 +28,7 @@ to enter
 and type
 
 ```julia
-pkg> add https://github.com/glwagner/OceanTurb.jl.git
-```
-
-This installs `OceanTurb.jl` from the master branch.
-The tests can then be run by typing
-
-```julia
-pkg> test OceanTurb
+pkg> add OceanTurb
 ```
 
 Use help mode by typing `?` to find information about key functions:
@@ -50,23 +43,46 @@ which should give the information
 iterate!
 ```  
 
-## Components
+## Modules and models
 
 Solvers for various turbulence models are implemented in submodules
 of `OceanTurb.jl`.
-For example, our simplest model solves the 1D diffusion equation
-and can be used by writing
+For example, our simplest module solves the 1D diffusion equation.
+A diffusion `Model` is instantiated by writing
 
 ```julia
-julia> using OceanTurb.Diffusion
+using OceanTurb
+
+# 100-grid point model with height 1.0 and diffusivity 0.01.
+model = Diffusion.Model(grid = UniformGrid(N=100, L=1.0), parameters = Parameters(K=0.01))
 ```
+
+Setting an initial condition is done by writing
+
+```julia
+c₀(z) = exp(-(z + 0.5)^2 / 0.005)
+model.solution.c = c₀
+```
+
+Time stepping a model forward looks like
+
+```julia
+iterate!(model, Δt=0.01, Nt=100)
+```
+
+This example, and more, can be found in the `/examples` directory.
 
 In addition to simple diffusion we have models for
 
 * The K-Profile-Parameterization proposed by
-* A 'modular' K-Profile-Parameterization that allows mixing and matching the three separate components of a canonical 'KPP'-type model.
-* Pacanowski-Philander
+    [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
+
+* A 'modular', and therefore generic, ``K``-profile parameterization that has multiple models
+    for diffusivity, diffusivity shapes and profiles, nonlocal fluxes including a diagnostic plume model, 
+    and mixing depth.
+
+* The Pacanowski-Philander parameterization
 
 ## Authors
 
-[Gregory L. Wagner](https://glwagner.github.io).
+The author of this software is [Gregory L. Wagner](https://glwagner.github.io).
