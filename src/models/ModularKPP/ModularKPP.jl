@@ -36,7 +36,8 @@ export
     LMDCounterGradientFlux,
     LMDDiffusivity,
     ROMSMixingDepth,
-    HoltslagDiffusivity
+    HoltslagDiffusivity,
+    DiagnosticPlumeModel
 
 using
     OceanTurb,
