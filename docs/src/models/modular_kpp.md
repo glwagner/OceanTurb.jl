@@ -462,7 +462,8 @@ and ``\C{\epsilon}{w} = 0.2``.
 
 The plume equations require boundary conditions at ``z=0``, or an initialization model 
 at the topmost node in the interior of the domain. 
-Note that the three plume fields ``\breve T``, ``\breve S``, and ``\breve W^2`` are defined at cell centers.
+Note that ``\breve T`` and ``\breve S`` are defined at cell centers, and 
+``\breve W^2`` is defined at cell interfaces.
 
 The plume-averaged tracer concentration in the topmost cell is parameterized in terms
 of the tracer flux across the top boundary, ``Q_\phi``, with the formula
@@ -480,30 +481,59 @@ vertical velocity standard deviation,
 ```
 with ``\C{\sigma \tau}{} = 2.2`` and ``\C{\sigma b}{} = 1.32``.
 
-We also assume that the plume vertical velocity in the topmost cell is zero:
+The boundary condition on plume vertical momentum prescribes no penetration
+through the ocean surface,
 ```math
 \beq
-    \breve W(z=z_N) = 0 \, .
+    \breve W(z=z_{N+1}) = 0 \, .
 \eeq
 ```
 
-The diagnostic plume equations are discretized with an upwind scheme that integrates from
-the surface downward, such that the plume-averaged temperature is determined via
+The advetion terms in the diagnostic plume equations are discretized with an downwind 
+scheme, which permits integration of each equation from the surface downward.
+The plume temperature advection term, for example, is defined at cell centers
+and discretized with
+
+```math
+\beq
+\left ( \partial_z \breve T \right )_{i+1} = \frac{\breve T_{i+1} - \breve T_i}{\Delta c_{i+1}} \, .
+\eeq
+```
+
+At the same time, the terms on the right side of the plume temperature conservation 
+equation are evaluated at cell center `i+1`, which leads to the integral
+
 ```math
 \beq
     \breve T_i = \breve T_{i+1} + \Delta c_{i+1} \epsilon \left ( z_{c, i+1} \right ) 
-        \left ( \breve T_{i+1} - T_{i+1} \right )
+        \left ( \breve T_{i+1} - T_{i+1} \right ) \, ,
 \eeq
 ```
-The plume vertical velocity is integrated with an upwind scheme such that
+
+that determines the plume temperature at cell center `i` with respect to plume temperature,
+environment temperature, and entrainment quantities evaluated at cell center `i+1`.
+The plume salinity conservaiton equation is discretized analogously.
+
+The downwind discretization of the plume vertical momentum advection term is
+
 ```math
 \beq
-\breve W^2_{i} = \breve W^2_{i+1} - \C{w}{} \Delta c_{i+1} 
-    \left ( \breve B_{i+1} - B_{i+1} - \C{\epsilon}{w} \epsilon(z_{c, i+1}) \breve W^2_{i+1} \right ) \, .
+\left ( \partial_z \breve W^2 \right )_i = \frac{ \breve W^2_i - \breve W^2_{i-1} }{\Delta f_i} \, .
 \eeq
 ```
-The plume integration is stopped if ``\breve W^2[i] \le 0`` for ``i < N-2``, and negative values
-of ``\breve W^2`` are clipped to 0.
+
+The plume vertical momentum is defined at cell interfaces. This means that discretizing the
+right side of the plume vertical momentum equation requires interpolating the buoyancy
+field from cell centers to cell interfaces.
+The plume vertical velocity equation is thus
+
+```math
+\beq
+    \breve W^2_i = \breve W^2_{i+1} - \Delta f_{i+1} \C{w}{} \left [ \frac{1}{2} \left ( \breve B_i + \breve B_{i+1} - B_i - B_{i+1} \right ) - \C{\epsilon}{w} \epsilon \left ( z_{f, i+1} \right ) \breve W^2_{i+1} \right ) \, .
+\eeq
+```
+
+The plume integration is stopped at grid point `i` when ``\breve W^2_{i+1} < 0``.
 
 To numerically integrate the environment-averaged tracer conservation equation, 
 the mass flux term is divided into two components,

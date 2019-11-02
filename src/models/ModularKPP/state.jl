@@ -12,7 +12,7 @@ end
 h_criterion(args...) = nothing
 
 function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
-    plumes = initialize_plumes(nonlocalflux, grid)
+    plumes = instantiate_plumes(nonlocalflux, grid)
     h_crit = h_criterion(mixingdepth, grid)
     return State(zero(T), zero(T), zero(T), zero(T), zero(T), zero(T),
                  h_crit, plumes)
