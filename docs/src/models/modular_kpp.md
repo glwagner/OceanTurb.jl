@@ -487,23 +487,38 @@ We also assume that the plume vertical velocity in the topmost cell is zero:
 \eeq
 ```
 
-The diagnostic plume equations are discretized with an upwind scheme that integrates from
-the surface downward, such that the plume-averaged temperature is determined via
+The advection terms for plume-averaged temperature, salinity, and 
+vertical momentum are discretized with a downwind scheme. 
+Plume-averaged temperature advection at cell center `i` is thus approximated by
+
+```math
+\beq
+\left ( \partial_z \breve T \right )_i = \frac{\breve T_{i+1} - \breve T_i}{\Delta c_i} \, .
+\eeq
+```
+
+The downwind discretization yields a vertical integral that determines the plume-averaged
+temperature profile,
+
 ```math
 \beq
     \breve T_i = \breve T_{i+1} + \Delta c_{i+1} \epsilon \left ( z_{c, i+1} \right ) 
         \left ( \breve T_{i+1} - T_{i+1} \right )
 \eeq
 ```
-The plume vertical velocity is integrated with an upwind scheme such that
+
+The plume-averaged salinity profile is determined by a similar procedrue.
+
+The plume vertical momentum equation discretizes into
+
 ```math
 \beq
 \breve W^2_{i} = \breve W^2_{i+1} - \C{w}{} \Delta c_{i+1} 
     \left ( \breve B_{i+1} - B_{i+1} - \C{\epsilon}{w} \epsilon(z_{c, i+1}) \breve W^2_{i+1} \right ) \, .
 \eeq
 ```
-The plume integration is stopped if ``\breve W^2[i] \le 0`` for ``i < N-2``, and negative values
-of ``\breve W^2`` are clipped to 0.
+
+The plume integration is stopped at cell `i < N-2` if ``\breve W^2_{i+1} \le 0``.
 
 To numerically integrate the environment-averaged tracer conservation equation, 
 the mass flux term is divided into two components,
