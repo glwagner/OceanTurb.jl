@@ -6,16 +6,16 @@ mutable struct State{T, H, P}
         Qb :: T
          h :: T
     h_crit :: H
-    plumes :: P
+     plume :: P
 end
 
 h_criterion(args...) = nothing
 
 function State(diffusivity, nonlocalflux, mixingdepth, grid, T=Float64)
-    plumes = initialize_plumes(nonlocalflux, grid)
+     plume = initialize_plume(nonlocalflux, grid)
     h_crit = h_criterion(mixingdepth, grid)
     return State(zero(T), zero(T), zero(T), zero(T), zero(T), zero(T),
-                 h_crit, plumes)
+                 h_crit, plume)
 end
 
 """
