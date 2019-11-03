@@ -25,12 +25,16 @@ Update the top flux conditions and mixing depth for `model`
 and store in `model.state`.
 """
 function update_state!(m)
+
     m.state.Qu = getbc(m, m.bcs.U.top)
     m.state.Qv = getbc(m, m.bcs.V.top)
     m.state.Qθ = getbc(m, m.bcs.T.top)
     m.state.Qs = getbc(m, m.bcs.S.top)
     m.state.Qb = m.constants.g * (m.constants.α * m.state.Qθ - m.constants.β * m.state.Qs)
+
     update_mixing_depth!(m)
+
     update_nonlocal_flux!(m)
+
     return nothing
 end

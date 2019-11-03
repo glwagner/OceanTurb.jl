@@ -122,14 +122,17 @@ function integrate_plume_equations!(T̆, S̆, W̆², T, S, grid, model)
 
     # Integrate from surface cell `N-1` downwards
     for i in n-1 : -1 : 1
-        if W̆²[i+1] <= 0
+        if W̆²[i+1] <= 0 # plume is stopped
             @inbounds W̆²[i] = 0
             @inbounds T̆[i] = T[i]
             @inbounds S̆[i] = S[i]
-        else
+        else # plume still lives
+
+            # Integrate temperature and salinity
             @inbounds T̆[i] = T̆[i+1] + Δc(grid, i+1) * entrainment(grid.zc[i+1], model) * (T̆[i+1] - T[i+1])
             @inbounds S̆[i] = S̆[i+1] + Δc(grid, i+1) * entrainment(grid.zc[i+1], model) * (S̆[i+1] - S[i+1])
 
+            # Integrate vertical momentum
             ΔB̆ᵢ₊₁ = onface(i+1, grid, plume_buoyancy_excess, model)
                                                              
             @inbounds W̆²[i] = W̆²[i+1] - Δf(grid, i+1) * ( 
