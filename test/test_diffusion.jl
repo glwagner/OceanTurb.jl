@@ -107,3 +107,18 @@ function test_damping(stepper=:ForwardEuler)
 
     all(abs.(data(c_answer) .- data(model.solution.c)) .< 1e-6)
 end
+
+@testset "Diffusion" begin
+    @test test_diffusion_basic()
+    @test test_diffusion_set_c()
+
+    for stepper in steppers
+        @test test_diffusion_cosine(stepper)
+        @test test_diffusion_cosine_run_until(stepper)
+        @test test_diffusive_flux(stepper, top_flux=0, bottom_flux=0)
+        @test test_diffusive_flux(stepper)
+        @test test_advection(stepper)
+        @test test_damping(stepper)
+    end
+end
+

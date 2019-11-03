@@ -26,3 +26,9 @@ function test_ldiv(N)
 
     x ≈ test_x
 end
+
+@testset "Solvers" begin
+    @test test_tridiagonalsolve()
+    @test test_ldiv(10)
+end
+

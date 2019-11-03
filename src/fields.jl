@@ -299,6 +299,9 @@ end
 @propagate_inbounds Δc(c::AbstractField, i_face) = Δc(c.grid, i_face)
 @propagate_inbounds Δf(c::AbstractField, i_cell) = Δf(c.grid, i_cell)
 
+"Upwards-biased difference."
+∂z⁺(i, grid, f::Function, args...) = (f(i+1, grid, args...) - f(i, grid, args...)) / Δc(grid, i+1)
+
 """
     ∂z(a, i)
 
@@ -391,6 +394,9 @@ Return the interpolation of `f` onto cell point `i`.
 """
 @propagate_inbounds oncell(f::FaceField, i) = (f.data[i+1] + f.data[i])/2
 @propagate_inbounds oncell(c::CellField, i) = c[i]
+
+@inline oncell(i, grid, f::Function, args...) = ( f(i+1, grid, args...) + f(i, grid, args...) ) / 2
+@inline onface(i, grid, f::Function, args...) = ( f(i, grid, args...) + f(i-1, grid, args...) ) / 2
 
 """
     absolute_error(c, d, p=2)

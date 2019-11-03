@@ -1,5 +1,5 @@
 #
-# Tests for the Diffusion module
+# Tests for the Pacanowski-Philander module
 #
 
 function test_pp_basic()
@@ -22,4 +22,9 @@ function test_pp_diffusion_cosine()
 
     # The error tolerance is a bit arbitrary.
     norm(c_ans.(z, time(model)) .- data(model.solution.T)) < model.grid.N*1e-6
+end
+
+@testset "Pacanowski-Philander" begin
+    @test test_pp_basic()
+    @test test_pp_diffusion_cosine()
 end

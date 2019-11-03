@@ -182,3 +182,32 @@ function test_relative_error(T)
     d = CellField([2, 2, 2], grid)
     relative_error(c, d) == 1
 end
+
+@testset "Fields" begin
+    nz, Lz = 3, 4.2
+    for T in (Float64,)
+        @test test_cell_field_construction(T, nz, Lz)
+        @test test_face_field_construction(T, nz, Lz)
+        @test test_cell_∂z(T)
+        @test test_face_∂z(T)
+        @test test_cell_plus(T)
+        @test test_cell_times(T)
+        for loc in (Face, Cell)
+            @test test_set_scalar_field(loc, T)
+            @test test_set_array_field(loc, T)
+            @test test_set_function_field(loc, T)
+        end
+        @test test_integral(T)
+        @test test_integral_range(T, 10, 10, -5, -3)
+        @test test_integral_range(T, 10, 10, -5.1, -4.5)
+        @test test_integral_range(T, 17, 3, -2.5, -1.3)
+        @test test_integral_range(T, 3, 30, -2.5, -1.3)
+        @test test_ghost_cell_value(T)
+        @test test_ghost_cell_gradient(T)
+        @test test_ghost_cell_flux(T)
+        @test test_absolute_error(T)
+        @test test_relative_error(T)
+    end
+    @test test_field_indexing()
+end
+

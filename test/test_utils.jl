@@ -1,7 +1,3 @@
-# --
-# Define tests
-# --
-
 function test_zeros(T=Float64, dims=(13, 45))
   a1, b1 = zeros(T, dims), zeros(T, dims)
   OceanTurb.@zeros T dims a2 b2
@@ -24,3 +20,13 @@ function test_diffusive_flux()
     flux = OceanTurb.diffusive_flux(:c, model)
     return flux[2] == -0.1
 end
+
+@testset "Utils" begin
+    @test test_zeros(Float64)
+    @test test_zeros(Float32)
+    @test test_diffusive_flux()
+    for stepper in steppers
+        @test test_run_until(stepper)
+    end
+end
+

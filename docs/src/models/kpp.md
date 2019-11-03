@@ -19,6 +19,7 @@
 \newcommand{\Ri}        {\mathrm{Ri}}
 \newcommand{\SL}        {\mathrm{SL}}
 \newcommand{\K}         {\mathcal{E}}
+\newcommand{\W}         {\mathcal{W}}
 
 \newcommand{\btau}      {\b{\tau}} % wind stress vector
 
@@ -26,15 +27,15 @@
 \renewcommand{\F}[2]      {\Upsilon^{#1}_{#2}}
 \renewcommand{\C}[2]      {C^{#1}_{#2}}
 
-\newcommand{\uwind}     {\omega_{\tau}}
-\newcommand{\ubuoy}     {\omega_b}
+\newcommand{\uwind}     {u_\star}
+\newcommand{\ubuoy}     {w_\star}
 
 \newcommand{\NL}        {NL}
 ```
 
 The K-Profile-Parameterization, or "KPP", is proposed by
 [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
-as a mo
+as a model for convective and wind-driven mixing in the ocean surface boundary layer.
 In KPP, vertical turbulent fluxes of a quantity ``\phi`` are parameterized as
 
 ```math
@@ -71,7 +72,7 @@ The mixing layer depth ``h`` is defined implicitly via the bulk Richardson numbe
 
 ```math
 \beq \label{bulk_ri}
-\C{\Ri}{} = \frac{h \left ( 1 - \tfrac{1}{2} \C{\ep}{} \right ) \Delta B(-h)}{| \Delta \b{U}(-h)|^2 + \F{\K}{}(-h)} \p
+\C{\Ri}{} = \frac{h \left ( 1 - \tfrac{1}{2} \C{\ep}{} \right ) \Delta B(-h)}{| \Delta \b{U}(-h)|^2 + \K(-h)} \
 \eeq
 ```
 
@@ -84,11 +85,12 @@ where the critical ``\Ri`` is ``\C{\Ri}{} = 0.3``. The operator ``\Delta`` is de
 ```
 
 where ``\C{\SL}{} = 0.1`` is the surface layer fraction.
-The function ``\F{\K}{}(z)`` is
+The function ``\K(-h)`` parameterizes unresolved kinetic energy associated with convective
+plumes,
 
 ```math
 \beq  \label{unresolved_ke}
-\F{\K}{}(z) = \C{\K}{} (-z)^{4/3} \sqrt{ \max \left [ 0, B_z(z) \right ] } \max \left [ 0, F_b \right ]^{1/3} + \C{\K_0}{} \p
+\K(-h) = \C{\K}{} (-z)^{4/3} \sqrt{ \max \left [ 0, B_z(z) \right ] } \max \left [ 0, Q_b \right ]^{1/3} + \C{\K_0}{} \p
 \eeq
 ```
 
@@ -102,36 +104,37 @@ The non-local flux is defined only for ``T`` and ``S``, and is
 
 ```math
 \beq
-NL_\phi = \C{\NL}{} F_\phi d (1 - d)^2 \c
+NL_\phi = \C{\NL}{} Q_\phi d (1 - d)^2 \c
 \eeq
 ```
 where ``d = -z/h`` is a non-dimensional depth coordinate and ``\C{\NL}{} = 6.33``.
 
 ## ``K``-Profile model in CVMix KPP
 
-The KPP diffusivity is defined
+The KPP diffusivity is
 
 ```math
 \beq
-K_\phi = h \F{w}{\phi} d ( 1 - d )^2 \c
+K_\phi = h \W_\Phi(d) d ( 1 - d )^2 \c
 \eeq
 ```
-where ``\F{w}{\phi}`` is the turbulent velocity scale.
+
+where ``\W_\Phi(d)`` is the turbulent velocity scale for variable ``\phi``.
 
 We define the ratios
 
 ```math
 \beq
-r_b \equiv \left ( \frac{\omega_b}{\omega_\tau} \right )^3 \qquad \text{and}
-\qquad r_\tau \equiv \left ( \frac{\omega_\tau}{\omega_b} \right )^3 = \frac{1}{r_b} \p
+r_b \equiv \left ( \frac{\ubuoy}{\uwind} \right )^3 \qquad \text{and}
+\qquad r_\tau \equiv \left ( \frac{\uwind}{\ubuoy} \right )^3 = \frac{1}{r_b} \p
 \eeq
 ```
 
-In wind-driven turbulence under stable buoyancy forcing such that ``F_b < 0``, the turbulent velocity scale is
+In wind-driven turbulence under stable buoyancy forcing such that ``Q_b < 0``, the turbulent velocity scale is
 
 ```math
 \beq
-\F{w}{\phi} = \frac{ \C{\tau}{} \uwind}{ \left ( 1 + \C{\mathrm{stab}}{} r_b d \right )^{\C{n}{}}} \p
+\W_\Phi = \frac{ \C{\tau}{} \uwind}{ \left ( 1 + \C{\mathrm{stab}}{} r_b d \right )^{\C{n}{}}} \p
 \eeq
 ```
 
@@ -142,7 +145,7 @@ the turbulent velocity scale is
 
 ```math
 \beq
-\F{w}{\Phi} = \C{\tau}{} \omega_\tau \left ( 1 + \C{\mathrm{unst}}{} r_b \min \left [ \C{\SL}{}, d \right ] \right )^{\C{m\tau}{\Phi}} \c
+\W_\Phi(d) = \C{\tau}{} \uwind \left ( 1 + \C{\mathrm{unst}}{} r_b \min \left [ \C{\SL}{}, d \right ] \right )^{\C{m\tau}{\Phi}} \c
 \eeq
 ```
 
@@ -155,7 +158,7 @@ the turbulent velocity scale is
 
 ```math
 \beq
-\F{w}{\Phi} = \C{b}{\Phi} \omega_b \left ( \min \left [ \C{\SL}{}, d \right ] + \C{\tau b}{\Phi} r_\tau \right )^{\C{mb}{\Phi}} \c
+\W_\Phi(d) = \C{b}{\Phi} \ubuoy \left ( \min \left [ \C{\SL}{}, d \right ] + \C{\tau b}{\Phi} r_\tau \right )^{\C{mb}{\Phi}} \c
 \eeq
 ```
 
@@ -169,13 +172,13 @@ where
 
 ## Selected tests
 
-See `/test/runtests.jl` for more tests.
+See `/test/test_kpp.jl` for more tests.
 
 ### Linear temperature profile and no velocity field
 
 Some simple tests can be defined when the model state is ``U=V=S=0`` and ``T = \gamma z``.
 In this case the buoyancy becomes ``B = g \alpha \gamma z`` and the buoyancy gradient is ``B_z = g \alpha \gamma``.
-If we further take ``\C{\SL}{} \to 0`` and ``F_b > 0``, and note that the value of ``T``
+If we further take ``\C{\SL}{} \to 0`` and ``Q_b > 0``, and note that the value of ``T``
 in the top grid cell is ``T_N = -\gamma \Delta z / 2``, where ``N`` is the number of
 grid points, we find that
 
@@ -197,7 +200,7 @@ The unresolved kinetic energy function is
 
 ```math
 \beq
-\F{\K}{}(-h) = \C{\K}{} h^{4/3} \sqrt{g \alpha \gamma} F_b^{1/3} \p
+\K(-h) = \C{\K}{} h^{4/3} \sqrt{g \alpha \gamma} Q_b^{1/3} \p
 \eeq
 ```
 
@@ -205,9 +208,9 @@ The bulk Richardson number criterion then becomes
 
 ```math
 \begin{align}
-\C{\Ri}{} &= \frac{h \Delta B(-h)}{\F{\K}{}(-h)} \c \\
-          &= \frac{g \alpha \gamma h^2 - h B_N}{\C{\K}{} h^{4/3} \sqrt{g \alpha \gamma} F_b^{1/3}} \c \\
-          &= \frac{g \alpha \gamma h - B_N}{\C{\K}{} \sqrt{g \alpha \gamma} \left ( h F_b \right )^{1/3}} \c \\
+\C{\Ri}{} &= \frac{h \Delta B(-h)}{\K(-h)} \c \\
+          &= \frac{g \alpha \gamma h^2 - h B_N}{\C{\K}{} h^{4/3} \sqrt{g \alpha \gamma} Q_b^{1/3}} \c \\
+          &= \frac{g \alpha \gamma h - B_N}{\C{\K}{} \sqrt{g \alpha \gamma} \left ( h Q_b \right )^{1/3}} \c \\
 \end{align}
 ```
 
@@ -216,7 +219,7 @@ analytically calculate the mixed layer depth:
 
 ```math
 \beq
-h = \left ( \C{\Ri}{} \C{\K}{} \right )^{3/2} \sqrt{F_b} \left ( g \alpha \gamma \right )^{-3/4} \p
+h = \left ( \C{\Ri}{} \C{\K}{} \right )^{3/2} \sqrt{Q_b} \left ( g \alpha \gamma \right )^{-3/4} \p
 \label{analyticaldepth}
 \eeq
 ```
@@ -238,47 +241,46 @@ and a velocity profile
 
 ```math
 \beq
-u(z) =  \left \{ \begin{matrix}
-  u_0 & \quad \text{for } z > -h \c \\
-  -u_0 & \quad \text{for } z < -h \c
+U(z) =  \left \{ \begin{matrix}
+  U_0 & \quad \text{for } z > -h \c \\
+  -U_0 & \quad \text{for } z < -h \c
   \end{matrix} \right .
 \eeq
 ```
 
-so that ``t(z=-h) = u(z=-h) = 0``.
-we then have ``\delta t(-h) = t_0`` and ``\delta u^2(-h) = u_0^2``, so that
+so that ``T(z=-h) = U(z=-h) = 0``.
+We then have ``\Delta T(-h) = T_0`` and ``\Delta U^2(-h) = U_0^2``, so that
 with ``g=\alpha=1``,
 
 ```math
 \beq
-\c{\Ri}{} = \frac{h t_0}{u_0^2} \p
+\C{\Ri}{} = \frac{h T_0}{U_0^2} \p
 \label{sheardepth}
 \eeq
 ```
-setting ``h = 9``, ``\c{\ri}{}=1``, ``t_0 = 1``, and ``u_0=3`` yields a consistent solution.
 
-### limiting cases for turbulent velocity scales
+setting ``h = 9``, ``\C{\Ri}{}=1``, ``T_0 = 1``, and ``U_0=3`` yields a consistent solution.
 
-under zero momentum forcing, the turbulent vertical velocity scale is
+### Limiting cases for turbulent velocity scales
+
+Under zero momentum forcing, the turbulent vertical velocity scale is
 
 ```math
 \beq
-\f{w}{\phi} = \c{b}{\phi} \left ( \c{\ep}{} \right )^{1/3} | h f_b |^{1/3} \p
+\W_\phi = \C{b}{\phi} \left ( \C{\ep}{} \right )^{1/3} | h Q_b |^{1/3} \p
 \label{buoyscaletest}
 \eeq
 ```
+We write the test in \eqref{buoyscaletest} using the depth in \eqref{analyticaldepth}
 
-we write the test in \eqref{buoyscaletest} using the depth in \eqref{analyticaldepth}
-
-under zero buoyancy forcing, the turbulent velocity scale is
+Under zero buoyancy forcing, the turbulent velocity scale is
 
 ```math
 \beq
-\f{w}{\phi} = \c{\tau}{} \omega_\tau \p
+\W_\phi = \C{\tau}{} \uwind \p
 \label{windscaletest}
 \eeq
 ```
-
 
 # Table of model parameters
 
@@ -286,7 +288,7 @@ The default values for adjustable model parameters in KPP are
 
 |   Parameter             | Value       | Description |
 |   :-------:             | :---:       | :---:       |
-| ``\C{\Ri}{}``           | 0.3         | Bulk Richardson number criterion |   
+| ``\C{\Ri}{}``           | 0.3         | Bulk Richardson number criterion |
 | ``\C{\SL}{}``           | 0.1         | Surface layer fraction |
 | ``\C{\K}{}``            | 3.19        | Unresolved kinetic energy constant |
 | ``\C{\NL}{}``           | 6.33        | Non-local flux proportionality constant |
@@ -312,7 +314,7 @@ The default values for 'non-adjustable' parameters in KPP are
 
 |   Parameter       | Value  | Description |
 |   :-------:       | :---:  | :-: |
-| ``\C{\tau b}{U}`` | 0.374  | |  
+| ``\C{\tau b}{U}`` | 0.374  | | 
 | ``\C{\tau b}{T}`` | -0.717 | |
 | ``\C{\K_0}{}``    | 1e-11  | |
 

@@ -5,8 +5,6 @@ to discretize momentum, temperature, salinity, and other variables
 in the ``z``-direction.
 A variety of explicit and implicit-explicit schemes are
 implemented for temporal integration.
-At the moment, we only support the treatment of diffusive operators
-implicitly for semi-implicit time-integration.
 
 # Spatial discretization
 
@@ -223,9 +221,9 @@ To form the matrix operator in \eqref{implicitoperatormatrix}, we have used
 the second-order flux divergence finite difference operators in
 \eqref{fluxdivop}--\eqref{fluxdivop_bottom}.
 
-It is crucial to note that the diffusive operator that contributes to ``L^n_{ij}``
+It is crucial to note that the diffusive operator that contributes to ``\mathcal{L}^n_{ij}``
 does not include fluxes across boundary faces.
-In particular, ``L^n_{ij}`` in \eqref{implicitoperatormatrix} enforces a
+In particular, ``\mathcal{L}^n_{ij}`` in \eqref{implicitoperatormatrix} enforces a
 no-flux condition across the top and bottom faces.
 Accordingly, fluxes through boundary faces due either to Dirichlet (Value)
 boundary conditions or non-zero fluxes are accounted for
