@@ -476,7 +476,7 @@ where ``\C{\alpha}{} = 1.0``, and ``\sigma_w(z)`` is an empirical expression for
 vertical velocity standard deviation,
 ```math
 \beq
-    \sigma_w = \left ( \C{\sigma \tau}{} \uwind^3 + \C{\sigma b}{} d \ubuoy^3 \right )^{1/3} \left ( 1 - d \right )^{1/2} \, ,
+    \sigma_w = \left ( \C{\sigma \tau}{} \uwind^3 + \C{\sigma b}{} \ubuoy^3 d \right )^{1/3} \left ( 1 - d \right )^{1/2} \, ,
 \eeq
 ```
 with ``\C{\sigma \tau}{} = 2.2`` and ``\C{\sigma b}{} = 1.32``.
@@ -518,7 +518,7 @@ The downwind discretization of the plume vertical momentum advection term is
 
 ```math
 \beq
-\left ( \partial_z \breve W^2 \right )_i = \frac{ \breve W^2_i - \breve W^2_{i-1} }{\Delta f_i} \, .
+\left ( \partial_z \breve W^2 \right )_{i+1} = \frac{ \breve W^2_{i+1} - \breve W^2_i }{\Delta f_{i+1}} \, .
 \eeq
 ```
 
