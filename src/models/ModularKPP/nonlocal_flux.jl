@@ -26,9 +26,9 @@ mass_flux(m::CGModel, i) = 0
 
 Base.@kwdef struct DiagnosticPlumeModel{T} <: AbstractParameters
      Ca :: T = 0.1
-     Cw :: T = 2.86
+    Cbw :: T = 2.86
      Ce :: T = 0.4
-    Cew :: T = 0.2
+    Cew :: T = 0.572
      Cα :: T = 1.0
     Cστ :: T = 2.2
     Cσb :: T = 1.32
@@ -118,7 +118,7 @@ function integrate_plume_equations!(T̆, S̆, W̆², T, S, grid, model)
     # Vertical momentum at the nᵗʰ cell interface, approximating excess buoyancy at
     # interface with excess at top cell center:
     ΔB̆ᵢ₊₁ = plume_buoyancy_excess(n, grid, model)
-    @inbounds W̆²[n] = -model.nonlocalflux.Cw * Δf(grid, n) * ΔB̆ᵢ₊₁
+    @inbounds W̆²[n] = -model.nonlocalflux.Cbw * Δf(grid, n) * ΔB̆ᵢ₊₁
 
     # Integrate from surface cell `N-1` downwards
     for i in n-1 : -1 : 1
@@ -132,8 +132,9 @@ function integrate_plume_equations!(T̆, S̆, W̆², T, S, grid, model)
 
             ΔB̆ᵢ₊₁ = onface(i+1, grid, plume_buoyancy_excess, model)
                                                              
-            @inbounds W̆²[i] = (W̆²[i+1] - model.nonlocalflux.Cw * Δf(grid, i+1) * 
-                              (ΔB̆ᵢ₊₁ - model.nonlocalflux.Cew * entrainment(grid.zf[i+1], model) * W̆²[i+1]))
+            @inbounds W̆²[i] = W̆²[i+1] - Δf(grid, i+1) * ( 
+                                  model.nonlocalflux.Cbw * ΔB̆ᵢ₊₁
+                                - model.nonlocalflux.Cew * entrainment(grid.zf[i+1], model) * W̆²[i+1])
         end
     end
 

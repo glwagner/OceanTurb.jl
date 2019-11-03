@@ -451,12 +451,12 @@ The budget for plume vertical momentum is
 
 ```math
 \beq
-    \d_z \breve W^2 = \C{w}{} \left ( \breve B - B - \C{\epsilon}{w} \epsilon \, \breve W^2 \right ) 
+    \d_z \breve W^2 = \C{b}{w} \left ( \breve B - B \right ) - \C{\epsilon}{w} \epsilon \, \breve W^2
 \eeq
 ```
 where ``\breve B = \alpha \breve T - \beta \breve S`` is the plume-averaged buoyancy and 
-``B = \alpha T - \beta S`` is the environment-averaged buoyancy, ``\C{w}{} = 2.86``, 
-and ``\C{\epsilon}{w} = 0.2``.
+``B = \alpha T - \beta S`` is the environment-averaged buoyancy, ``\C{b}{w} = 2.86``, 
+and ``\C{\epsilon}{w} = 0.572``.
 
 #### Surface layer plume initialization model and numerical implementation
 
@@ -485,7 +485,7 @@ The boundary condition on plume vertical momentum prescribes no penetration
 through the ocean surface,
 ```math
 \beq
-    \breve W(z=z_{N+1}) = 0 \, .
+    \breve W(z=0) = 0 \, .
 \eeq
 ```
 
@@ -529,7 +529,7 @@ The plume vertical velocity equation is thus
 
 ```math
 \beq
-    \breve W^2_i = \breve W^2_{i+1} - \Delta f_{i+1} \C{w}{} \left [ \frac{1}{2} \left ( \breve B_i + \breve B_{i+1} - B_i - B_{i+1} \right ) - \C{\epsilon}{w} \epsilon \left ( z_{f, i+1} \right ) \breve W^2_{i+1} \right ) \, .
+    \breve W^2_i = \breve W^2_{i+1} - \Delta f_{i+1} \C{b}{w} \frac{1}{2} \left ( \breve B_i + \breve B_{i+1} - B_i - B_{i+1} \right ) + \Delta f_{i+1} \C{\epsilon}{w} \epsilon \left ( z_{f, i+1} \right ) \breve W^2_{i+1} \, .
 \eeq
 ```
 
