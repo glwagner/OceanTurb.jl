@@ -9,8 +9,8 @@ usecmbright()
 
 modelsetup = (N=256, L=256, stepper=:BackwardEuler)
 
-Fb = 1e-7
-Fu = 0.0
+buoyancy_flux = 1e-7
+wind_stress = 0.0
 N² = 1e-5
 Δt = 2minute
 t_plot = (0hour, 12hour, 48hour)
@@ -58,10 +58,10 @@ models = (cvmix, holtslag, roms, holtslag_roms, cvmix_plumes)
 for model in models
     model.solution.T = T₀
 
-    Fθ = Fb / (model.constants.α * model.constants.g)
-    model.bcs.U.top = FluxBoundaryCondition(Fu)
+    temperature_flux = buoyancy_flux / (model.constants.α * model.constants.g)
+    model.bcs.U.top = FluxBoundaryCondition(wind_stress)
 
-    model.bcs.T.top = FluxBoundaryCondition(Fθ)
+    model.bcs.T.top = FluxBoundaryCondition(temperature_flux)
     model.bcs.T.bottom = GradientBoundaryCondition(dTdz)
 
 end
