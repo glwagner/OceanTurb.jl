@@ -1,8 +1,4 @@
 Base.@kwdef struct TKEParameters{T} <: AbstractParameters
-        CLz :: T = 0.4    # Dissipation parameter
-        CLb :: T = Inf    # Dissipation parameter
-        CLΔ :: T = 0.1    # Dissipation parameter
-         Cτ :: T = 400.0  # Dissipation parameter
 
         CDe :: T = 2.0    # Dissipation parameter
 
@@ -26,32 +22,9 @@ end
 # definitions below.
 #
 
-@inline oncell(f::Function, m, i) = (f(m, i) + f(m, i+1)) / 2
-@inline onface(f::Function, m, i) = (f(m, i) + f(m, i-1)) / 2
-
 "Return the turbuent velocity scale associated with convection."
 @inline ωb(Qb, h) = abs(h * Qb)^(1/3)
 @inline ωb(m::AbstractModel) = ωb(m.state.Qb, m.state.h)
-
-@inline function mixing_length(m, i)
-    Ls = - m.tke.CLz * m.grid.zf[i]
-    Ls = isnan(Ls) ? Inf : Ls
-
-    LN = m.tke.CLb * onface(sqrt_e, m, i) / maxsqrt(∂B∂z(m, i))
-    LN = isnan(LN) ? Inf : LN
-
-    L = min(Ls, LN)
-    L = L == Inf ? 0.0 : L
-
-    L = max(L, m.tke.CLΔ * m.grid.Δf)
-
-    return L
-end
-
-@inline sqrt_e(m, i) = @inbounds maxsqrt(m.solution.e[i])
-
-@inline ∂B∂z(m, i) = ∂B∂z(m.solution.T, m.solution.S, m.constants.g, m.constants.α,
-                          m.constants.β, i)
 
 @inline production(m, i) = KU(m, i) * (∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2)
 

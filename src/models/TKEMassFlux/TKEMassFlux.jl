@@ -14,27 +14,30 @@ const nsol = 5
 minuszero(args...) = -0
 
 include("state.jl")
+include("mixing_length.jl")
 include("tke.jl")
 
-struct Model{TKE, NP, H, TS, G, T, S, BC} <: AbstractModel{TS, G, T}
-          clock :: Clock{T}
-           grid :: G
-    timestepper :: TS
-       solution :: S
-            bcs :: BC
-            tke :: TKE
-   nonlocalflux :: NP
-    mixingdepth :: H
-      constants :: Constants{T}
-          state :: State{T}
+struct Model{L, P, K, H, TS, G, T, S, BC} <: AbstractModel{TS, G, T}
+            clock :: Clock{T}
+             grid :: G
+      timestepper :: TS
+         solution :: S
+              bcs :: BC
+    mixing_length :: L
+    nonlocal_flux :: P
+     mixing_depth :: H
+     tke_equation :: K
+        constants :: Constants{T}
+            state :: State{T}
 end
 
 function Model(; N=10, L=1.0,
             grid = UniformGrid(N, L),
        constants = Constants(),
-             tke = TKEParameters(),
-    nonlocalflux = nothing,
-     mixingdepth = ModularKPP.LMDMixingDepth(),
+   mixing_length = SimpleMixingLength(),
+   nonlocal_flux = nothing,
+    mixing_depth = ModularKPP.LMDMixingDepth(),
+    tke_equation = TKEParameters(),
          stepper = :ForwardEuler,
     )
 
@@ -56,16 +59,17 @@ function Model(; N=10, L=1.0,
 
     timestepper = Timestepper(stepper, eq, solution, lhs)
 
-    return Model(Clock(), grid, timestepper, solution, bcs, tke,
-                 mixingdepth, constants, State())
+    return Model(Clock(), grid, timestepper, solution, bcs, 
+                 mixing_length, nonlocal_flux, mixing_depth, 
+                 tke_equation, constants, State())
 end
 
 @inline K(m, i) = @inbounds mixing_length(m, i) * onface(sqrt_e, m, i)
 
-@inline KU(m, i) = m.tke.KU₀ + m.tke.CK_U * K(m, i)
-@inline KT(m, i) = m.tke.KT₀ + m.tke.CK_T * K(m, i)
-@inline KS(m, i) = m.tke.KS₀ + m.tke.CK_T * K(m, i)
-@inline Ke(m, i) = m.tke.Ke₀ + m.tke.CK_e * K(m, i)
+@inline KU(m, i) = m.tke_equation.KU₀ + m.tke_equation.CK_U * K(m, i)
+@inline KT(m, i) = m.tke_equation.KT₀ + m.tke_equation.CK_T * K(m, i)
+@inline KS(m, i) = m.tke_equation.KS₀ + m.tke_equation.CK_T * K(m, i)
+@inline Ke(m, i) = m.tke_equation.Ke₀ + m.tke_equation.CK_e * K(m, i)
 
 const KV = KU
 
