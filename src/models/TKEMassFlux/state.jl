@@ -4,9 +4,8 @@ mutable struct State{T} <: FieldVector{6, T}
     Qθ :: T
     Qs :: T
     Qb :: T
-     h :: T
     function State(T=Float64)
-        new{T}(0, 0, 0, 0, 0, 0)
+        new{T}(0, 0, 0, 0, 0)
     end
 end
 
@@ -22,6 +21,5 @@ function update_state!(m)
     m.state.Qθ = getbc(m, m.bcs.T.top)
     m.state.Qs = getbc(m, m.bcs.S.top)
     m.state.Qb = m.constants.g * (m.constants.α * m.state.Qθ - m.constants.β * m.state.Qs)
-    m.state.h  = ModularKPP.mixing_depth(m)
     return nothing
 end

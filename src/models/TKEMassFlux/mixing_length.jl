@@ -1,20 +1,11 @@
-@inline oncell(f::Function, m, i) = (f(m, i) + f(m, i+1)) / 2
-@inline onface(f::Function, m, i) = (f(m, i) + f(m, i-1)) / 2
-
-@inline sqrt_e(m, i) = @inbounds maxsqrt(m.solution.e[i])
-
-@inline ∂B∂z(m, i) = ∂B∂z(m.solution.T, m.solution.S, m.constants.g, m.constants.α,
-                          m.constants.β, i)
-
 Base.@kwdef struct SimpleMixingLength{T} <: AbstractParameters
-    CLz :: T = 0.4    # Dissipation parameter
-    CLb :: T = Inf    # Dissipation parameter
-    CLΔ :: T = 0.1    # Dissipation parameter
+    CLz :: T = 0.4
+    CLb :: T = 0.1
+    CLΔ :: T = 1.0
 end
 
-@inline function mixing_length(m::Model{<:SimpleMixingLength}, i)
+@inline function mixing_length_face(m::Model{<:SimpleMixingLength}, i)
     Ls = - m.mixing_length.CLz * m.grid.zf[i]
-    Ls = isnan(Ls) ? Inf : Ls
 
     LN = m.mixing_length.CLb * onface(sqrt_e, m, i) / maxsqrt(∂B∂z(m, i))
     LN = isnan(LN) ? Inf : LN
@@ -22,7 +13,23 @@ end
     L = min(Ls, LN)
     L = L == Inf ? 0.0 : L
 
-    L = max(L, m.mixing_length.CLΔ * m.grid.Δf)
+    # Limit mixing length by some factor of the local cell width
+    L = max(L, m.mixing_length.CLΔ * Δc(m.grid, i))
+
+    return L
+end
+
+@inline function mixing_length_cell(m::Model{<:SimpleMixingLength}, i)
+    Ls = - m.mixing_length.CLz * m.grid.zc[i]
+
+    LN = m.mixing_length.CLb * sqrt_e(m, i) / oncell(sqrt_∂B∂z, m, i)
+    LN = isnan(LN) ? Inf : LN
+
+    L = min(Ls, LN)
+    L = L == Inf ? 0.0 : L
+
+    # Limit mixing length by some factor of the local face separation
+    L = max(L, m.mixing_length.CLΔ * Δf(m.grid, i))
 
     return L
 end

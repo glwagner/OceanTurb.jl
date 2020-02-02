@@ -13,11 +13,20 @@ const nsol = 5
 
 minuszero(args...) = -0
 
-include("state.jl")
-include("mixing_length.jl")
-include("tke.jl")
+@inline maxsqrt(ϕ::T) where T = sqrt(max(zero(T), ϕ))
+@inline maxsqrt(ϕ, i) = @inbounds sqrt(max(0, ϕ[i]))
 
-struct Model{L, P, K, H, TS, G, T, S, BC} <: AbstractModel{TS, G, T}
+@inline oncell(f::Function, m, i) = (f(m, i) + f(m, i+1)) / 2
+@inline onface(f::Function, m, i) = (f(m, i) + f(m, i-1)) / 2
+
+@inline sqrt_e(m, i) = @inbounds maxsqrt(m.solution.e[i])
+
+@inline ∂B∂z(m, i) = ∂B∂z(m.solution.T, m.solution.S, m.constants.g, m.constants.α,
+                          m.constants.β, i)
+
+@inline sqrt_∂B∂z(m, i) = maxsqrt(∂B∂z(m, i))
+
+struct Model{L, P, K, TS, G, T, S, BC, C, ST} <: AbstractModel{TS, G, T}
             clock :: Clock{T}
              grid :: G
       timestepper :: TS
@@ -25,18 +34,20 @@ struct Model{L, P, K, H, TS, G, T, S, BC} <: AbstractModel{TS, G, T}
               bcs :: BC
     mixing_length :: L
     nonlocal_flux :: P
-     mixing_depth :: H
      tke_equation :: K
-        constants :: Constants{T}
-            state :: State{T}
+        constants :: C
+            state :: ST
 end
+
+include("state.jl")
+include("mixing_length.jl")
+include("tke_equation.jl")
 
 function Model(; N=10, L=1.0,
             grid = UniformGrid(N, L),
        constants = Constants(),
    mixing_length = SimpleMixingLength(),
    nonlocal_flux = nothing,
-    mixing_depth = ModularKPP.LMDMixingDepth(),
     tke_equation = TKEParameters(),
          stepper = :ForwardEuler,
     )
@@ -59,12 +70,11 @@ function Model(; N=10, L=1.0,
 
     timestepper = Timestepper(stepper, eq, solution, lhs)
 
-    return Model(Clock(), grid, timestepper, solution, bcs, 
-                 mixing_length, nonlocal_flux, mixing_depth, 
-                 tke_equation, constants, State())
+    return Model(Clock(), grid, timestepper, solution, bcs, mixing_length, 
+                 nonlocal_flux, tke_equation, constants, State())
 end
 
-@inline K(m, i) = @inbounds mixing_length(m, i) * onface(sqrt_e, m, i)
+@inline K(m, i) = @inbounds mixing_length_face(m, i) * onface(sqrt_e, m, i)
 
 @inline KU(m, i) = m.tke_equation.KU₀ + m.tke_equation.CK_U * K(m, i)
 @inline KT(m, i) = m.tke_equation.KT₀ + m.tke_equation.CK_T * K(m, i)
@@ -79,6 +89,6 @@ const KV = KU
 @inline RS(m, i) = 0
 
 @inline Re(m, i) = oncell(production, m, i) + oncell(buoyancy_flux, m, i) - dissipation(m, i)
-@inline Le(m, i) = -0 #@inbounds m.tke.CDe / mixing_time(m, i)
+@inline Le(m, i) = 0
 
 end # module
