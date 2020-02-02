@@ -26,7 +26,7 @@ minuszero(args...) = -0
 
 @inline sqrt_∂B∂z(m, i) = maxsqrt(∂B∂z(m, i))
 
-struct Model{L, P, K, TS, G, T, S, BC, C, ST} <: AbstractModel{TS, G, T}
+mutable struct Model{L, P, K, TS, G, T, S, BC, C, ST} <: AbstractModel{TS, G, T}
             clock :: Clock{T}
              grid :: G
       timestepper :: TS
