@@ -398,24 +398,30 @@ Return the interpolation of `f` onto cell point `i`.
 @inline oncell(i, grid, f::Function, args...) = ( f(i+1, grid, args...) + f(i, grid, args...) ) / 2
 @inline onface(i, grid, f::Function, args...) = ( f(i, grid, args...) + f(i-1, grid, args...) ) / 2
 
+function on_grid(c, d)
+    if length(c) != length(d)
+        e = similar(c)
+        set!(e, d)
+    else
+        e = d
+    end
+
+    return e
+end
+
 """
     absolute_error(c, d, p=2)
 
 Compute the absolute error between `c` and `d` with norm `p`, defined as
 
-``\\mathrm{abs \\, error} = \\left ( L^{-1} \\int_{-L}^0 (c-d)^p \\, \\mathrm{d} z \\right )^(1/p)``.
+``\\mathrm{abs \\, error} = \\left ( L^{-1} \\int_{-L}^0 |c-d|^p \\, \\mathrm{d} z \\right )^(1/p)``.
 """
 function absolute_error(c::CellField, d::CellField, p=2)
-    if length(c) != length(d)
-        𝒹 = similar(c)
-        set!(𝒹, d)
-    else
-        𝒹 = d
-    end
+    e = on_grid(c, d)
 
     total = zero(eltype(c))
     for i in eachindex(c)
-        @inbounds total += (c[i] - 𝒹[i])^p * Δf(c, i)
+        @inbounds total += abs(c[i] - e[i])^p * Δf(c, i)
     end
 
     return  ( total / height(c) )^(1/p)
