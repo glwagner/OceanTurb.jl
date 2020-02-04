@@ -41,15 +41,15 @@ instantiate_plume(::DiagnosticPlumeModel, grid) =
 ##### Empirical standard deviation
 #####
 
-@inline function w_standard_dev(ωb, ωτ, Cστ, Cσb, d::T) where T
+@inline function w_standard_dev(w★, u★, Cστ, Cσb, d::T) where T
     if 0 < d < 1
-        return (Cστ * ωτ^3 + Cσb * ωb^3 * d)^(1/3) * (1 - d)^(1/2)
+        return (Cστ * u★^3 + Cσb * w★^3 * d)^(1/3) * (1 - d)^(1/2)
     else
         return zero(T)
     end
 end
 
-@inline w_standard_dev(m, i) = @inbounds w_standard_dev(ωb(m), ωτ(m), m.nonlocalflux.Cστ, 
+@inline w_standard_dev(m, i) = @inbounds w_standard_dev(w★(m), u★(m), m.nonlocalflux.Cστ, 
                                                         m.nonlocalflux.Cσb, -m.grid.zc[i] / m.state.h)
 
 #####
