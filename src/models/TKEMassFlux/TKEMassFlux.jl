@@ -14,7 +14,7 @@ const nsol = 5
 minuszero(args...) = -0
 
 @inline maxsqrt(ϕ::T) where T = sqrt(max(zero(T), ϕ))
-@inline maxsqrt(ϕ, i) = @inbounds sqrt(max(0, ϕ[i]))
+@inline maxsqrt(ϕ, i) = @inbounds sqrt(max(zero(eltype(ϕ)), ϕ[i]))
 
 @inline oncell(f::Function, m, i) = (f(m, i) + f(m, i+1)) / 2
 @inline onface(f::Function, m, i) = (f(m, i) + f(m, i-1)) / 2
