@@ -49,12 +49,12 @@ include("tke_equation.jl")
 function Model(; 
                       grid = UniformGrid(N, L),
                  constants = Constants(),
-             mixing_length = SimpleMixingLength(),
+             mixing_length = EquilibriumMixingLength(),
       boundary_layer_depth = nothing,
              nonlocal_flux = nothing,
               tke_equation = TKEParameters(),
-            tke_wall_model = nothing,
-                   stepper = :ForwardEuler,
+            tke_wall_model = PrescribedBoundaryTKE(),
+                   stepper = :BackwardEuler,
 )
 
     solution = Solution((CellField(grid) for i=1:nsol)...)
