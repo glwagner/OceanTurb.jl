@@ -32,9 +32,9 @@ end
 TurbulentKineticEnergyBoundaryConditions(T, wall_model) = DefaultBoundaryConditions(T)
 
 Base.@kwdef struct PrescribedNearWallTKE{T} <: AbstractParameters
-    Cu★ :: T = 3.75
-    Cw★ :: T = 0.2
-    Cz★ :: T = 0.4
+    Cʷu★ :: T = 3.75
+    Cʷw★ :: T = 0.2
+    Cʷz★ :: T = 0.4
 end
 
 function update_near_wall_tke!(m::Model{L, H, <:PrescribedNearWallTKE}) where {L, H}
@@ -43,9 +43,9 @@ function update_near_wall_tke!(m::Model{L, H, <:PrescribedNearWallTKE}) where {L
 end
 
 Base.@kwdef struct PrescribedBoundaryTKE{T} <: AbstractParameters
-    Cu★ :: T = 3.75
-    Cw★ :: T = 0.2
-    Cz★ :: T = 0.4
+    Cʷu★ :: T = 3.75
+    Cʷw★ :: T = 0.2
+    Cʷz★ :: T = 0.4
 end
 
 (boundary_tke::PrescribedBoundaryTKE)(model) = boundary_tke.Cu★ * u★(model)^2
