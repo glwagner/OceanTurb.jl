@@ -38,7 +38,7 @@ Base.@kwdef struct PrescribedNearWallTKE{T} <: AbstractParameters
 end
 
 function update_near_wall_tke!(m::Model{L, H, <:PrescribedNearWallTKE}) where {L, H}
-    @inbounds m.solution.e[m.grid.N] = m.tke_wall_model.Cu★ * u★(m)^2
+    @inbounds m.solution.e[m.grid.N] = m.tke_wall_model.Cʷu★ * u★(m)^2
     return nothing
 end
 
@@ -48,7 +48,7 @@ Base.@kwdef struct PrescribedBoundaryTKE{T} <: AbstractParameters
     Cʷz★ :: T = 0.4
 end
 
-(boundary_tke::PrescribedBoundaryTKE)(model) = boundary_tke.Cu★ * u★(model)^2
+(boundary_tke::PrescribedBoundaryTKE)(model) = boundary_tke.Cʷu★ * u★(model)^2
 
 TurbulentKineticEnergyBoundaryConditions(T, wall_model::PrescribedBoundaryTKE) =
     FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), ValueBoundaryCondition(wall_model))

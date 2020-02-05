@@ -27,7 +27,7 @@ ValueBoundaryCondition(bc) = BoundaryCondition(Value, bc)
 const BC = BoundaryCondition
 
 @inline getbc(model, bc::BC{C, <:Number}) where C = bc.condition
-@inline getbc(model, bc::BC{C, <:Function}) where C = bc.condition(model)
+@inline getbc(model, bc) = bc.condition(model) # default / fallback
 
 @inline gradient(bc::BC{<:Gradient}, model, args...) = getbc(model, bc)
 @inline gradient(bc::BC{<:Flux},     model, κ, args...) = -getbc(model, bc) / κ
