@@ -82,12 +82,12 @@ function Model(;
                  State(mixing_length, boundary_layer_depth))
 end
 
-@inline K(m, i) = @inbounds diffusivity_mixing_length(m, i) * onface(sqrt_e, m, i)
+@inline K(m, i) = @inbounds m.tke_equation.Cᴷ * diffusivity_mixing_length(m, i) * onface(sqrt_e, m, i)
 
-@inline KU(m, i) = m.tke_equation.KU₀ + m.tke_equation.Cᴷᵤ * K(m, i)
-@inline KT(m, i) = m.tke_equation.KT₀ + m.tke_equation.Cᴷᵩ * K(m, i)
-@inline KS(m, i) = m.tke_equation.KS₀ + m.tke_equation.Cᴷᵩ * K(m, i)
-@inline Ke(m, i) = m.tke_equation.Ke₀ + m.tke_equation.Cᴷₑ * K(m, i)
+@inline KU(m, i) = m.tke_equation.KU₀ + K(m, i)
+@inline KT(m, i) = m.tke_equation.KT₀ + m.tke_equation.Cᴾʳᵩ * K(m, i)
+@inline KS(m, i) = m.tke_equation.KS₀ + m.tke_equation.Cᴾʳᵩ * K(m, i)
+@inline Ke(m, i) = m.tke_equation.Ke₀ + m.tke_equation.Cᴾʳₑ * K(m, i)
 
 const KV = KU
 

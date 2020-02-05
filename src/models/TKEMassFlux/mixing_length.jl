@@ -90,8 +90,8 @@ Base.@kwdef struct EquilibriumMixingLength{T} <: AbstractParameters
     Cᴸᵇ :: T = 0.64
 end
 
-@inline tke_time_scale(m, i) = m.tke_equation.Cᴷᵤ * (∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2) -
-                                m.tke_equation.Cᴷᵩ * ∂B∂z(m, i)
+@inline tke_time_scale(m, i) = m.tke_equation.Cᴷ * (∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2) -
+                                m.tke_equation.Cᴷ * m.tke_equation.Cᴾʳᵩ * ∂B∂z(m, i)
 
 @inline function diffusivity_mixing_length(m::Model{<:EquilibriumMixingLength}, i)
 

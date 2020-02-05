@@ -1,8 +1,8 @@
 Base.@kwdef struct TKEParameters{T} <: AbstractParameters
      Cᴰ :: T = 0.305  # Dissipation parameter
-    Cᴷᵤ :: T = 1.0    # Diffusivity parameter for velocity
-    Cᴷᵩ :: T = 1.0    # Diffusivity parameter for temperature
-    Cᴷₑ :: T = 0.1    # Diffusivity parameter for turbulent kinetic energy
+     Cᴷ :: T = 1.0    # Diffusivity parameter 
+   Cᴾʳᵩ :: T = 1.0    # Ratio between temperature and momentum diffusivity
+   Cᴾʳₑ :: T = 0.1    # Ratio between turbulent kinetic energy and momentum diffusivity
 
     KU₀ :: T = 1e-6   # Interior viscosity for velocity
     KT₀ :: T = 1e-7   # Interior diffusivity for temperature
@@ -12,7 +12,6 @@ end
 
 # Note: to increase readability, we use 'm' to refer to 'model' in function
 # definitions below.
-#
 
 @inline production(m, i) = KU(m, i) * (∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2)
 
