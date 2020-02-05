@@ -81,7 +81,7 @@ end
 end
 
 #
-# Mixing length model due to Ignacio Lopez + Clima
+# Mixing length model due to Ignacio Lopez-Gomez + Clima
 #
 
 Base.@kwdef struct EquilibriumMixingLength{T} <: AbstractParameters
