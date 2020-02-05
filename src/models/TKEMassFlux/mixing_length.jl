@@ -102,11 +102,11 @@ function diffusivity_mixing_length(m::Model{<:EquilibriumMixingLength}, i)
     ℓᵀᴷᴱ = nan2inf(ℓᵀᴷᴱ)
 
     # Length scale associated with strongly-stratified turbulence
-    ℓᵇ = m.tke_equation.Cᵇ * onface(sqrt_e, m, i) / maxsqrt(∂B∂z(m, i))
+    ℓᵇ = m.mixing_length.Cᵇ * onface(sqrt_e, m, i) / maxsqrt(∂B∂z(m, i))
     ℓᵇ = nan2inf(ℓᵇ)
 
     # Length scale associated near-wall turbulence
-    ℓʷ = @inbounds m.tke_equation.Cᶻ * m.grid.zf[i]
+    ℓʷ = @inbounds m.mixing_length.Cᶻ * m.grid.zf[i]
 
     # Hard minimum for now
     ℓ = min(ℓᵀᴷᴱ, ℓᵇ, ℓʷ)
@@ -126,11 +126,11 @@ function dissipation_length(m::Model{<:EquilibriumMixingLength}, i)
     ℓᵀᴷᴱ = nan2inf(ℓᵀᴷᴱ)
 
     # Length scale associated with strongly-stratified turbulence
-    ℓᵇ = m.tke_equation.Cᵇ * sqrt_e(m, i) / oncell(sqrt_∂B∂z, m, i)
+    ℓᵇ = m.mixing_length.Cᵇ * sqrt_e(m, i) / oncell(sqrt_∂B∂z, m, i)
     ℓᵇ = nan2inf(ℓᵇ)
 
     # Length scale associated near-wall turbulence
-    ℓʷ = @inbounds - m.tke_equation.Cᶻ * m.grid.zc[i] * u★(m) / sqrt_e(m, i)
+    ℓʷ = @inbounds - m.mixing_length.Cᶻ * m.grid.zc[i] * u★(m) / sqrt_e(m, i)
 
     # Hard minimum for now
     ℓ = min(ℓᵀᴷᴱ, ℓᵇ, ℓʷ)
