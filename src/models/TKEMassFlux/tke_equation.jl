@@ -1,14 +1,13 @@
 Base.@kwdef struct TKEParameters{T} <: AbstractParameters
-        CDe :: T = 0.305  # Dissipation parameter
+     Cᴰ :: T = 0.305  # Dissipation parameter
+    Cᴷᵤ :: T = 1.0    # Diffusivity parameter for velocity
+    Cᴷᵩ :: T = 1.0    # Diffusivity parameter for temperature
+    Cᴷₑ :: T = 0.1    # Diffusivity parameter for turbulent kinetic energy
 
-       CK_U :: T = 1.0    # Diffusivity parameter
-       CK_T :: T = 2.0    # Diffusivity parameter
-       CK_e :: T = 0.1    # Diffusivity parameter
-
-        KU₀ :: T = 1e-6   # Interior viscosity for velocity
-        KT₀ :: T = 1e-7   # Interior diffusivity for temperature
-        KS₀ :: T = 1e-9   # Interior diffusivity for salinity
-        Ke₀ :: T = 1e-6   # Interior diffusivity for salinity
+    KU₀ :: T = 1e-6   # Interior viscosity for velocity
+    KT₀ :: T = 1e-7   # Interior diffusivity for temperature
+    KS₀ :: T = 1e-9   # Interior diffusivity for salinity
+    Ke₀ :: T = 1e-6   # Interior diffusivity for salinity
 end
 
 # Note: to increase readability, we use 'm' to refer to 'model' in function
@@ -23,5 +22,33 @@ end
     )
 
 @inline dissipation(m, i) =
-    @inbounds m.tke_equation.CDe * maxsqrt(m.solution.e[i])^3 / mixing_length_cell(m, i)
+    @inbounds m.tke_equation.Cᴰ * maxsqrt(m.solution.e[i])^3 / dissipation_length(m, i)
 
+#
+# Turbulent kinetic energy wall model
+#
+
+# Fallbacks
+TurbulentKineticEnergyBoundaryConditions(T, wall_model) = DefaultBoundaryConditions(T)
+
+Base.@kwdef struct PrescribedNearWallTKE{T} <: AbstractParameters
+    Cu★ :: T = 3.75
+    Cw★ :: T = 0.2
+    Cz★ :: T = 0.4
+end
+
+function update_near_wall_tke!(m::Model{L, H, <:PrescribedNearWallTKE}) where {L, H}
+    @inbounds m.solution.e[m.grid.N] = m.tke_wall_model.Cu★ * u★(m)^2
+    return nothing
+end
+
+Base.@kwdef struct PrescribedBoundaryTKE{T} <: AbstractParameters
+    Cu★ :: T = 3.75
+    Cw★ :: T = 0.2
+    Cz★ :: T = 0.4
+end
+
+(boundary_tke::PrescribedBoundaryTKE)(model) = boundary_tke.Cu★ * u★(model)^2
+
+TurbulentKineticEnergyBoundaryConditions(T, wall_model::PrescribedBoundaryTKE) =
+    FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), ValueBoundaryCondition(wall_model))

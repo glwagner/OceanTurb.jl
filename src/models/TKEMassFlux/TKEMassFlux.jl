@@ -1,11 +1,12 @@
 module TKEMassFlux
 
 using OceanTurb
+using OceanTurb: nan2inf, inf2zero
 
 using Printf
 
 import ..OceanTurb: oncell, onface
-import .KPP: ∂B∂z, isunstable, ωτ, ωb
+import .KPP: ∂B∂z, u★, isunstable
 import .ModularKPP: AbstractModularKPPModel
 
 const nsol = 5
@@ -26,40 +27,46 @@ minuszero(args...) = -0
 
 @inline sqrt_∂B∂z(m, i) = maxsqrt(∂B∂z(m, i))
 
-mutable struct Model{L, P, K, TS, G, T, S, BC, C, ST} <: AbstractModel{TS, G, T}
-            clock :: Clock{T}
-             grid :: G
-      timestepper :: TS
-         solution :: S
-              bcs :: BC
-    mixing_length :: L
-    nonlocal_flux :: P
-     tke_equation :: K
-        constants :: C
-            state :: ST
+mutable struct Model{L, H, W, P, K, TS, G, T, S, BC, C, ST} <: AbstractModel{TS, G, T}
+                   clock :: Clock{T}
+                    grid :: G
+             timestepper :: TS
+                solution :: S
+                     bcs :: BC
+           mixing_length :: L
+    boundary_layer_depth :: H
+           nonlocal_flux :: P
+            tke_equation :: K
+          tke_wall_model :: W
+               constants :: C
+                   state :: ST
 end
 
 include("state.jl")
 include("mixing_length.jl")
 include("tke_equation.jl")
 
-function Model(; N=10, L=1.0,
-            grid = UniformGrid(N, L),
-       constants = Constants(),
-   mixing_length = SimpleMixingLength(),
-   nonlocal_flux = nothing,
-    tke_equation = TKEParameters(),
-         stepper = :ForwardEuler,
-    )
+function Model(; 
+                      grid = UniformGrid(N, L),
+                 constants = Constants(),
+             mixing_length = SimpleMixingLength(),
+      boundary_layer_depth = nothing,
+             nonlocal_flux = nothing,
+              tke_equation = TKEParameters(),
+            tke_wall_model = nothing,
+                   stepper = :ForwardEuler,
+)
 
     solution = Solution((CellField(grid) for i=1:nsol)...)
+
+    tke_bcs = TurbulentKineticEnergyBoundaryConditions(eltype(grid), tke_wall_model)
 
     bcs = (
         U = DefaultBoundaryConditions(eltype(grid)),
         V = DefaultBoundaryConditions(eltype(grid)),
         T = DefaultBoundaryConditions(eltype(grid)),
         S = DefaultBoundaryConditions(eltype(grid)),
-        e = DefaultBoundaryConditions(eltype(grid))
+        e = tke_bcs
     )
 
     Kϕ = (U=KU, V=KV, T=KT, S=KS, e=Ke)
@@ -70,16 +77,17 @@ function Model(; N=10, L=1.0,
 
     timestepper = Timestepper(stepper, eq, solution, lhs)
 
-    return Model(Clock(), grid, timestepper, solution, bcs, mixing_length, 
-                 nonlocal_flux, tke_equation, constants, State())
+    return Model(Clock(), grid, timestepper, solution, bcs, mixing_length, boundary_layer_depth,
+                 nonlocal_flux, tke_equation, tke_wall_model, constants, 
+                 State(mixing_length, boundary_layer_depth))
 end
 
-@inline K(m, i) = @inbounds mixing_length_face(m, i) * onface(sqrt_e, m, i)
+@inline K(m, i) = @inbounds diffusivity_mixing_length(m, i) * onface(sqrt_e, m, i)
 
-@inline KU(m, i) = m.tke_equation.KU₀ + m.tke_equation.CK_U * K(m, i)
-@inline KT(m, i) = m.tke_equation.KT₀ + m.tke_equation.CK_T * K(m, i)
-@inline KS(m, i) = m.tke_equation.KS₀ + m.tke_equation.CK_T * K(m, i)
-@inline Ke(m, i) = m.tke_equation.Ke₀ + m.tke_equation.CK_e * K(m, i)
+@inline KU(m, i) = m.tke_equation.KU₀ + m.tke_equation.Cᴷᵤ * K(m, i)
+@inline KT(m, i) = m.tke_equation.KT₀ + m.tke_equation.Cᴷᵩ * K(m, i)
+@inline KS(m, i) = m.tke_equation.KS₀ + m.tke_equation.Cᴷᵩ * K(m, i)
+@inline Ke(m, i) = m.tke_equation.Ke₀ + m.tke_equation.Cᴷₑ * K(m, i)
 
 const KV = KU
 
