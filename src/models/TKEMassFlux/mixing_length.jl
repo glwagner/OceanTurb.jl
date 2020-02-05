@@ -49,15 +49,14 @@ end
 
 @inline ζ(Ca, Qb, u★, z) = Ca * Qb / u★^3 * z
 
-function diffusivity_mixing_length(m::Model{<:TanEtAl2018MixingLength}, i)
+@inline function diffusivity_mixing_length(m::Model{<:TanEtAl2018MixingLength}, i)
 
     if isunstable(m)
         Cκ, Ca, Cn = m.mixing_length.Cᴸᵏ, m.mixing_length.Cᵃᵤₙₛ, m.mixing_length.Cⁿᵤₙₛ
         ℓᶻ = @inbounds Cκ * m.grid.zf[i] * (1 - ζ(Ca, m.state.Qb, u★(m)^3, m.grid.zf[i]))^Cn
     else
         Cκ, Ca, Cn = m.mixing_length.Cᴸᵏ, m.mixing_length.Cᵃₛₜₐ, m.mixing_length.Cⁿₛₜₐ
-        ℓᶻ = @inbounds Cκ * m.grid.zf[i] * (1 - ζ(Ca, m.state.Qb, u★(m)^3, m.grid.zf[i]))^Cn
-    end
+        ℓᶻ = @inbounds Cκ * m.grid.zf[i] * (1 - ζ(Ca, m.state.Qb, u★(m)^3, m.grid.zf[i]))^Cn end
 
     ℓᵟ = m.mixing_length.Cᴸᵟ * Δc(m.grid, i)
     ℓ = max(ℓᶻ, ℓᵟ)
@@ -65,7 +64,7 @@ function diffusivity_mixing_length(m::Model{<:TanEtAl2018MixingLength}, i)
     return ℓ
 end
 
-function dissipation_length(m::Model{<:TanEtAl2018MixingLength}, i)
+@inline function dissipation_length(m::Model{<:TanEtAl2018MixingLength}, i)
 
     if isunstable(m)
         Cκ, Ca, Cn = m.mixing_length.Cᴸᵏ, m.mixing_length.Cᵃᵤₙₛ, m.mixing_length.Cⁿᵤₙₛ
@@ -94,7 +93,7 @@ end
 @inline tke_time_scale(m, i) = m.tke_equation.Cᴷᵤ * (∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2) -
                                 m.tke_equation.Cᴷᵩ * ∂B∂z(m, i)
 
-function diffusivity_mixing_length(m::Model{<:EquilibriumMixingLength}, i)
+@inline function diffusivity_mixing_length(m::Model{<:EquilibriumMixingLength}, i)
 
     # Length scale associated with a steady TKE balance 
     τ = maxsqrt(tke_time_scale(m, i))
@@ -118,7 +117,7 @@ function diffusivity_mixing_length(m::Model{<:EquilibriumMixingLength}, i)
     return ℓ
 end
 
-function dissipation_length(m::Model{<:EquilibriumMixingLength}, i)
+@inline function dissipation_length(m::Model{<:EquilibriumMixingLength}, i)
 
     # Length scale associated with a steady TKE balance 
     τ = maxsqrt(oncell(tke_time_scale, m, i))
