@@ -28,7 +28,7 @@ end
 #
 
 # Fallbacks
-TurbulentKineticEnergyBoundaryConditions(T, wall_model) = DefaultBoundaryConditions(T)
+TKEBoundaryConditions(T, wall_model) = DefaultBoundaryConditions(T)
 
 Base.@kwdef struct PrescribedNearWallTKE{T} <: AbstractParameters
     Cʷu★ :: T = 3.75
@@ -39,13 +39,22 @@ end
 @inline update_near_wall_tke!(m::Model{L, H, <:PrescribedNearWallTKE}) where {L, H} =
     m.solution.e[m.grid.N] = m.tke_wall_model.Cʷu★ * u★(m)^2
 
-Base.@kwdef struct PrescribedBoundaryTKE{T} <: AbstractParameters
+Base.@kwdef struct SurfaceValueScaling{T} <: AbstractParameters
     Cʷu★ :: T = 3.75
     Cʷw★ :: T = 0.2
     Cʷz★ :: T = 0.4
 end
 
-@inline (boundary_tke::PrescribedBoundaryTKE)(model) = boundary_tke.Cʷu★ * u★(model)^2
+@inline (boundary_tke::SurfaceValueScaling)(model) = boundary_tke.Cʷu★ * u★(model)^2
 
-TurbulentKineticEnergyBoundaryConditions(T, wall_model::PrescribedBoundaryTKE) =
+TKEBoundaryConditions(T, wall_model::SurfaceValueScaling) =
     FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), ValueBoundaryCondition(wall_model))
+
+Base.@kwdef struct SurfaceFluxScaling{T} <: AbstractParameters
+    Cʷu★ :: T = 3.0
+end
+
+@inline (boundary_tke::SurfaceFluxScaling)(model) = - boundary_tke.Cʷu★ * u★(model)^3 # source...
+
+TKEBoundaryConditions(T, wall_model::SurfaceFluxScaling) =
+    FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), FluxBoundaryCondition(wall_model))

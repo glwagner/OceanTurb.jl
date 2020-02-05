@@ -53,13 +53,13 @@ function Model(;
       boundary_layer_depth = nothing,
              nonlocal_flux = nothing,
               tke_equation = TKEParameters(),
-            tke_wall_model = PrescribedBoundaryTKE(),
+            tke_wall_model = SurfaceFluxScaling(),
                    stepper = :BackwardEuler,
 )
 
     solution = Solution((CellField(grid) for i=1:nsol)...)
 
-    tke_bcs = TurbulentKineticEnergyBoundaryConditions(eltype(grid), tke_wall_model)
+    tke_bcs = TKEBoundaryConditions(eltype(grid), tke_wall_model)
 
     bcs = (
         U = DefaultBoundaryConditions(eltype(grid)),

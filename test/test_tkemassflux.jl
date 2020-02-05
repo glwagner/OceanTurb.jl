@@ -45,7 +45,8 @@ mixing_length_models = (
 wall_models = (
     nothing,
     TKEMassFlux.PrescribedNearWallTKE(),
-    TKEMassFlux.PrescribedBoundaryTKE(),
+    TKEMassFlux.SurfaceValueScaling(),
+    TKEMassFlux.SurfaceFluxScaling(),
 )
 
 @testset "TKEMassFlux" begin
