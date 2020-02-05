@@ -8,19 +8,19 @@ function fill_ghost_cells!(c, κtop, κbottom, model, fieldbcs)
     return nothing
 end
 
-function test_cell_field_construction(T, N, L)
+function cell_field_construction(T, N, L)
     grid = UniformGrid(T, N, L)
     c = CellField(grid)
     typeof(c) <: CellField
 end
 
-function test_face_field_construction(T, N, L)
+function face_field_construction(T, N, L)
     grid = UniformGrid(T, N, L)
     f = FaceField(grid)
     typeof(f) <: FaceField
 end
 
-function test_field_indexing()
+function field_indexing()
     grid = UniformGrid(3, 4.2)
     c = CellField(grid)
     f = FaceField(grid)
@@ -30,7 +30,7 @@ function test_field_indexing()
     c[2] == val && f[2] == val
 end
 
-function test_cell_∂z(T)
+function cell_∂z(T)
     grid = UniformGrid(T, 2, 2.0)
     c = CellField([2, 4], grid)
     cz = ∂z(c)
@@ -38,7 +38,7 @@ function test_cell_∂z(T)
     cz.data == cz_answer.data
 end
 
-function test_face_∂z(T)
+function face_∂z(T)
     grid = UniformGrid(T, 2, 2.0)
     f = FaceField([2, 4, 6], grid)
     fz = ∂z(f)
@@ -46,7 +46,7 @@ function test_face_∂z(T)
     fz.data[1:2] == fz_answer.data[1:2]
 end
 
-function test_cell_plus(T)
+function cell_plus(T)
     grid = UniformGrid(T, 4, 2.0)
     c1 = CellField([0, 1, 2, 0], grid)
     c2 = CellField([0, 3, 4, 0], grid)
@@ -55,7 +55,7 @@ function test_cell_plus(T)
     c1_plus_c2.data == c3.data
 end
 
-function test_cell_times(T)
+function cell_times(T)
     grid = UniformGrid(T, 4, 2.0)
     c1 = CellField([0, 1, 2, 0], grid)
     c2 = CellField([0, 3, 4, 0], grid)
@@ -64,7 +64,7 @@ function test_cell_times(T)
     c1_times_c2.data == c3.data
 end
 
-function test_face_plus(T)
+function face_plus(T)
     grid = UniformGrid(T, 2, 2.0)
     c1 = FaceField([1, 2, 2], grid)
     c2 = FaceField([3, 4, 3], grid)
@@ -73,7 +73,7 @@ function test_face_plus(T)
     c1_plus_c2.data == c3.data
 end
 
-function test_face_times(T)
+function face_times(T)
     grid = UniformGrid(T, 2, 2.0)
     f1 = FaceField([1, 2, 2], grid)
     f2 = FaceField([3, 4, 3], grid)
@@ -82,7 +82,7 @@ function test_face_times(T)
     f1_times_f2.data == f3.data
 end
 
-function test_set_scalar_field(loc, T)
+function set_scalar_field(loc, T)
     g = UniformGrid(T, 2, 2.0)
     f = Field(loc, g)
     a = 7
@@ -90,7 +90,7 @@ function test_set_scalar_field(loc, T)
     !any(@. !(f.data == a))
 end
 
-function test_set_array_field(loc, T)
+function set_array_field(loc, T)
     g = UniformGrid(T, 2, 2.0)
     f = Field(loc, g)
     data = rand(1:10, length(f))
@@ -98,7 +98,7 @@ function test_set_array_field(loc, T)
     f.data[1:length(f)] == data
 end
 
-function test_set_function_field(loc, T)
+function set_function_field(loc, T)
     g = UniformGrid(T, 2, 2.0)
     f = Field(loc, g)
     fcn(z) = z^2
@@ -108,13 +108,13 @@ function test_set_function_field(loc, T)
     f[i] == fcn(z[i])
 end
 
-function test_integral(T)
+function integral_is_correct(T)
     grid = UniformGrid(T, 3, 3.0)
     c = CellField([1, 2, 3], grid)
     integral(c) / grid.L == 2
 end
 
-function test_integral_range(T, N, L, z₋, z₊)
+function integral_range(T, N, L, z₋, z₊)
     grid = UniformGrid(T, N, L)
     c = CellField(ones(N), grid)
     integral(c, z₋, z₊) == z₊ - z₋
@@ -123,7 +123,7 @@ end
 
 struct DummyModel end
 
-function test_ghost_cell_value(T)
+function ghost_cell_value(T)
     model = DummyModel()
     grid = UniformGrid(T, 3, 3.0)
     c = CellField([1, 2, 3], grid)
@@ -137,7 +137,7 @@ function test_ghost_cell_value(T)
     onface(c, 1) ≈ c_bottom && onface(c, grid.N+1) ≈ c_top
 end
 
-function test_ghost_cell_gradient(T)
+function ghost_cell_gradient(T)
     model = DummyModel()
     grid = UniformGrid(T, 3, 3.0)
     c = CellField([1, 2, 3], grid)
@@ -152,7 +152,7 @@ function test_ghost_cell_gradient(T)
     ∂z(c, 1) ≈ cz_bottom && ∂z(c, grid.N+1) ≈ cz_top
 end
 
-function test_ghost_cell_flux(T)
+function ghost_cell_flux(T)
     model = DummyModel()
     grid = UniformGrid(T, 3, 3.0)
     c = CellField([1, 2, 3], grid)
@@ -169,14 +169,30 @@ function test_ghost_cell_flux(T)
         && OceanTurb.flux(0, κ, c, grid.N+1) ≈ Fc_top)
 end
 
-function test_absolute_error(T)
+function absolute_error_is_correct(T)
     grid = UniformGrid(T, 3, 3)
     c = CellField([0, 0, 0], grid)
     d = CellField([2, 2, 2], grid)
     absolute_error(c, d) == 2
 end
 
-function test_relative_error(T)
+function absolute_error_fine_to_coarse()
+    fine_grid = UniformGrid(N=4, L=1)
+    coarse_grid = UniformGrid(N=2, L=1)
+    fine_field = CellField([2, 4, 6, 8], fine_grid)
+    coarse_field = CellField([0, 1], coarse_grid)
+    return absolute_error(coarse_field, fine_field) == sqrt(45/2)
+end
+
+function absolute_error_coarse_to_fine()
+    fine_grid = UniformGrid(N=4, L=1)
+    coarse_grid = UniformGrid(N=2, L=1)
+    fine_field = CellField([2, 4, 6, 8], fine_grid)
+    coarse_field = CellField([0, 1], coarse_grid)
+    return absolute_error(fine_field, coarse_field) == sqrt(47/2)
+end
+
+function relative_error_is_correct(T)
     grid = UniformGrid(T, 3, 1)
     c = CellField([0, 0, 0], grid)
     d = CellField([2, 2, 2], grid)
@@ -186,28 +202,30 @@ end
 @testset "Fields" begin
     nz, Lz = 3, 4.2
     for T in (Float64,)
-        @test test_cell_field_construction(T, nz, Lz)
-        @test test_face_field_construction(T, nz, Lz)
-        @test test_cell_∂z(T)
-        @test test_face_∂z(T)
-        @test test_cell_plus(T)
-        @test test_cell_times(T)
+        @test cell_field_construction(T, nz, Lz)
+        @test face_field_construction(T, nz, Lz)
+        @test cell_∂z(T)
+        @test face_∂z(T)
+        @test cell_plus(T)
+        @test cell_times(T)
         for loc in (Face, Cell)
-            @test test_set_scalar_field(loc, T)
-            @test test_set_array_field(loc, T)
-            @test test_set_function_field(loc, T)
+            @test set_scalar_field(loc, T)
+            @test set_array_field(loc, T)
+            @test set_function_field(loc, T)
         end
-        @test test_integral(T)
-        @test test_integral_range(T, 10, 10, -5, -3)
-        @test test_integral_range(T, 10, 10, -5.1, -4.5)
-        @test test_integral_range(T, 17, 3, -2.5, -1.3)
-        @test test_integral_range(T, 3, 30, -2.5, -1.3)
-        @test test_ghost_cell_value(T)
-        @test test_ghost_cell_gradient(T)
-        @test test_ghost_cell_flux(T)
-        @test test_absolute_error(T)
-        @test test_relative_error(T)
+        @test integral_is_correct(T)
+        @test integral_range(T, 10, 10, -5, -3)
+        @test integral_range(T, 10, 10, -5.1, -4.5)
+        @test integral_range(T, 17, 3, -2.5, -1.3)
+        @test integral_range(T, 3, 30, -2.5, -1.3)
+        @test ghost_cell_value(T)
+        @test ghost_cell_gradient(T)
+        @test ghost_cell_flux(T)
+        @test absolute_error_is_correct(T)
+        @test relative_error_is_correct(T)
     end
-    @test test_field_indexing()
+    @test absolute_error_fine_to_coarse()
+    @test absolute_error_coarse_to_fine()
+    @test field_indexing()
 end
 
