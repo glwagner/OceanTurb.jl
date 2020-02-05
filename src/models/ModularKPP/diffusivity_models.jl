@@ -27,15 +27,15 @@ end
 ## ** The K-Profile-Parameterization **
 K_KPP(h, 𝒲, d::T, p) where T = 0<d<1 ? max(zero(T), h * 𝒲 * shape(d, p)) : -zero(T)
 
-𝒲_Holtslag(Cτ, Cτb, ωτ, ωb, d) = Cτ * (ωτ^3 + Cτb * d * ωb^3)^(1/3)
-𝒲_Holtslag(m, i) = 𝒲_Holtslag(m.diffusivity.Cτ, m.diffusivity.Cτb, KPP.ωτ(m), KPP.ωb(m), KPP.d(m, i))
+𝒲_Holtslag(Cτ, Cτb, u★, w★, d) = Cτ * (u★^3 + Cτb * d * w★^3)^(1/3)
+𝒲_Holtslag(m, i) = 𝒲_Holtslag(m.diffusivity.Cτ, m.diffusivity.Cτb, KPP.u★(m), KPP.w★(m), KPP.d(m, i))
 
 𝒲_LMD_unstable_U(m, i) = KPP.𝒲_unstable(
     m.diffusivity.CKSL, m.diffusivity.Cd_U,
     m.diffusivity.Cτ, m.diffusivity.Cunst,
     m.diffusivity.Cb_U, m.diffusivity.Cτb_U,
     m.diffusivity.Cmτ_U, m.diffusivity.Cmb_U,
-    ωτ(m), ωb(m), d(m, i)
+    u★(m), w★(m), d(m, i)
     )
 
 𝒲_LMD_unstable_T(m, i) = KPP.𝒲_unstable(
@@ -43,12 +43,12 @@ K_KPP(h, 𝒲, d::T, p) where T = 0<d<1 ? max(zero(T), h * 𝒲 * shape(d, p)) :
     m.diffusivity.Cτ, m.diffusivity.Cunst,
     m.diffusivity.Cb_T, m.diffusivity.Cτb_T,
     m.diffusivity.Cmτ_T, m.diffusivity.Cmb_T,
-    ωτ(m), ωb(m), d(m, i)
+    u★(m), w★(m), d(m, i)
     )
 
 𝒲_LMD_stable(m, i) = KPP.𝒲_stable(
     m.diffusivity.Cτ, m.diffusivity.Cstab, m.diffusivity.Cn,
-    ωτ(m), ωb(m), d(m, i)
+    u★(m), w★(m), d(m, i)
     )
 
 "Return the vertical velocity scale for momentum at face point i"

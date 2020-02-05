@@ -96,7 +96,7 @@ export # This file, core functionality:
     KPP,
     ModularKPP,
     PacanowskiPhilander,
-    KPP_TKE
+    TKEMassFlux
 
 using
     Statistics,
@@ -210,13 +210,18 @@ end
 include("models/Diffusion.jl")
 include("models/KPP/KPP.jl")
 include("models/ModularKPP/ModularKPP.jl")
+include("models/TKEMassFlux/TKEMassFlux.jl")
 include("models/PacanowskiPhilander.jl")
 
 # Convenient utilities for plotting
 macro use_pyplot_utils()
     return esc(quote
         using PyPlot, PyCall
-        include(joinpath(@__DIR__, "..", "plotting", "pyplot_utils.jl"))
+
+        if !("OceanTurbPyPlotUtils" in [item[1] for item in varinfo().content[1].rows])
+            include(joinpath(@__DIR__, "..", "plotting", "OceanTurbPyPlotUtils.jl"))
+        end
+
         using Main.OceanTurbPyPlotUtils
     end
     )

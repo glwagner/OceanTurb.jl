@@ -64,7 +64,8 @@ function UniformGrid(T, N::Int, L::Number)
 end
 
 # Defaults
-UniformGrid(N=3, L=1) = UniformGrid(Float64, N, L)
+UniformGrid(N, L) = UniformGrid(Float64, N, L)
+UniformGrid(T=Float64; N=3, L=1) = UniformGrid(T, N, L)
 
 "Return the cell spacing at index i."
 @inline Δc(grid::UniformGrid, i) = grid.Δc

@@ -291,7 +291,7 @@ end
 
 function test_zero_turbulent_velocity()
     model = KPP.Model()
-    KPP.ωτ(model) == 0.0 &&  KPP.ωb(model) == 0.0
+    KPP.u★(model) == 0.0 &&  KPP.w★(model) == 0.0
 end
 
 function test_friction_velocity()
@@ -299,7 +299,7 @@ function test_friction_velocity()
     model.bcs.U.top = FluxBoundaryCondition(sqrt(8))
     model.bcs.V.top = FluxBoundaryCondition(-sqrt(8))
     KPP.update_state!(model)
-    KPP.ωτ(model) ≈ 2
+    KPP.u★(model) ≈ 2
 end
 
 function test_convective_velocity()
@@ -315,11 +315,11 @@ function test_convective_velocity()
 
     h = KPP.mixing_depth(model)
 
-    KPP.ωb(model) ≈ (h*Qb)^(1/3)
+    KPP.w★(model) ≈ (h*Qb)^(1/3)
 end
 
 function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, CSL=1e-16)
-    # Zero wind + convection => 𝒲_U = Cb_U * CSL^(1/3) * ωb.
+    # Zero wind + convection => 𝒲_U = Cb_U * CSL^(1/3) * w★.
     parameters = KPP.Parameters(CRi=1.0, CKE=1.0, CKE₀=0.0, CSL=CSL, Cb_U=Cb_U, Cb_T=Cb_T)
     constants = KPP.Constants(g=1, α=1)
     model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
@@ -335,12 +335,12 @@ function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, CSL=
 
     i = 16
     h = sqrt(Qb) / (1-0.5CSL) # requires h to be an integer... ?
-    ωb = (h*Qb)^(1/3)
+    w★ = (h*Qb)^(1/3)
 
-    (KPP.𝒲_U(model, i) ≈ Cb_U * CSL^(1/3) * ωb &&
-     KPP.𝒲_V(model, i) ≈ Cb_U * CSL^(1/3) * ωb &&
-     KPP.𝒲_T(model, i) ≈ Cb_T * CSL^(1/3) * ωb &&
-     KPP.𝒲_S(model, i) ≈ Cb_T * CSL^(1/3) * ωb )
+    (KPP.𝒲_U(model, i) ≈ Cb_U * CSL^(1/3) * w★ &&
+     KPP.𝒲_V(model, i) ≈ Cb_U * CSL^(1/3) * w★ &&
+     KPP.𝒲_T(model, i) ≈ Cb_T * CSL^(1/3) * w★ &&
+     KPP.𝒲_S(model, i) ≈ Cb_T * CSL^(1/3) * w★ )
 end
 
 function test_turb_velocity_pure_wind(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1.0)

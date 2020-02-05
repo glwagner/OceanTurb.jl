@@ -296,23 +296,23 @@ end
 @inline isforced(model) = model.state.Qu != 0 || model.state.Qv != 0 || model.state.Qb != 0
 
 "Return the turbuent velocity scale associated with wind stress."
-@inline ωτ(Qu, Qv) = (Qu^2 + Qv^2)^(1/4)
-@inline ωτ(m::AbstractModel) = ωτ(m.state.Qu, m.state.Qv)
+@inline u★(Qu, Qv) = (Qu^2 + Qv^2)^(1/4)
+@inline u★(m::AbstractModel) = u★(m.state.Qu, m.state.Qv)
 
 "Return the turbuent velocity scale associated with convection."
-@inline ωb(Qb, h) = abs(h * Qb)^(1/3)
-@inline ωb(m::AbstractModel) = ωb(m.state.Qb, m.state.h)
+@inline w★(Qb, h) = abs(h * Qb)^(1/3)
+@inline w★(m::AbstractModel) = w★(m.state.Qb, m.state.h)
 
 "Return the vertical velocity scale at depth d for a stable boundary layer."
-@inline 𝒲_stable(Cτ, Cstab, Cn, ωτ, ωb, d) = Cτ * ωτ / (1 + Cstab * d * (ωb/ωτ)^3)^Cn
+@inline 𝒲_stable(Cτ, Cstab, Cn, u★, w★, d) = Cτ * u★ / (1 + Cstab * d * (w★/u★)^3)^Cn
 
 "Return the vertical velocity scale at scaled depth dϵ for an unstable boundary layer."
-@inline function 𝒲_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, ωτ, ωb, d)
+@inline function 𝒲_unstable(CSL, Cd, Cτ, Cunst, Cb, Cτb, Cmτ, Cmb, u★, w★, d)
     dϵ = min(CSL, d)
-    if dϵ * ωb^3 < Cd * ωτ^3
-        return Cτ * ωτ * (1 + Cunst * dϵ * (ωb/ωτ)^3)^Cmτ
+    if dϵ * w★^3 < Cd * u★^3
+        return Cτ * u★ * (1 + Cunst * dϵ * (w★/u★)^3)^Cmτ
     else
-        return Cb * ωb * (dϵ + Cτb * (ωτ/ωb)^3)^Cmb
+        return Cb * w★ * (dϵ + Cτb * (u★/w★)^3)^Cmb
     end
 end
 
@@ -321,7 +321,7 @@ end
                             m.parameters.Cτ, m.parameters.Cunst,
                             m.parameters.Cb_U, m.parameters.Cτb_U,
                             m.parameters.Cmτ_U, m.parameters.Cmb_U,
-                            ωτ(m), ωb(m), d(m, i)
+                            u★(m), w★(m), d(m, i)
                             )
 end
 
@@ -330,13 +330,13 @@ end
                             m.parameters.Cτ, m.parameters.Cunst,
                             m.parameters.Cb_T, m.parameters.Cτb_T,
                             m.parameters.Cmτ_T, m.parameters.Cmb_T,
-                            ωτ(m), ωb(m), d(m, i)
+                            u★(m), w★(m), d(m, i)
                             )
 end
 
 @propagate_inbounds function 𝒲_stable(m, i)
     return 𝒲_stable(m.parameters.Cτ, m.parameters.Cstab, m.parameters.Cn,
-                          ωτ(m), ωb(m), d(m, i)
+                          u★(m), w★(m), d(m, i)
                           )
 end
 

@@ -145,45 +145,8 @@ boundaryindices(c::CellField) = (1, c.grid.N)
 @propagate_inbounds setindex!(c::AbstractField, d::AbstractField, inds...) = setindex!(c.data, d.data, inds...)
 
 #
-# Ways to specify a field's data
+# More advanced 'Field' functionality
 #
-
-set!(c::AbstractField, data::Number) = fill!(c.data, data)
-set!(c::AbstractField{Ac, G}, d::AbstractField{Ad, G}) where {Ac, Ad, G} = c.data .= convert(Ac, d.data)
-set!(c::FaceField, fcn::Function) = c.data .= fcn.(nodes(c))
-
-function set!(c::CellField, func::Function)
-    data = func.(nodes(c))
-    set!(c, data)
-    # Set ghost points to get approximation to first derivative at boundary
-    data_bottom = func(c.grid.zf[1])
-    data_top = func(c.grid.zf[end])
-
-    # Set ghost values so that
-    # ∂z(c, 1) = (c[1] - c[0]) / Δc(c, 1) = (c[1] - c_bottom) / 0.5*Δc(c, 1)
-    #
-    # and
-    # ∂z(c, N+1) = (c[N+1] - c[N]) / Δc(c, N+1) = (c_top - c[N]) / 0.5*Δc(c, N)
-
-    N = c.grid.N
-    @inbounds begin
-        c[0] = c[1] - 2 * (c[1] - data_bottom)
-        c[N+1] = c[N] + 2 * (data_top - c[N])
-    end
-
-    return nothing
-end
-
-set!(f::FaceField, data::AbstractArray) = f.data .= data
-
-function set!(c::CellField, data::AbstractArray)
-    for i in eachindex(data)
-        @inbounds c[i] = data[i]
-    end
-    # Default boundary conditions if data is not an OffsetArray
-    typeof(data) <: OffsetArray || set_default_bcs!(c)
-    return nothing
-end
 
 function set_default_bcs!(c)
     @inbounds begin
@@ -251,12 +214,71 @@ function integral(c::CellField, z₋, z₊=0)
     return total
 end
 
-function set!(c1::CellField{A1, G2}, c2::CellField{A2, G2}) where {A1, G1, A2, G2}
+#
+# Ways to specify a field's data
+#
+
+# Set to a number
+set!(c::AbstractField, data::Number) = fill!(c.data, data)
+
+# Set to a function
+set!(c::FaceField, fcn::Function) = c.data .= fcn.(nodes(c))
+
+function set!(c::CellField, func::Function)
+    data = func.(nodes(c))
+    set!(c, data)
+    # Set ghost points to get approximation to first derivative at boundary
+    data_bottom = func(c.grid.zf[1])
+    data_top = func(c.grid.zf[end])
+
+    # Set ghost values so that
+    # ∂z(c, 1) = (c[1] - c[0]) / Δc(c, 1) = (c[1] - c_bottom) / 0.5*Δc(c, 1)
+    #
+    # and
+    # ∂z(c, N+1) = (c[N+1] - c[N]) / Δc(c, N+1) = (c_top - c[N]) / 0.5*Δc(c, N)
+
+    N = c.grid.N
+    @inbounds begin
+        c[0] = c[1] - 2 * (c[1] - data_bottom)
+        c[N+1] = c[N] + 2 * (data_top - c[N])
+    end
+
+    return nothing
+end
+
+# Set to an array
+set!(f::FaceField, data::AbstractArray) = f.data .= data
+
+function set!(c::CellField, data::AbstractArray)
+    for i in eachindex(data)
+        @inbounds c[i] = data[i]
+    end
+    # Default boundary conditions if data is not an OffsetArray
+    typeof(data) <: OffsetArray || set_default_bcs!(c)
+    return nothing
+end
+
+# Set two fields to one another... some shenanigans
+#
+_set_similar_fields!(c::AbstractField{Ac, G}, d::AbstractField{Ad, G}) where {Ac, Ad, G} = 
+    c.data .= convert(Ac, d.data)
+
+set!(c::FaceField{Ac, G}, d::FaceField{Ad, G}) where {Ac, Ad, G} = _set_similar_fields!(c, d)
+
+function interp_and_set!(c1::CellField{A1, G1}, c2::CellField{A2, G2}) where {A1, A2, G1, G2}
     @assert height(c1) == height(c2) "Physical domains differ between the two fields."
     for i in eachindex(c1)
         @inbounds c1[i] = integral(c2, c1.grid.zf[i], c1.grid.zf[i+1]) / Δf(c1, i)
     end
     return nothing
+end
+
+function set!(c::CellField{Ac, G}, d::CellField{Ad, G}) where {Ac, Ad, G}
+    if height(c) == height(d) && length(c) == length(d)
+        return _set_similar_fields!(c, d)
+    else
+        return interp_and_set!(c, d)
+    end
 end
 
 similar(c::CellField) = CellField(c.grid)
@@ -398,24 +420,30 @@ Return the interpolation of `f` onto cell point `i`.
 @inline oncell(i, grid, f::Function, args...) = ( f(i+1, grid, args...) + f(i, grid, args...) ) / 2
 @inline onface(i, grid, f::Function, args...) = ( f(i, grid, args...) + f(i-1, grid, args...) ) / 2
 
+function on_grid(c, d)
+    if length(c) != length(d)
+        e = similar(c)
+        set!(e, d)
+    else
+        e = d
+    end
+
+    return e
+end
+
 """
     absolute_error(c, d, p=2)
 
 Compute the absolute error between `c` and `d` with norm `p`, defined as
 
-``\\mathrm{abs \\, error} = \\left ( L^{-1} \\int_{-L}^0 (c-d)^p \\, \\mathrm{d} z \\right )^(1/p)``.
+``\\mathrm{abs \\, error} = \\left ( L^{-1} \\int_{-L}^0 |c-d|^p \\, \\mathrm{d} z \\right )^(1/p)``.
 """
 function absolute_error(c::CellField, d::CellField, p=2)
-    if length(c) != length(d)
-        𝒹 = similar(c)
-        set!(𝒹, d)
-    else
-        𝒹 = d
-    end
+    e = on_grid(c, d)
 
     total = zero(eltype(c))
     for i in eachindex(c)
-        @inbounds total += (c[i] - 𝒹[i])^p * Δf(c, i)
+        @inbounds total += abs(c[i] - e[i])^p * Δf(c, i)
     end
 
     return  ( total / height(c) )^(1/p)

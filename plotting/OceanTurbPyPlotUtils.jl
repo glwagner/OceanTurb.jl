@@ -36,13 +36,7 @@ function usecmbright()
 end
 
 "Remove `spine` from `ax`."
-function removespine(side, ax=gca())
-    ax.spines[side].set_visible(false)
-    keywords = Dict(Symbol(side)=>false, Symbol(:label, side)=>false)
-    ax.tick_params(keywords)
-    nothing
-end
-
+removespine(side, ax=gca()) = ax.spines[side].set_visible(false)
 removespines(sides...; ax=gca()) = for side in sides; removespine(side, ax); end
 cornerspines(ax=gca()) = removespines("top", "right"; ax=ax)
 
