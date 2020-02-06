@@ -30,8 +30,19 @@ const BC = BoundaryCondition
 @inline getbc(model, bc) = bc.condition(model) # default / fallback
 
 @inline gradient(bc::BC{<:Gradient}, model, args...) = getbc(model, bc)
-@inline gradient(bc::BC{<:Flux},     model, κ, args...) = -getbc(model, bc) / κ
-@inline gradient(bc::BC{<:Value},    model, κ, cᴺ, Δf, args...) = 2 * (getbc(model, bc) - cᴺ) / Δf
+@inline gradient(bc::BC{<:Value}, model, κ, cᴺ, Δf, args...) = 2 * (getbc(model, bc) - cᴺ) / Δf
+#@inline gradient(bc::BC{<:Flux}, model, κ, args...) = -getbc(model, bc) / κ
+@inline gradient(bc::BC{<:Flux}, args...) = 0
+
+# Fallbacks
+@inline apply_bottom_bc!(rhs, bc::Union{BC{<:Gradient}, BC{<:Value}}, m) = nothing
+@inline apply_top_bc!(rhs, bc::Union{BC{<:Gradient}, BC{<:Value}}, m) = nothing
+
+@inline apply_bottom_bc!(rhs, bc::BC{<:Flux}, m) = 
+    @inbounds rhs[1] += getbc(m, bc) / Δf(m.grid, 1)
+
+@inline apply_top_bc!(rhs, bc::BC{<:Flux}, m) = 
+    @inbounds rhs[m.grid.N] -= getbc(m, bc) / Δf(m.grid, m.grid.N)
 
 """
     fill_bottom_ghost_cell!(c, κ, model, bc)

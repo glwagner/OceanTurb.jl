@@ -12,18 +12,15 @@ import .ModularKPP: AbstractModularKPPModel
 const nsol = 5
 @solution U V T S e
 
-minuszero(args...) = -0
-
+@inline minuszero(args...) = -0
 @inline maxsqrt(ϕ::T) where T = sqrt(max(zero(T), ϕ))
 @inline maxsqrt(ϕ, i) = @inbounds sqrt(max(zero(eltype(ϕ)), ϕ[i]))
-
-@inline oncell(f::Function, m, i) = (f(m, i) + f(m, i+1)) / 2
-@inline onface(f::Function, m, i) = (f(m, i) + f(m, i-1)) / 2
-
 @inline sqrt_e(m, i) = @inbounds maxsqrt(m.solution.e[i])
 
-@inline ∂B∂z(m, i) = ∂B∂z(m.solution.T, m.solution.S, m.constants.g, m.constants.α,
-                          m.constants.β, i)
+@inline ∂B∂z(m, i) = ∂B∂z(m.solution.T, m.solution.S, 
+                          m.constants.g, m.constants.α, m.constants.β, i)
+
+@inline oncell_∂B∂z(m, i) = oncell(∂B∂z, m, i) # Fallback valid for linear equations of state
 
 @inline sqrt_∂B∂z(m, i) = maxsqrt(∂B∂z(m, i))
 
@@ -45,6 +42,7 @@ end
 include("state.jl")
 include("mixing_length.jl")
 include("tke_equation.jl")
+include("wall_models.jl")
 
 function Model(; 
                       grid = UniformGrid(N, L),
@@ -53,7 +51,7 @@ function Model(;
       boundary_layer_depth = nothing,
              nonlocal_flux = nothing,
               tke_equation = TKEParameters(),
-            tke_wall_model = SurfaceFluxScaling(),
+            tke_wall_model = SurfaceProductionModel(),
                    stepper = :BackwardEuler,
 )
 
@@ -79,15 +77,13 @@ function Model(;
 
     return Model(Clock(), grid, timestepper, solution, bcs, mixing_length, boundary_layer_depth,
                  nonlocal_flux, tke_equation, tke_wall_model, constants, 
-                 State(mixing_length, boundary_layer_depth))
+                 State(grid, mixing_length, boundary_layer_depth))
 end
 
-@inline K(m, i) = @inbounds m.tke_equation.Cᴷ * diffusivity_mixing_length(m, i) * onface(sqrt_e, m, i)
-
-@inline KU(m, i) = m.tke_equation.KU₀ + K(m, i)
-@inline KT(m, i) = m.tke_equation.KT₀ + m.tke_equation.Cᴾʳᵩ * K(m, i)
-@inline KS(m, i) = m.tke_equation.KS₀ + m.tke_equation.Cᴾʳᵩ * K(m, i)
-@inline Ke(m, i) = m.tke_equation.Ke₀ + m.tke_equation.Cᴾʳₑ * K(m, i)
+@inline KU(m, i) = m.tke_equation.KU₀ + onface(m.state.K, i)
+@inline KT(m, i) = m.tke_equation.KT₀ + m.tke_equation.Cᴾʳᵩ * onface(m.state.K, i)
+@inline KS(m, i) = m.tke_equation.KS₀ + m.tke_equation.Cᴾʳᵩ * onface(m.state.K, i)
+@inline Ke(m, i) = m.tke_equation.Ke₀ + m.tke_equation.Cᴾʳₑ * onface(m.state.K, i)
 
 const KV = KU
 
@@ -96,7 +92,7 @@ const KV = KU
 @inline RT(m, i) = 0
 @inline RS(m, i) = 0
 
-@inline Re(m, i) = oncell(production, m, i) + oncell(buoyancy_flux, m, i) - dissipation(m, i)
+@inline Re(m, i) = production(m, i) + buoyancy_flux(m, i) - dissipation(m, i)
 @inline Le(m, i) = 0
 
 end # module

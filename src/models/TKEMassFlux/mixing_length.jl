@@ -1,25 +1,20 @@
+# Fallbacks
+@inline diffusivity_mixing_length(m, i) = mixing_length(m, i)
+@inline dissipation_length(m, i) = mixing_length(m, i)
+
+@inline shear_squared(m, i) = ∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2
+
+#
+# A "simple" mixing length
+#
+
 Base.@kwdef struct SimpleMixingLength{T} <: AbstractParameters
     Cᴸᵏ :: T = 0.4
     Cᴸᵇ :: T = 0.1
     Cᴸᵟ :: T = 1.0
 end
 
-@inline function diffusivity_mixing_length(m::Model{<:SimpleMixingLength}, i)
-    # Two mixing lengths based on stratification and distance from surface:
-    @inbounds ℓᶻ = - m.mixing_length.Cᴸᵏ * m.grid.zf[i]
-    ℓᵇ = nan2inf(m.mixing_length.Cᴸᵇ * onface(sqrt_e, m, i) / maxsqrt(∂B∂z(m, i)))
-
-    # Take hard minimum:
-    ℓ = min(ℓᶻ, ℓᵇ)
-
-    # Finally, limit by some factor of the local cell width
-    ℓᵐⁱⁿ = m.mixing_length.Cᴸᵟ * Δc(m.grid, i)
-    ℓ = max(ℓ, ℓᵐⁱⁿ)
-
-    return ℓ
-end
-
-@inline function dissipation_length(m::Model{<:SimpleMixingLength}, i)
+@inline function mixing_length(m::Model{<:SimpleMixingLength}, i)
     # Two mixing lengths based on stratification and distance from surface:
     @inbounds ℓᶻ = - m.mixing_length.Cᴸᵏ * m.grid.zc[i]
     ℓᵇ = nan2inf(m.mixing_length.Cᴸᵇ * sqrt_e(m, i) / oncell(sqrt_∂B∂z, m, i))
@@ -30,6 +25,48 @@ end
     # Finally, limit by some factor of the local cell width
     ℓᵐⁱⁿ = m.mixing_length.Cᴸᵟ * Δf(m.grid, i)
     ℓ = max(ℓ, ℓᵐⁱⁿ)
+
+    return ℓ
+end
+
+#
+# Mixing length model due to Ignacio Lopez-Gomez + Clima
+#
+
+Base.@kwdef struct EquilibriumMixingLength{T} <: AbstractParameters
+    Cᴸᵟ :: T = 1.0
+    Cᴸᵏ :: T = 0.4
+    Cᴸᵇ :: T = 0.5
+end
+
+"Returns τ² = 1 / Cᴷ * ( (∂z U)² + (∂z V)^2 - Cᴾʳ * ∂z B ) at cell centers."
+@inline function tke_time_scale(m, i)
+    Cᴾʳ = m.tke_equation.Cᴾʳᵩ
+    ω² = oncell(shear_squared, m, i) - Cᴾʳ * oncell_∂B∂z(m, i)
+    return 1 / maxsqrt(ω²)
+end
+
+@inline function mixing_length(m::Model{<:EquilibriumMixingLength}, i)
+
+    # Length scale associated with a steady TKE balance 
+    τ = tke_time_scale(m, i)
+    ℓᵀᴷᴱ = sqrt(m.tke_equation.Cᴰ) * τ * sqrt_e(m, i)
+    ℓᵀᴷᴱ = nan2inf(ℓᵀᴷᴱ)
+
+    # Length scale associated with strongly-stratified turbulence
+    ℓᵇ = m.mixing_length.Cᴸᵇ * sqrt_e(m, i) / maxsqrt(oncell_∂B∂z(m, i))
+    ℓᵇ = nan2inf(ℓᵇ)
+
+    # Length scale associated near-wall turbulence
+    ℓʷ = @inbounds - m.mixing_length.Cᴸᵏ * m.grid.zc[i] * u★(m) / sqrt_e(m, i)
+    ℓʷ = nan2inf(ℓʷ)
+
+    # Hard minimum for now
+    ℓ = min(ℓᵀᴷᴱ, ℓᵇ, ℓʷ)
+
+    # Finally, limit by some factor of the local cell width
+    ℓᵟ = m.mixing_length.Cᴸᵟ * Δf(m.grid, i)
+    ℓ = max(ℓ, ℓᵟ)
 
     return ℓ
 end
@@ -48,24 +85,8 @@ Base.@kwdef struct TanEtAl2018MixingLength{T} <: AbstractParameters
 end
 
 @inline ζ(Ca, Qb, u★, z) = Ca * Qb / u★^3 * z
-
-@inline function diffusivity_mixing_length(m::Model{<:TanEtAl2018MixingLength}, i)
-
-    if isunstable(m)
-        Cκ, Ca, Cn = m.mixing_length.Cᴸᵏ, m.mixing_length.Cᵃᵤₙₛ, m.mixing_length.Cⁿᵤₙₛ
-        ℓᶻ = @inbounds Cκ * m.grid.zf[i] * (1 - ζ(Ca, m.state.Qb, u★(m)^3, m.grid.zf[i]))^Cn
-    else
-        Cκ, Ca, Cn = m.mixing_length.Cᴸᵏ, m.mixing_length.Cᵃₛₜₐ, m.mixing_length.Cⁿₛₜₐ
-        ℓᶻ = @inbounds Cκ * m.grid.zf[i] * (1 - ζ(Ca, m.state.Qb, u★(m)^3, m.grid.zf[i]))^Cn end
-
-    ℓᵟ = m.mixing_length.Cᴸᵟ * Δc(m.grid, i)
-    ℓ = max(ℓᶻ, ℓᵟ)
-
-    return ℓ
-end
-
-@inline function dissipation_length(m::Model{<:TanEtAl2018MixingLength}, i)
-
+ 
+@inline function mixing_length(m::Model{<:TanEtAl2018MixingLength}, i)
     if isunstable(m)
         Cκ, Ca, Cn = m.mixing_length.Cᴸᵏ, m.mixing_length.Cᵃᵤₙₛ, m.mixing_length.Cⁿᵤₙₛ
         ℓᶻ = @inbounds Cκ * m.grid.zc[i] * (1 - ζ(Ca, m.state.Qb, u★(m)^3, m.grid.zc[i]))^Cn
@@ -80,63 +101,3 @@ end
     return ℓ
 end
 
-#
-# Mixing length model due to Ignacio Lopez-Gomez + Clima
-#
-
-Base.@kwdef struct EquilibriumMixingLength{T} <: AbstractParameters
-    Cᴸᵟ :: T = 1.0
-    Cᴸᵏ :: T = 3.75
-    Cᴸᵇ :: T = 0.64
-end
-
-@inline tke_time_scale(m, i) = m.tke_equation.Cᴷ * (∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2) -
-                                m.tke_equation.Cᴷ * m.tke_equation.Cᴾʳᵩ * ∂B∂z(m, i)
-
-@inline function diffusivity_mixing_length(m::Model{<:EquilibriumMixingLength}, i)
-
-    # Length scale associated with a steady TKE balance 
-    τ = maxsqrt(tke_time_scale(m, i))
-    ℓᵀᴷᴱ = onface(sqrt_e, m, i) * sqrt(m.tke_equation.Cᴰ) / τ
-    ℓᵀᴷᴱ = nan2inf(ℓᵀᴷᴱ)
-
-    # Length scale associated with strongly-stratified turbulence
-    ℓᵇ = m.mixing_length.Cᴸᵇ * onface(sqrt_e, m, i) / maxsqrt(∂B∂z(m, i))
-    ℓᵇ = nan2inf(ℓᵇ)
-
-    # Length scale associated near-wall turbulence
-    ℓʷ = @inbounds m.mixing_length.Cᴸᵏ * m.grid.zf[i]
-
-    # Hard minimum for now
-    ℓ = min(ℓᵀᴷᴱ, ℓᵇ, ℓʷ)
-
-    # Finally, limit by some factor of the local cell width
-    ℓᵟ = m.mixing_length.Cᴸᵟ * Δc(m.grid, i)
-    ℓ = max(ℓ, ℓᵟ)
-
-    return ℓ
-end
-
-@inline function dissipation_length(m::Model{<:EquilibriumMixingLength}, i)
-
-    # Length scale associated with a steady TKE balance 
-    τ = maxsqrt(oncell(tke_time_scale, m, i))
-    ℓᵀᴷᴱ = sqrt_e(m, i) * sqrt(m.tke_equation.Cᴰ) / τ
-    ℓᵀᴷᴱ = nan2inf(ℓᵀᴷᴱ)
-
-    # Length scale associated with strongly-stratified turbulence
-    ℓᵇ = m.mixing_length.Cᴸᵇ * sqrt_e(m, i) / oncell(sqrt_∂B∂z, m, i)
-    ℓᵇ = nan2inf(ℓᵇ)
-
-    # Length scale associated near-wall turbulence
-    ℓʷ = @inbounds - m.mixing_length.Cᴸᵏ * m.grid.zc[i] * u★(m) / sqrt_e(m, i)
-
-    # Hard minimum for now
-    ℓ = min(ℓᵀᴷᴱ, ℓᵇ, ℓʷ)
-
-    # Finally, limit by some factor of the local cell width
-    ℓᵟ = m.mixing_length.Cᴸᵟ * Δf(m.grid, i)
-    ℓ = max(ℓ, ℓᵟ)
-
-    return ℓ
-end

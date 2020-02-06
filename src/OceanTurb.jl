@@ -29,6 +29,7 @@ export # This file, core functionality:
     @add_standard_model_fields,
     @add_clock_grid_timestepper,
     run_until!,
+    prettytime,
 
     # grids.jl
     Grid,
@@ -99,6 +100,7 @@ export # This file, core functionality:
     TKEMassFlux
 
 using
+    Printf,
     Statistics,
     StaticArrays,
     OffsetArrays,

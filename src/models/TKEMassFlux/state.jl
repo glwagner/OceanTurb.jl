@@ -1,17 +1,19 @@
-mutable struct State{T, M, H}
+mutable struct State{T, D, L, H}
     Qu :: T
     Qv :: T
     Qθ :: T
     Qs :: T
     Qb :: T
-    mixing_length :: M
+    K :: D
+    ℓ :: L
     h :: H # boundary layer depth
 end
 
-function State(mixing_length, boundary_layer_depth; T=Float64)
+function State(grid, mixing_length, boundary_layer_depth; T=Float64)
     mixing_length = instantiate_mixing_length(mixing_length)
     boundary_layer_depth = instantiate_boundary_layer_depth(boundary_layer_depth)
-    return State((zero(T) for i=1:5)..., mixing_length, boundary_layer_depth)
+    K = CellField(grid)
+    return State((zero(T) for i=1:5)..., K, mixing_length, boundary_layer_depth)
 end
 
 """
@@ -27,11 +29,12 @@ function update_state!(m)
     m.state.Qs = getbc(m, m.bcs.S.top)
     m.state.Qb = m.constants.g * (m.constants.α * m.state.Qθ - m.constants.β * m.state.Qs)
 
-    update_mixing_length!(m)
-    update_boundary_layer_depth!(m)
-    update_near_wall_tke!(m)
-
     zero_out_negative_tke!(m.solution.e)
+    update_near_wall_tke!(m)
+    update_boundary_layer_depth!(m)
+
+    update_mixing_length!(m)
+    update_diffusivity!(m)
 
     return nothing
 end
@@ -47,5 +50,17 @@ update_boundary_layer_depth!(m) = nothing
     for i in eachindex(e)
         @inbounds e[i] = ifelse(e[i] < 0, zero(eltype(e)), e[i])
     end
+    return nothing
+end
+
+function update_diffusivity!(m)
+    for i in 1:m.grid.N
+        @inbounds m.state.K[i] = m.tke_equation.Cᴷ * diffusivity_mixing_length(m, i) * sqrt_e(m, i)
+    end
+
+    # Neumann condition on eddy diffusivity over boundary
+    @inbounds m.state.K[0] = m.state.K[1]
+    @inbounds m.state.K[m.grid.N+1] = m.state.K[m.grid.N]
+
     return nothing
 end
