@@ -31,7 +31,7 @@ There are two types of fields:
   1. Fields defined at cell centers with dimension `N+2`: `Field{Cell}`
   2. Fields defined at cell interfaces with dimension `N+1`: `Field{Face}`
 =#
-import Base: +, *, -, ^, setindex!, getindex, eachindex, lastindex, similar,
+import Base: +, *, /, -, ^, setindex!, getindex, eachindex, lastindex, similar,
              eltype, length, @propagate_inbounds
 
 import Statistics: mean
@@ -287,7 +287,7 @@ similar(f::FaceField) = FaceField(f.grid)
 # Define +, -, and * on fields as element-wise calculations on their data. This
 # is only true for fields of the same type. So far, we haven't found use for
 # these sweets because we tend to write element-wise kernels for operations.
-for op in (:+, :-, :*)
+for op in (:+, :-, :*, :/)
     @eval begin
         # +, -, * a Field by a Number on the left
         function $op(num::Number, f::AbstractField)
@@ -312,6 +312,12 @@ function ^(c::AbstractField, b::Number)
     d = similar(c)
     set!(d, c.data.^b)
     return d
+end
+
+function -(a::AbstractField)
+    negative_a = similar(a)
+    @. negative_a.data = -a.data
+    return negative_a
 end
 
 #
