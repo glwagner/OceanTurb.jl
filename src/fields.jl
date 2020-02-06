@@ -335,11 +335,11 @@ and the derviative of a `FaceField` is computed at cell points.
 ∂z(a, i) = throw("∂z is not defined for arbitrary fields.")
 
 "Return ∂c/∂z at face index i."
-@propagate_inbounds ∂z(c::CellField, i) = (c.data[i] - c.data[i-1]) / Δc(c, i)
+@inline ∂z(c::CellField, i) = @inbounds (c.data[i] - c.data[i-1]) / Δc(c, i)
 
 "Return ∂c/∂z at face index i."
-@propagate_inbounds ∂z(c::FaceField, i) = (c.data[i+1] - c.data[i]) / Δc(c, i)
-@propagate_inbounds ∂²z(c::AbstractField, i) = (∂z(c, i+1) - ∂z(c, i)) / Δf(c, i)
+@inline ∂z(c::FaceField, i) = @inbounds (c.data[i+1] - c.data[i]) / Δc(c, i)
+@inline ∂²z(c::AbstractField, i) = @inbounds (∂z(c, i+1) - ∂z(c, i)) / Δf(c, i)
 
 "Calculate `f = ∂c/∂z` in the grid interior."
 function ∂z!(f::FaceField, c::CellField)
@@ -383,7 +383,7 @@ end
 @propagate_inbounds ∇K∇ϕ(Kᵢ₊₁, Kᵢ, ϕ, i) = (K∂z(Kᵢ₊₁, ϕ, i+1) - K∂z(Kᵢ, ϕ, i)) / Δf(ϕ, i)
 
 "Return the upwind advective flux divergence at cell i for M<0."
-@propagate_inbounds ∂zM(Mᵢ₊₁, Mᵢ, ϕ, i) = (Mᵢ₊₁ * ϕ[i+1] - Mᵢ * ϕ[i]) / Δc(ϕ, i+1)
+@inline ∂zM(Mᵢ₊₁, Mᵢ, ϕ, i) = @inbounds (Mᵢ₊₁ * ϕ[i+1] - Mᵢ * ϕ[i]) / Δc(ϕ, i+1)
 
 "Return the total flux (advective + diffusive) across face i."
 @propagate_inbounds flux(M, K, ϕ, i) = M * onface(ϕ, i) - K * ∂z(ϕ, i)
@@ -406,21 +406,41 @@ bottom(a::Union{AbstractField, AbstractArray}) = @inbounds a[1]
 
 Return the interpolation of `c` onto face point `i`.
 """
-@propagate_inbounds onface(c::CellField, i) = (c.data[i] + c.data[i-1])/2
-@propagate_inbounds onface(f::FaceField, i) = f[i]
+@propagate_inbounds onface(c::CellField, i) = @inbounds (c.data[i] + c.data[i-1]) / 2
+
+@propagate_inbounds onface(f::FaceField, i) = @inbounds f[i]
+
+"""
+    onface(c, i)
+
+Return the interpolation of the function `f` onto face point `i`, where
+`f` is assumed to be a function of `m::AbstractModel` and to return a quantity 
+at cell centers.
+"""
+@propagate_inbounds onface(f::Function, m, i) = (f(m, i) + f(m, i-1)) / 2
 
 """
     oncell(f, i)
 
 Return the interpolation of `f` onto cell point `i`.
 """
-@propagate_inbounds oncell(f::FaceField, i) = (f.data[i+1] + f.data[i])/2
-@propagate_inbounds oncell(c::CellField, i) = c[i]
+@inline oncell(f::FaceField, i) = @inbounds (f.data[i+1] + f.data[i])/2
+
+@inline oncell(c::CellField, i) = @inbounds c[i]
+
+"""
+    onface(c, i)
+
+Return the interpolation of the function `f` onto cell point `i`, where
+`f` is assumed to be a function of `m::AbstractModel` and to return a quantity 
+at cell interfaces.
+"""
+@inline oncell(f::Function, m, i) = (f(m, i) + f(m, i+1)) / 2
 
 @inline oncell(i, grid, f::Function, args...) = ( f(i+1, grid, args...) + f(i, grid, args...) ) / 2
 @inline onface(i, grid, f::Function, args...) = ( f(i, grid, args...) + f(i-1, grid, args...) ) / 2
 
-function on_grid(c, d)
+function ongrid(c, d)
     if length(c) != length(d)
         e = similar(c)
         set!(e, d)
@@ -441,7 +461,7 @@ Compute the absolute error between `c` and `d` with norm `p`, defined as
 When `c` and `d` are on different grids, `d` is interpolated to the same grid as `c`.
 """
 function absolute_error(c::CellField, d::CellField, p=2)
-    e = on_grid(c, d)
+    e = ongrid(c, d)
 
     total = zero(eltype(c))
     for i in eachindex(c)

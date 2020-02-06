@@ -13,11 +13,24 @@ end
 # Note: to increase readability, we use 'm' to refer to 'model' in function
 # definitions below.
 
-@inline production(m, i) = KU(m, i) * (∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2)
+"Returns the eddy diffusivity at cell centers."
+@inline function K(m, i) 
+    if i <= 1 || i >= m.grid.N+1
+        return zero(eltype(m.grid))
+    else
+        return @inbounds m.tke_equation.Cᴷ * diffusivity_mixing_length(m, i) * sqrt_e(m, i)
+    end
+end
 
+@inline production(m, i) = KU(m, i) * oncell(shear_squared, m, i)
+
+@inline ∂z_T(m, i) = ∂z(m.solution.T, i)
+@inline ∂z_S(m, i) = ∂z(m.solution.S, i)
+
+# Fallback for linear equations of state.
 @inline buoyancy_flux(m, i) = - m.constants.g * (
-      m.constants.α * KT(m, i) * ∂z(m.solution.T, i)
-    - m.constants.β * KS(m, i) * ∂z(m.solution.S, i)
+        m.constants.α * KT(m, i) * oncell(∂z_T, m, i)
+      - m.constants.β * KS(m, i) * oncell(∂z_S, m, i)
     )
 
 @inline dissipation(m, i) =
