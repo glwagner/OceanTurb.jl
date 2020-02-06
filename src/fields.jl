@@ -34,7 +34,7 @@ There are two types of fields:
 import Base: +, *, /, -, ^, setindex!, getindex, eachindex, lastindex, similar,
              eltype, length, @propagate_inbounds
 
-import Statistics: mean
+import Statistics: mean 
 
 default_arraytype(T) = Array{T, 1}
 
@@ -144,6 +144,9 @@ boundaryindices(c::CellField) = (1, c.grid.N)
 @propagate_inbounds setindex!(c::AbstractField, d, inds...) = setindex!(c.data, d, inds...)
 @propagate_inbounds setindex!(c::AbstractField, d::AbstractField, inds...) = setindex!(c.data, d.data, inds...)
 
+@inline Base.maximum(c::AbstractField) = maximum(data(c))
+@inline Base.minimum(c::AbstractField) = minimum(data(c))
+
 #
 # More advanced 'Field' functionality
 #
@@ -175,7 +178,6 @@ applying the function `f` to each element.
 """
 mean(fn::Function, c::CellField) = integral(fn, c) / height(c)
 mean(c::CellField) = mean(x->x, c)
-
 
 function integrate_range(c::CellField, i₁::Int, i₂::Int)
     total = 0
