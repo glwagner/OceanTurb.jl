@@ -51,7 +51,7 @@ function Model(;
       boundary_layer_depth = nothing,
              nonlocal_flux = nothing,
               tke_equation = TKEParameters(),
-            tke_wall_model = SurfaceProductionModel(),
+            tke_wall_model = SurfaceTKEProductionModel(),
                    stepper = :BackwardEuler,
 )
 
