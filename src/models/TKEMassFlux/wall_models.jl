@@ -40,27 +40,26 @@ TKEBoundaryConditions(T, wall_model::SurfaceValueScaling) =
 # as propotional to u★^3
 #
 
-Base.@kwdef struct SurfaceFluxScaling{T} <: AbstractParameters
+Base.@kwdef struct SurfaceTKEProductionModel{T} <: AbstractParameters
     Cʷu★ :: T = 3.0
 end
 
-@inline (boundary_tke::SurfaceFluxScaling)(model) = - boundary_tke.Cʷu★ * u★(model)^3 # source...
+@inline (boundary_tke::SurfaceTKEProductionModel)(model) = - boundary_tke.Cʷu★ * u★(model)^3 # source...
 
-TKEBoundaryConditions(T, wall_model::SurfaceFluxScaling) =
+TKEBoundaryConditions(T, wall_model::SurfaceTKEProductionModel) =
     FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), FluxBoundaryCondition(wall_model))
 
 #
 # Prescribes the surface flux of turbulent kinetic energy 
 # as propotional to sqrt(e) u★^2, where sqrt(e) is the near-wall
 # turbulent velocity at the upper grid cell i = N.
-# This is a model for turbulent production across the surface
 #
 
-Base.@kwdef struct SurfaceProductionModel{T} <: AbstractParameters
+Base.@kwdef struct MixedSurfaceTKEProductionModel{T} <: AbstractParameters
     Cʷu★ :: T = 1.0
 end
 
-@inline (boundary_tke::SurfaceProductionModel)(m) = @inbounds - boundary_tke.Cʷu★ * sqrt_e(m, m.grid.N) * u★(m)^2 # source...
+@inline (boundary_tke::MixedSurfaceTKEProductionModel)(m) = @inbounds - boundary_tke.Cʷu★ * sqrt_e(m, m.grid.N) * u★(m)^2 # source...
 
-TKEBoundaryConditions(T, wall_model::SurfaceProductionModel) =
+TKEBoundaryConditions(T, wall_model::MixedSurfaceTKEProductionModel) =
     FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), FluxBoundaryCondition(wall_model))
