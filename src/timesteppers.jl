@@ -39,33 +39,40 @@ end
 #
 
 "Evaluate the right-hand-side of ∂ϕ∂t for an explicit time-stepping method."
-function calc_explicit_rhs!(rhs, eqn, solution, m)
+function calc_explicit_rhs!(rhs, eqn, bcs, solution, m)
 
     # Function barrier for better performance and forced specialization
     # on Kϕ and Rϕ
-    function kernel!(rhs, ϕ, M::MF, L::LF, K::KF, R::RF, m) where {MF, LF, KF, RF}
+    function kernel!(rhs, bcs, ϕ, M::MF, L::LF, K::KF, R::RF, m) where {MF, LF, KF, RF}
         for i in eachindex(ϕ)
             @inbounds rhs[i] = (-L(m, i) * ϕ[i] - ∂zM(M(m, i+1), M(m, i), ϕ, i)
                                     + ∇K∇ϕ(K(m, i+1), K(m, i), ϕ, i) + R(m, i))
         end
+
+        apply_bottom_bc!(rhs, bcs.bottom, m)
+        apply_top_bc!(rhs, bcs.top, m)
     end
 
     ntuple(Val(length(solution))) do j
         Base.@_inline_meta
            ϕ = solution[j]
         rhsϕ = rhs[j]
+        bcsϕ = bcs[j]
           Mϕ = eqn.M[j]
           Lϕ = eqn.L[j]
           Kϕ = eqn.K[j]
           Rϕ = eqn.R[j]
 
-        kernel!(rhsϕ, ϕ, Mϕ, Lϕ, Kϕ, Rϕ, m)
+        kernel!(rhsϕ, bcsϕ, ϕ, Mϕ, Lϕ, Kϕ, Rϕ, m)
     end
     return nothing
 end
 
+@inline calc_explicit_rhs!(m) = 
+    calc_explicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m.bcs, m.solution, m)
+
 "Evaluate the right-hand-side of ∂ϕ∂t for an implicit time-stepping method."
-function calc_implicit_rhs!(rhs, eqn, solution, m)
+function calc_implicit_rhs!(rhs, eqn, bcs, solution, m)
 
     N = m.grid.N
 
@@ -73,23 +80,29 @@ function calc_implicit_rhs!(rhs, eqn, solution, m)
         Base.@_inline_meta
            ϕ = solution[j]
         rhsϕ = rhs[j]
+        bcsϕ = bcs[j]
           Mϕ = eqn.M[j]
           Kϕ = eqn.K[j]
           Rϕ = eqn.R[j]
 
-        for i in eachindex(rhsϕ)
+        # Advective divergence included in lhs
+        @inbounds rhsϕ[1] = ∇K∇ϕ(-zero(eltype(ϕ)), Kϕ(m, 1), ϕ, 1) + Rϕ(m, 1)
+
+        for i = 2:N
             @inbounds rhsϕ[i] = Rϕ(m, i)
         end
 
         @inbounds rhsϕ[N] = (-∂zM(Mϕ(m, N+1), Mϕ(m, N), ϕ, N)
                                 + ∇K∇ϕ(Kϕ(m, N+1), -zero(eltype(ϕ)), ϕ, N) + Rϕ(m, N))
 
-        # Advective divergence included in lhs
-        @inbounds rhsϕ[1] = ∇K∇ϕ(-zero(eltype(ϕ)), Kϕ(m, 1), ϕ, 1) + Rϕ(m, 1)
-
+        apply_bottom_bc!(rhsϕ, bcsϕ.bottom, m)
+        apply_top_bc!(rhsϕ, bcsϕ.top, m)
     end
     return nothing
 end
+
+@inline calc_implicit_rhs!(m) = 
+    calc_implicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m.bcs, m.solution, m)
 
 @inline K_op(m, K, iᶠ, iᶜ) = K(m, iᶠ) / Δc(m.grid, iᶠ) / Δf(m.grid, iᶜ)
 @inline M_op(m, M, iᴹ, iᶜ) = M(m, iᴹ) / Δc(m.grid, iᶜ)
@@ -125,11 +138,14 @@ function calc_diffusive_lhs!(lhs, eqn, solution, Δt::T, m) where T
     return nothing
 end
 
+@inline calc_diffusive_lhs!(m, Δt) =
+    calc_diffusive_lhs!(m.timestepper.lhs, m.timestepper.eqn, m.solution, Δt, m)
+
 #
 # Timestepping methods
 #
 
-function update!(bcs, eqn, solution, m)
+function update!(solution, m, eqn, bcs)
     N = m.grid.N
     eqn.update!(m)
     ntuple(Val(length(solution))) do j
@@ -143,7 +159,7 @@ function update!(bcs, eqn, solution, m)
     return nothing
 end
 
-update!(m) = update!(m.bcs, m.timestepper.eqn, m.solution, m)
+update!(m) = update!(m.solution, m, m.timestepper.eqn, m.bcs)
 
 #
 # ForwardEuler timestepper
@@ -180,11 +196,14 @@ function forward_euler_step!(rhs, solution, Δt)
     return nothing
 end
 
+@inline forward_euler_step!(m, Δt) =
+    forward_euler_step!(m.timestepper.rhs, m.solution, Δt)
+
 # Forward Euler timestepping
 function iterate!(m::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
-    update!(m.bcs, m.timestepper.eqn, m.solution, m)
-    calc_explicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m.solution, m)
-    forward_euler_step!(m.timestepper.rhs, m.solution, Δt)
+    update!(m)
+    calc_explicit_rhs!(m)
+    forward_euler_step!(m, Δt)
     tick!(m.clock, Δt)
     return nothing
 end
@@ -242,12 +261,15 @@ function backward_euler_step!(rhs, lhs, solution, Δt)
     return nothing
 end
 
+@inline backward_euler_step!(m, Δt) = 
+    backward_euler_step!(m.timestepper.rhs, m.timestepper.lhs, m.solution, Δt)
+
 "Step forward `m` by `Δt` with the backward Euler method."
 function iterate!(m::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimestepper
-    update!(m.bcs, m.timestepper.eqn, m.solution, m)
-    calc_implicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m.solution, m)
-    calc_diffusive_lhs!(m.timestepper.lhs, m.timestepper.eqn, m.solution, Δt, m)
-    backward_euler_step!(m.timestepper.rhs, m.timestepper.lhs, m.solution, Δt)
+    update!(m)
+    calc_implicit_rhs!(m)
+    calc_diffusive_lhs!(m, Δt)
+    backward_euler_step!(m, Δt)
     tick!(m.clock, Δt)
     return nothing
 end
