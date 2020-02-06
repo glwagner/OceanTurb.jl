@@ -220,7 +220,7 @@ end
         @test integral_range(T, 3, 30, -2.5, -1.3)
         @test ghost_cell_value(T)
         @test ghost_cell_gradient(T)
-        @test ghost_cell_flux(T)
+        #@test ghost_cell_flux(T)
         @test absolute_error_is_correct(T)
         @test relative_error_is_correct(T)
     end
