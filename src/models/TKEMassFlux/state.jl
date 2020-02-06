@@ -1,11 +1,11 @@
-mutable struct State{T, D, M, H}
+mutable struct State{T, D, L, H}
     Qu :: T
     Qv :: T
     Qθ :: T
     Qs :: T
     Qb :: T
-     K :: D
-    mixing_length :: M
+    K :: D
+    ℓ :: L
     h :: H # boundary layer depth
 end
 
@@ -29,11 +29,11 @@ function update_state!(m)
     m.state.Qs = getbc(m, m.bcs.S.top)
     m.state.Qb = m.constants.g * (m.constants.α * m.state.Qθ - m.constants.β * m.state.Qs)
 
-    update_mixing_length!(m)
-    update_boundary_layer_depth!(m)
-    update_near_wall_tke!(m)
     zero_out_negative_tke!(m.solution.e)
+    update_near_wall_tke!(m)
+    update_boundary_layer_depth!(m)
 
+    update_mixing_length!(m)
     update_diffusivity!(m)
 
     return nothing
@@ -58,9 +58,9 @@ function update_diffusivity!(m)
         @inbounds m.state.K[i] = m.tke_equation.Cᴷ * diffusivity_mixing_length(m, i) * sqrt_e(m, i)
     end
 
-    # Eddy diffusivity is zero on boundaries
-    @inbounds m.state.K[0] = -m.state.K[1]
-    @inbounds m.state.K[m.grid.N+1] = -m.state.K[m.grid.N]
+    # Neumann condition on eddy diffusivity over boundary
+    @inbounds m.state.K[0] = m.state.K[1]
+    @inbounds m.state.K[m.grid.N+1] = m.state.K[m.grid.N]
 
     return nothing
 end
