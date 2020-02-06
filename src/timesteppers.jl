@@ -143,6 +143,8 @@ function update!(bcs, eqn, solution, m)
     return nothing
 end
 
+update!(m) = update!(m.bcs, m.timestepper.eqn, m.solution, m)
+
 #
 # ForwardEuler timestepper
 #
