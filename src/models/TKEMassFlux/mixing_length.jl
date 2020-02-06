@@ -30,6 +30,48 @@ end
 end
 
 #
+# Mixing length model due to Ignacio Lopez-Gomez + Clima
+#
+
+Base.@kwdef struct EquilibriumMixingLength{T} <: AbstractParameters
+    Cᴸᵟ :: T = 1.0
+    Cᴸᵏ :: T = 0.4
+    Cᴸᵇ :: T = 0.5
+end
+
+"Returns τ² = 1 / Cᴷ * ( (∂z U)² + (∂z V)^2 - Cᴾʳ * ∂z B ) at cell centers."
+@inline function tke_time_scale(m, i)
+    Cᴾʳ = m.tke_equation.Cᴾʳᵩ
+    ω² = oncell(shear_squared, m, i) - Cᴾʳ * oncell_∂B∂z(m, i)
+    return 1 / maxsqrt(ω²)
+end
+
+@inline function mixing_length(m::Model{<:EquilibriumMixingLength}, i)
+
+    # Length scale associated with a steady TKE balance 
+    τ = tke_time_scale(m, i)
+    ℓᵀᴷᴱ = sqrt(m.tke_equation.Cᴰ) * τ * sqrt_e(m, i)
+    ℓᵀᴷᴱ = nan2inf(ℓᵀᴷᴱ)
+
+    # Length scale associated with strongly-stratified turbulence
+    ℓᵇ = m.mixing_length.Cᴸᵇ * sqrt_e(m, i) / maxsqrt(oncell_∂B∂z(m, i))
+    ℓᵇ = nan2inf(ℓᵇ)
+
+    # Length scale associated near-wall turbulence
+    ℓʷ = @inbounds - m.mixing_length.Cᴸᵏ * m.grid.zc[i] * u★(m) / sqrt_e(m, i)
+    ℓʷ = nan2inf(ℓʷ)
+
+    # Hard minimum for now
+    ℓ = min(ℓᵀᴷᴱ, ℓᵇ, ℓʷ)
+
+    # Finally, limit by some factor of the local cell width
+    ℓᵟ = m.mixing_length.Cᴸᵟ * Δf(m.grid, i)
+    ℓ = max(ℓ, ℓᵟ)
+
+    return ℓ
+end
+
+#
 # Mixing length model from Tan et al 2018.
 #
 
@@ -59,41 +101,3 @@ end
     return ℓ
 end
 
-#
-# Mixing length model due to Ignacio Lopez-Gomez + Clima
-#
-
-Base.@kwdef struct EquilibriumMixingLength{T} <: AbstractParameters
-    Cᴸᵟ :: T = 1.0
-    Cᴸᵏ :: T = 3.75
-    Cᴸᵇ :: T = 0.64
-end
-
-"Returns τ = Cᴷ * ( (∂z U)² + (∂z V)^2 - Cᴾʳ * ∂z B ) at cell centers."
-@inline tke_time_scale(m, i) = 
-    m.tke_equation.Cᴷ * oncell(shear_squared, m, i) -
-    m.tke_equation.Cᴷ * m.tke_equation.Cᴾʳᵩ * oncell_∂B∂z(m, i)
-
-@inline function mixing_length(m::Model{<:EquilibriumMixingLength}, i)
-
-    # Length scale associated with a steady TKE balance 
-    τ = maxsqrt(tke_time_scale(m, i))
-    ℓᵀᴷᴱ = sqrt_e(m, i) * sqrt(m.tke_equation.Cᴰ) / τ
-    ℓᵀᴷᴱ = nan2inf(ℓᵀᴷᴱ)
-
-    # Length scale associated with strongly-stratified turbulence
-    ℓᵇ = m.mixing_length.Cᴸᵇ * sqrt_e(m, i) / maxsqrt(oncell_∂B∂z(m, i))
-    ℓᵇ = nan2inf(ℓᵇ)
-
-    # Length scale associated near-wall turbulence
-    ℓʷ = @inbounds - m.mixing_length.Cᴸᵏ * m.grid.zc[i] * u★(m) / sqrt_e(m, i)
-
-    # Hard minimum for now
-    ℓ = min(ℓᵀᴷᴱ, ℓᵇ, ℓʷ)
-
-    # Finally, limit by some factor of the local cell width
-    ℓᵟ = m.mixing_length.Cᴸᵟ * Δf(m.grid, i)
-    ℓ = max(ℓ, ℓᵟ)
-
-    return ℓ
-end
