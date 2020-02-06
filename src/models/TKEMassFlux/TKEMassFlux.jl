@@ -42,6 +42,7 @@ end
 include("state.jl")
 include("mixing_length.jl")
 include("tke_equation.jl")
+include("wall_models.jl")
 
 function Model(; 
                       grid = UniformGrid(N, L),
@@ -50,7 +51,7 @@ function Model(;
       boundary_layer_depth = nothing,
              nonlocal_flux = nothing,
               tke_equation = TKEParameters(),
-            tke_wall_model = SurfaceFluxScaling(),
+            tke_wall_model = SurfaceProductionModel(),
                    stepper = :BackwardEuler,
 )
 
