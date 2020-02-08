@@ -9,14 +9,14 @@ end
 
 function time_step_tke_mass_flux_model(boundary_layer_depth, mixing_length, nonlocal_flux, tke_equation, tke_wall_model)
 
-    model = TKEMassFlux.Model(                grid = UniformGrid(N=4, L=3), 
+    model = TKEMassFlux.Model(                grid = UniformGrid(N=4, L=4), 
                               boundary_layer_depth = boundary_layer_depth,
                                      mixing_length = mixing_length,
                                      nonlocal_flux = nonlocal_flux,
                                       tke_equation = tke_equation,
                                     tke_wall_model = tke_wall_model,
                                            stepper = :BackwardEuler)
-    iterate!(model, 1e-16) 
+    iterate!(model, 1e-16, 3) 
     return true
 end
 
