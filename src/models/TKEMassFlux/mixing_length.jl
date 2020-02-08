@@ -63,8 +63,8 @@ end
 
         # Length scale associated with a production-buoyancy flux-dissipation balance
         # in the TKE budget.
-        τ = tke_time_scale(m, i)
-        ℓᵀᴷᴱ = √(Cᴰ * τ² * e)
+        τ² = tke_time_scale_squared(m, i)
+        ℓᵀᴷᴱ = maxsqrt(Cᴰ * τ² * e)
 
         # Length-scale limitation by strong stratification.
         N = oncell_∂B∂z(m, i) 
