@@ -13,8 +13,18 @@ const nsol = 5
 @solution U V T S e
 
 @inline minuszero(args...) = -0
+
 @inline maxsqrt(ϕ::T) where T = sqrt(max(zero(T), ϕ))
-@inline maxsqrt(ϕ, i) = @inbounds sqrt(max(zero(eltype(ϕ)), ϕ[i]))
+@inline maxsqrt(ϕ, i) = @inbounds maxsqrt(ϕ[i])
+
+"Returns √ϕ if ϕ is positive and not NaN. Otherwise returns 0."
+@inline function zeroed_sqrt(ϕ)
+    ϕ *= 1 - isnan(ϕ)
+    return maxsqrt(ϕ)
+end
+
+@inline zeroed_sqrt(ϕ, i) = @inbounds zeroed_sqrt(ϕ[i])
+
 @inline sqrt_e(m, i) = @inbounds maxsqrt(m.solution.e[i])
 
 @inline ∂B∂z(m, i) = ∂B∂z(m.solution.T, m.solution.S, 
