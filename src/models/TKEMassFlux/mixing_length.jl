@@ -2,6 +2,7 @@
 @inline diffusivity_mixing_length(m, i) = mixing_length(m, i)
 @inline dissipation_length(m, i) = mixing_length(m, i)
 
+"Returns (∂z U)^2 + (∂z V)^2 at cell interfaces."
 @inline shear_squared(m, i) = ∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2
 
 #
@@ -40,35 +41,43 @@ Base.@kwdef struct EquilibriumMixingLength{T} <: AbstractParameters
 end
 
 "Returns τ² = 1 / Cᴷ * ( (∂z U)² + (∂z V)^2 - Cᴾʳ * ∂z B ) at cell centers."
-@inline function tke_time_scale(m, i)
-    Cᴾʳ = m.tke_equation.Cᴾʳᵩ
-    ω² = oncell(shear_squared, m, i) - Cᴾʳ * oncell_∂B∂z(m, i)
-    return 1 / maxsqrt(ω²)
+@inline function tke_time_scale_squared(m, i)
+    Cᴷᵤ, Cᴾʳ = m.tke_equation.Cᴷᵤ, m.tke_equation.Cᴾʳ
+    ω² = Cᴷᵤ * (oncell(shear_squared, m, i) - Cᴾʳ * oncell_∂B∂z(m, i))
+    return 1 / ω²
 end
 
 @inline function mixing_length(m::Model{<:EquilibriumMixingLength}, i)
 
-    # Length scale associated with a steady TKE balance 
-    τ = tke_time_scale(m, i)
-    ℓᵀᴷᴱ = sqrt(m.tke_equation.Cᴰ) * τ * sqrt_e(m, i)
-    ℓᵀᴷᴱ = nan2inf(ℓᵀᴷᴱ)
+    @inbounds e = m.solution.e[i] # TKE at cell i
 
-    # Length scale associated with strongly-stratified turbulence
-    ℓᵇ = m.mixing_length.Cᴸᵇ * sqrt_e(m, i) / maxsqrt(oncell_∂B∂z(m, i))
-    ℓᵇ = nan2inf(ℓᵇ)
+    # "Smallest" diffusivity limited by grid spacing.
+    ℓᵟ = Cᴸᵟ * Δf(m.grid, i)
 
-    # Length scale associated near-wall turbulence
-    ℓʷ = @inbounds - m.mixing_length.Cᴸᵏ * m.grid.zc[i] * u★(m) / sqrt_e(m, i)
-    ℓʷ = nan2inf(ℓʷ)
+    if e <= 0 # shortcut when TKE is zero (diffusivity is zero in this case regardless).
+        return ℓᵟ
+    else
+        # For notational convenience
+        Cᴸᵟ, Cᴸᵇ, Cᴸᵏ, = m.mixing_length.Cᴸᵟ, m.mixing_length.Cᴸᵇ, m.mixing_length.Cᴸᵏ
+        Cᴰ = m.tke_equation.Cᴰ
 
-    # Hard minimum for now
-    ℓ = min(ℓᵀᴷᴱ, ℓᵇ, ℓʷ)
+        # Length scale associated with a production-buoyancy flux-dissipation balance
+        # in the TKE budget.
+        τ = tke_time_scale(m, i)
+        ℓᵀᴷᴱ = √(Cᴰ * τ² * e)
 
-    # Finally, limit by some factor of the local cell width
-    ℓᵟ = m.mixing_length.Cᴸᵟ * Δf(m.grid, i)
-    ℓ = max(ℓ, ℓᵟ)
+        # Length-scale limitation by strong stratification.
+        N = oncell_∂B∂z(m, i) 
+        ℓᵇ = N == 0 ? Inf : Cᴸᵇ * √e / N
 
-    return ℓ
+        # Near-wall length scale:
+        ℓʷ = @inbounds - Cᴸᵏ * m.grid.zc[i] * u★(m) / √e
+
+        # Hard minimum for now
+        ℓ = min(ℓᵀᴷᴱ, ℓᵇ, ℓʷ)
+
+        return max(ℓ, ℓᵟ) # limits mixing length to be larger than grid spacing
+    end
 end
 
 #

@@ -55,7 +55,7 @@ end
 
 function update_diffusivity!(m)
     for i in 1:m.grid.N
-        @inbounds m.state.K[i] = m.tke_equation.Cᴷ * diffusivity_mixing_length(m, i) * sqrt_e(m, i)
+        @inbounds m.state.K[i] = m.tke_equation.Cᴷᵤ * diffusivity_mixing_length(m, i) * sqrt_e(m, i)
     end
 
     # Neumann condition on eddy diffusivity over boundary
