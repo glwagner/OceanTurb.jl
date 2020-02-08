@@ -81,9 +81,9 @@ function Model(;
 end
 
 @inline KU(m, i) = m.tke_equation.KU₀ + onface(m.state.K, i)
-@inline KT(m, i) = m.tke_equation.KT₀ + m.tke_equation.Cᴾʳᵩ * onface(m.state.K, i)
-@inline KS(m, i) = m.tke_equation.KS₀ + m.tke_equation.Cᴾʳᵩ * onface(m.state.K, i)
-@inline Ke(m, i) = m.tke_equation.Ke₀ + m.tke_equation.Cᴾʳₑ * onface(m.state.K, i)
+@inline KT(m, i) = m.tke_equation.KT₀ + m.tke_equation.Cᴾʳ * onface(m.state.K, i)
+@inline KS(m, i) = m.tke_equation.KS₀ + m.tke_equation.Cᴾʳ * onface(m.state.K, i)
+@inline Ke(m, i) = m.tke_equation.Ke₀ + m.tke_equation.Cᴷₑ / m.tke_equation.Cᴷᵤ * onface(m.state.K, i)
 
 const KV = KU
 

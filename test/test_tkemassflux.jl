@@ -46,7 +46,8 @@ wall_models = (
     nothing,
     TKEMassFlux.PrescribedNearWallTKE(),
     TKEMassFlux.SurfaceValueScaling(),
-    TKEMassFlux.SurfaceFluxScaling(),
+    TKEMassFlux.SurfaceTKEProductionModel(),
+    TKEMassFlux.MixedSurfaceTKEProductionModel(),
 )
 
 @testset "TKEMassFlux" begin
