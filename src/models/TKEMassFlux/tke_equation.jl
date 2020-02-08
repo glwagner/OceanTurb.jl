@@ -1,5 +1,5 @@
 Base.@kwdef struct TKEParameters{T} <: AbstractParameters
-     Cᴰ :: T = 2.0  # Dissipation parameter
+     Cᴰ :: T = 0.33 # Dissipation parameter
     Cᴷᵤ :: T = 1.0  # Diffusivity parameter for velocity
     Cᴾʳ :: T = 1.0  # Ratio between temperature and momentum diffusivity
     Cᴷₑ :: T = 1.0  # Ratio between turbulent kinetic energy and momentum diffusivity

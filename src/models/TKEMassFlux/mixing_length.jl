@@ -10,14 +10,14 @@
 #
 
 Base.@kwdef struct SimpleMixingLength{T} <: AbstractParameters
-    Cᴸᵏ :: T = 0.4
-    Cᴸᵇ :: T = 0.1
     Cᴸᵟ :: T = 1.0
+    Cᴸʷ :: T = 0.4
+    Cᴸᵇ :: T = 0.64
 end
 
 @inline function mixing_length(m::Model{<:SimpleMixingLength}, i)
     # Two mixing lengths based on stratification and distance from surface:
-    @inbounds ℓᶻ = - m.mixing_length.Cᴸᵏ * m.grid.zc[i]
+    @inbounds ℓᶻ = - m.mixing_length.Cᴸʷ * m.grid.zc[i]
     ℓᵇ = nan2inf(m.mixing_length.Cᴸᵇ * sqrt_e(m, i) / oncell(sqrt_∂B∂z, m, i))
 
     # Take hard minimum:
@@ -36,15 +36,8 @@ end
 
 Base.@kwdef struct EquilibriumMixingLength{T} <: AbstractParameters
     Cᴸᵟ :: T = 1.0
-    Cᴸᵏ :: T = 0.4
-    Cᴸᵇ :: T = 0.5
-end
-
-"Returns τ² = 1 / Cᴷ * ( (∂z U)² + (∂z V)^2 - Cᴾʳ * ∂z B ) at cell centers."
-@inline function tke_time_scale_squared(m, i)
-    Cᴷᵤ, Cᴾʳ = m.tke_equation.Cᴷᵤ, m.tke_equation.Cᴾʳ
-    ω² = Cᴷᵤ * (oncell(shear_squared, m, i) - Cᴾʳ * oncell_∂B∂z(m, i))
-    return 1 / ω²
+    Cᴸʷ :: T = 0.67 # 0.4 / 3.75 / 0.16 via eq 3.20 and 3.27 of "Lopez-Gomez and Schenider, Lopez-Gomez quals"
+    Cᴸᵇ :: T = 0.64
 end
 
 @inline function mixing_length(m::Model{<:EquilibriumMixingLength}, i)
@@ -58,20 +51,26 @@ end
         return ℓᵟ
     else
         # For notational convenience
-        Cᴸᵇ, Cᴸᵏ, = m.mixing_length.Cᴸᵟ, m.mixing_length.Cᴸᵇ, m.mixing_length.Cᴸᵏ
-        Cᴰ = m.tke_equation.Cᴰ
+        Cᴸᵇ = m.mixing_length.Cᴸᵇ
+        Cᴸʷ = m.mixing_length.Cᴸʷ
+        Cᴰ  = m.tke_equation.Cᴰ
+        Cᴷᵤ = m.tke_equation.Cᴷᵤ
+        Cᴾʳ = m.tke_equation.Cᴾʳ
+
+        # Extract buoyancy frequency and shear squared.
+        N² = oncell_∂B∂z(m, i) 
+        S² = oncell(shear_squared, m, i)
 
         # Length scale associated with a production-buoyancy flux-dissipation balance
-        # in the TKE budget.
-        τ² = tke_time_scale_squared(m, i)
-        ℓᵀᴷᴱ = maxsqrt(Cᴰ * τ² * e)
+        # in the TKE budget. Valid only for a linear equation of state.
+        ω² = Cᴷᵤ * S² - Cᴷᵤ * Cᴾʳ * N² # can be negative, in which case this model predicts ℓᵀᴷᴱ=0.
+        ℓᵀᴷᴱ = maxsqrt(Cᴰ * e / ω²)
 
         # Length-scale limitation by strong stratification.
-        N = oncell_∂B∂z(m, i) 
-        ℓᵇ = N == 0 ? Inf : Cᴸᵇ * √e / N
+        ℓᵇ = N² <= 0 ? Inf : Cᴸᵇ * √(e / N²)
 
         # Near-wall length scale:
-        ℓʷ = @inbounds - Cᴸᵏ * m.grid.zc[i] * u★(m) / √e
+        ℓʷ = @inbounds - Cᴸʷ * m.grid.zc[i]
 
         # Hard minimum for now
         ℓ = min(ℓᵀᴷᴱ, ℓᵇ, ℓʷ)
@@ -86,7 +85,7 @@ end
 
 Base.@kwdef struct TanEtAl2018MixingLength{T} <: AbstractParameters
        Cᴸᵟ :: T = 1.0
-       Cᴸᵏ :: T = 0.4
+       Cᴸʷ :: T = 0.4
     Cᵃᵤₙₛ :: T = -100.0
     Cᵃₛₜₐ :: T = 2.7
     Cⁿᵤₙₛ :: T = 0.2   
@@ -97,10 +96,10 @@ end
  
 @inline function mixing_length(m::Model{<:TanEtAl2018MixingLength}, i)
     if isunstable(m)
-        Cκ, Ca, Cn = m.mixing_length.Cᴸᵏ, m.mixing_length.Cᵃᵤₙₛ, m.mixing_length.Cⁿᵤₙₛ
+        Cκ, Ca, Cn = m.mixing_length.Cᴸʷ, m.mixing_length.Cᵃᵤₙₛ, m.mixing_length.Cⁿᵤₙₛ
         ℓᶻ = @inbounds Cκ * m.grid.zc[i] * (1 - ζ(Ca, m.state.Qb, u★(m)^3, m.grid.zc[i]))^Cn
     else
-        Cκ, Ca, Cn = m.mixing_length.Cᴸᵏ, m.mixing_length.Cᵃₛₜₐ, m.mixing_length.Cⁿₛₜₐ
+        Cκ, Ca, Cn = m.mixing_length.Cᴸʷ, m.mixing_length.Cᵃₛₜₐ, m.mixing_length.Cⁿₛₜₐ
         ℓᶻ = @inbounds Cκ * m.grid.zc[i] * (1 - ζ(Ca, m.state.Qb, u★(m)^3, m.grid.zc[i]))^Cn
     end
 

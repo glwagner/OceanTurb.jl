@@ -12,8 +12,6 @@ TKEBoundaryConditions(T, wall_model) = DefaultBoundaryConditions(T)
 
 Base.@kwdef struct PrescribedNearWallTKE{T} <: AbstractParameters
     Cʷu★ :: T = 3.75
-    Cʷw★ :: T = 0.2
-    Cʷz★ :: T = 0.4
 end
 
 @inline update_near_wall_tke!(m::Model{L, H, <:PrescribedNearWallTKE}) where {L, H} =
@@ -26,8 +24,6 @@ end
 
 Base.@kwdef struct SurfaceValueScaling{T} <: AbstractParameters
     Cʷu★ :: T = 3.75
-    Cʷw★ :: T = 0.2
-    Cʷz★ :: T = 0.4
 end
 
 @inline (boundary_tke::SurfaceValueScaling)(model) = boundary_tke.Cʷu★ * u★(model)^2
@@ -41,7 +37,7 @@ TKEBoundaryConditions(T, wall_model::SurfaceValueScaling) =
 #
 
 Base.@kwdef struct SurfaceTKEProductionModel{T} <: AbstractParameters
-    Cʷu★ :: T = 3.0
+    Cʷu★ :: T = 3.75
 end
 
 @inline (boundary_tke::SurfaceTKEProductionModel)(model) = - boundary_tke.Cʷu★ * u★(model)^3 # source...
@@ -56,7 +52,7 @@ TKEBoundaryConditions(T, wall_model::SurfaceTKEProductionModel) =
 #
 
 Base.@kwdef struct MixedSurfaceTKEProductionModel{T} <: AbstractParameters
-    Cʷu★ :: T = 1.0
+    Cʷu★ :: T = 3.75
 end
 
 @inline (boundary_tke::MixedSurfaceTKEProductionModel)(m) = @inbounds - boundary_tke.Cʷu★ * sqrt_e(m, m.grid.N) * u★(m)^2 # source...
