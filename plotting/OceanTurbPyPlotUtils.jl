@@ -38,11 +38,8 @@ end
 "Remove `spine` from `ax`."
 removespine(side, ax=gca()) = ax.spines[side].set_visible(false)
 removespines(sides...; ax=gca()) = for side in sides; removespine(side, ax); end
-cornerspines(ax=gca()) = removespines("top", "right"; ax=ax)
 
-function bottomspine(ax=gca())
-    removespines("top", "right", "left"; ax=ax)
-    ax.tick_params(left=false, labelleft=false)
-end
+cornerspines(ax=gca()) = removespines("top", "right"; ax=ax)
+bottomspine(ax=gca()) = removespines("top", "right", "left"; ax=ax)
 
 end # module
