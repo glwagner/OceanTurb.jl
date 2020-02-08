@@ -52,13 +52,13 @@ end
     @inbounds e = m.solution.e[i] # TKE at cell i
 
     # "Smallest" diffusivity limited by grid spacing.
-    ℓᵟ = Cᴸᵟ * Δf(m.grid, i)
+    ℓᵟ = m.mixing_length.Cᴸᵟ * Δf(m.grid, i)
 
     if e <= 0 # shortcut when TKE is zero (diffusivity is zero in this case regardless).
         return ℓᵟ
     else
         # For notational convenience
-        Cᴸᵟ, Cᴸᵇ, Cᴸᵏ, = m.mixing_length.Cᴸᵟ, m.mixing_length.Cᴸᵇ, m.mixing_length.Cᴸᵏ
+        Cᴸᵇ, Cᴸᵏ, = m.mixing_length.Cᴸᵟ, m.mixing_length.Cᴸᵇ, m.mixing_length.Cᴸᵏ
         Cᴰ = m.tke_equation.Cᴰ
 
         # Length scale associated with a production-buoyancy flux-dissipation balance
