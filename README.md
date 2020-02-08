@@ -14,7 +14,7 @@ ocean's turbulent surface boundary layer.
 Open [julia](https://julialang.org), press `]` to enter package manager mode, and type
 
 ```julia
-pkg> add https://github.com/glwagner/OceanTurb.jl.git
+pkg> add OceanTurb
 ```
 
 ## Example(s)
