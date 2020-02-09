@@ -22,13 +22,13 @@ end
 # via a ValueBoundaryCondition.
 #
 
-Base.@kwdef struct SurfaceValueScaling{T} <: AbstractParameters
+Base.@kwdef struct PrescribedBoundaryTKE{T} <: AbstractParameters
     Cʷu★ :: T = 3.75
 end
 
-@inline (boundary_tke::SurfaceValueScaling)(model) = boundary_tke.Cʷu★ * u★(model)^2
+@inline (boundary_tke::PrescribedBoundaryTKE)(model) = boundary_tke.Cʷu★ * u★(model)^2
 
-TKEBoundaryConditions(T, wall_model::SurfaceValueScaling) =
+TKEBoundaryConditions(T, wall_model::PrescribedBoundaryTKE) =
     FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), ValueBoundaryCondition(wall_model))
 
 #

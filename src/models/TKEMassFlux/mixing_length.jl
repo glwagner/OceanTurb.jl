@@ -36,12 +36,11 @@ end
 
 Base.@kwdef struct EquilibriumMixingLength{T} <: AbstractParameters
     Cᴸᵟ :: T = 1.0
-    Cᴸʷ :: T = 0.67 # 0.4 / 3.75 / 0.16 via eq 3.20 and 3.27 of "Lopez-Gomez and Schenider, Lopez-Gomez quals"
+    Cᴸʷ :: T = 0.4  # Limits to Von-Karman constant for stress-driven turbulence
     Cᴸᵇ :: T = 0.64
 end
 
 @inline function mixing_length(m::Model{<:EquilibriumMixingLength}, i)
-
     @inbounds e = m.solution.e[i] # TKE at cell i
 
     # "Smallest" diffusivity limited by grid spacing.
@@ -54,8 +53,10 @@ end
         Cᴸᵇ = m.mixing_length.Cᴸᵇ
         Cᴸʷ = m.mixing_length.Cᴸʷ
         Cᴰ  = m.tke_equation.Cᴰ
-        Cᴷᵤ = m.tke_equation.Cᴷᵤ
-        Cᴾʳ = m.tke_equation.Cᴾʳ
+        Cᴷu = m.tke_equation.Cᴷu
+
+        # Constant Prandtl number for now
+        Pr = m.tke_equation.CᴷPr
 
         # Extract buoyancy frequency and shear squared.
         N² = oncell_∂B∂z(m, i) 
@@ -63,14 +64,15 @@ end
 
         # Length scale associated with a production-buoyancy flux-dissipation balance
         # in the TKE budget. Valid only for a linear equation of state.
-        ω² = Cᴷᵤ * S² - Cᴷᵤ * Cᴾʳ * N² # can be negative, in which case this model predicts ℓᵀᴷᴱ=0.
+        #ω² = Cᴷᵤ * S² - Cᴷᵤ * Cᴾʳ * N² # can be negative, in which case this model predicts ℓᵀᴷᴱ=0.
+        ω² = Cᴷu * (S² - Pr * N²) # can be negative, in which case this model predicts ℓᵀᴷᴱ=0.
         ℓᵀᴷᴱ = maxsqrt(Cᴰ * e / ω²)
 
         # Length-scale limitation by strong stratification.
         ℓᵇ = N² <= 0 ? Inf : Cᴸᵇ * √(e / N²)
 
         # Near-wall length scale:
-        ℓʷ = @inbounds - Cᴸʷ * m.grid.zc[i]
+        ℓʷ = @inbounds - Cᴸʷ * m.grid.zc[i] * u★(m) / √e
 
         # Hard minimum for now
         ℓ = min(ℓᵀᴷᴱ, ℓᵇ, ℓʷ)
@@ -83,23 +85,24 @@ end
 # Mixing length model from Tan et al 2018.
 #
 
+#=
 Base.@kwdef struct TanEtAl2018MixingLength{T} <: AbstractParameters
        Cᴸᵟ :: T = 1.0
        Cᴸʷ :: T = 0.4
-    Cᵃᵤₙₛ :: T = -100.0
-    Cᵃₛₜₐ :: T = 2.7
-    Cⁿᵤₙₛ :: T = 0.2   
-    Cⁿₛₜₐ :: T = -1.0
+    Cᵃunst :: T = -100.0
+    Cᵃstab :: T = 2.7
+    Cⁿunst :: T = 0.2   
+    Cⁿstab :: T = -1.0
 end
 
 @inline ζ(Ca, Qb, u★, z) = Ca * Qb / u★^3 * z
  
 @inline function mixing_length(m::Model{<:TanEtAl2018MixingLength}, i)
     if isunstable(m)
-        Cκ, Ca, Cn = m.mixing_length.Cᴸʷ, m.mixing_length.Cᵃᵤₙₛ, m.mixing_length.Cⁿᵤₙₛ
+        Cκ, Ca, Cn = m.mixing_length.Cᴸʷ, m.mixing_length.Cᵃunst, m.mixing_length.Cⁿunst
         ℓᶻ = @inbounds Cκ * m.grid.zc[i] * (1 - ζ(Ca, m.state.Qb, u★(m)^3, m.grid.zc[i]))^Cn
     else
-        Cκ, Ca, Cn = m.mixing_length.Cᴸʷ, m.mixing_length.Cᵃₛₜₐ, m.mixing_length.Cⁿₛₜₐ
+        Cκ, Ca, Cn = m.mixing_length.Cᴸʷ, m.mixing_length.Cᵃstab, m.mixing_length.Cⁿstab
         ℓᶻ = @inbounds Cκ * m.grid.zc[i] * (1 - ζ(Ca, m.state.Qb, u★(m)^3, m.grid.zc[i]))^Cn
     end
 
@@ -108,4 +111,4 @@ end
 
     return ℓ
 end
-
+=#
