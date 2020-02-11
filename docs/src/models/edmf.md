@@ -1,4 +1,4 @@
-# An eddy-diffusivity mass-flux (EDMF) scheme
+# An eddy-diffusivity mass-flux (EDMF) scheme with prognostic turbulent kinetic energy
 
 ```math
 \newcommand{\c}         {\, ,}
@@ -36,12 +36,13 @@ conditional average that partitions the subgrid boundary layer flow into a
 turbulent 'environment' with area ``a_0``,
 and non-turbulent updrafts and downdrafts with areas ``a_i`` for ``i>0``.
 
-We consider two types of EDMF schemes: those with prognostic equations
-that model the time-evolution and spatial distribution of turbulent kinetic
-energy (TKE), and those that parameterize the effect of turbulent environmental
-mixing with a 'K-profile'.
+We use an EDMF scheme with a prognostic equation for turbulent kinetic energy.
+At the moment, no plume model is implemented, which means our
+EDMF scheme only models mixing due to the presence of turbulent kinetic energy
+in stress-driven boundary layers.
+A description of mass flux schemes is included below for pedagogical purposes.
 
-## Turbulent eddy diffusivty and mass flux
+## Eddy diffusivities and mass fluxes
 
 In all schemes, the turbulent velocity fluxes are parameterized with an
 eddy diffusivity.
@@ -49,14 +50,10 @@ For the ``x``-velocity ``U``, for example,
 
 ```math
 \beq
-\overline{w u} = \d_z \left ( K \d_z U \right ) \c
+\overline{w u} = \d_z \left ( K_U \d_z U \right ) \c
 \eeq
 ```
-where ``K`` is the eddy diffusivity.
-We consider various models for eddy diffusivity ranging from a model similar to
-the K-profile parameterizaton (KPP), and a formulation
-in terms of a prognostic, time- and ``z``-dependent turbulent kinetic energy
-variable, ``e``.
+where ``K_U`` is the eddy diffusivity for ``x`` and ``y``-momentum.
 The turbulent flux of scalars ``\phi`` such as temperature and salinity
 is parameterized by both a turbulent flux and mass transport,
 
@@ -80,7 +77,7 @@ the environment or updraft area ``A_i``.
 The terms ``a_i \tilde W_i \tilde \Phi_i`` account for the vertical transport of ``\phi``
 by environment and updraft vertical velocities ``W_i``.
 
-## Zero-plume, 1.5-order EDMF scheme
+## Turbulent kinetic energy equation
 
 A relatively simple EDMF scheme emerges in the limit of vanishing updrafts
 and downdrafts, in which case ``W = W_0 = a_0 = 0``.
@@ -89,48 +86,31 @@ via the prognostic turbulent kinetic energy (TKE) equation
 
 ```math
 \beq
-\d_t e = K \left [ \left ( \d_z U \right )^2 + \left ( \d_z V \right )^2 \right ] + \d_z \left ( K \d_z e \right )
-  - K \d_z B - \C{\ep}{} \frac{e^{3/2}}{\ell} \c
+\d_t e = \d_z \left ( K_e \d_z e \right )
+    + K_U \left [ \left ( \d_z U \right )^2 + \left ( \d_z V \right )^2 \right ] 
+    + \overline{w b} - \C{D}{} \frac{e^{3/2}}{\ell} \c
   \label{TKE}
 \eeq
 ```
-where ``\C{\ep}{} = 2.0`` is a model parameter,
-``\d_z B = g \left( \alpha \d_z T - \beta \d_z S \right )`` is the buoyancy gradient in terms of gravitational acceleration ``g`` and thermal expansion and haline contraction coefficients ``\alpha`` and ``\beta``,
-and ``K`` is the eddy diffusivity defined in terms of turbulent 'velocity' ``\sqrt{e}`` and a mixing length ``\ell``:
+where ``\C{D}{}`` is the TKE dissipation parameter, ``K_U`` is the eddy diffusivity for momentum, 
+``K_e`` is the eddy diffusivity for turbulent kinetic energy, and ``\overline{wb}`` is the
+buoyancy flux,
 
 ```math
 \beq
-K = \C{K}{} \underbrace{
-      \C{\kappa}{} z \left ( 1 - \F{a}{} \tfrac{Q_b}{\uwind^3} z \right )^{\F{n}{}}}
-        _{\defn \ell}
-        \, \sqrt{e} \p
-        \label{eddydiffusivity}
+\overline{w b} = - g \left ( \alpha K_C \d_z T + \beta K_C \d_z S \right ) \c
 \eeq
 ```
-In \eqref{eddydiffusivity}, ``Q_b = g \left ( \alpha Q_\theta - \beta Q_s \right )`` is the buoyancy flux define in terms of temperature and salinity fluxes ``Q_\theta`` and ``Q_s``, and ``\uwind \defn | \b{Q}_u |^{1/2}`` is the friction velocity defined in terms of velocity flux ``\b{Q}_u = \b{\tau} / \rho_0`` or wind-stress ``\b{\tau}`` and reference density ``\rho_0``.
-``\C{\kappa}{} = 0.41`` and ``\C{K}{} = 0.1`` in \eqref{eddydiffusivity} are the 'Von Karman' and eddy diffusivity model parameters, respectively.
-``\F{a}{}`` and ``\F{n}{}`` in \eqref{eddydiffusivity} are piecewise constant model functions
-that model the effect of boundary layer stability on the mixing length and are
+
+where ``g`` is gravitational acceleration, ``\alpha`` and ``\beta`` are the thermal 
+expansion and haline contraction coefficients, and ``K_C`` is the eddy diffusivity for tracers.
+Eddy diffusivities are defined
 
 ```math
 \beq
-\F{a}{} = \left \{ \begin{matrix}
--100 & \text{for unstable boundary layers with } Q_b > 0 \\
-2.7 & \text{for stable boundary layers with } Q_b \le 0
-\end{matrix} \right . \c
+K_\Phi = C^K_\Phi \ell_\Phi \sqrt{e}
 \eeq
 ```
 
-and
-
-```math
-\beq
-\F{n}{} = \left \{ \begin{matrix}
-0.2 & \text{for unstable boundary layers with } Q_b > 0 \\
--1 & \text{for stable boundary layers with } Q_b \le 0
-\end{matrix} \right . \p
-\eeq
-```
-
-Note that parameterized buoyancy flux ``\overline{w b} \defn -K \d_z B`` appears in the
-TKE equation \eqref{TKE}.
+where ``C^K_\Phi`` is a model constant and ``\ell_\Phi`` is the mixing length for 
+the quantity ``\Phi``.
