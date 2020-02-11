@@ -34,34 +34,39 @@ end
 
 @inline sqrt_∂B∂z(m, i) = maxsqrt(∂B∂z(m, i))
 
-mutable struct Model{L, H, W, P, K, TS, G, T, S, BC, C, ST} <: AbstractModel{TS, G, T}
-                   clock :: Clock{T}
-                    grid :: G
-             timestepper :: TS
-                solution :: S
-                     bcs :: BC
-           mixing_length :: L
-    boundary_layer_depth :: H
-           nonlocal_flux :: P
-            tke_equation :: K
-          tke_wall_model :: W
-               constants :: C
-                   state :: ST
+mutable struct Model{L, K, W, E, H, P, K0, C, ST, G, TS, S, BC, T} <: AbstractModel{TS, G, T}
+                       clock :: Clock{T}
+                        grid :: G
+                 timestepper :: TS
+                    solution :: S
+                         bcs :: BC
+               mixing_length :: L
+          eddy_diffusivities :: K
+              tke_wall_model :: W
+                tke_equation :: E
+        boundary_layer_depth :: H
+               nonlocal_flux :: P
+    background_diffusivities :: K0
+                   constants :: C
+                       state :: ST
 end
 
 include("state.jl")
 include("mixing_length.jl")
 include("tke_equation.jl")
 include("wall_models.jl")
+include("diffusivities.jl")
 
 function Model(; 
                       grid = UniformGrid(N, L),
                  constants = Constants(),
              mixing_length = EquilibriumMixingLength(),
+        eddy_diffusivities = SinglePrandtlDiffusivities(),
+            tke_wall_model = PrescribedSurfaceTKEFlux(),
+              tke_equation = TKEParameters(),
       boundary_layer_depth = nothing,
              nonlocal_flux = nothing,
-              tke_equation = TKEParameters(),
-            tke_wall_model = SurfaceTKEProductionModel(),
+  background_diffusivities = BackgroundDiffusivities(),
                    stepper = :BackwardEuler,
 )
 
@@ -85,18 +90,23 @@ function Model(;
 
     timestepper = Timestepper(stepper, eq, solution, lhs)
 
-    return Model(Clock(), grid, timestepper, solution, bcs, mixing_length, boundary_layer_depth,
-                 nonlocal_flux, tke_equation, tke_wall_model, constants, 
-                 State(grid, mixing_length, boundary_layer_depth))
+    return Model(Clock(), 
+                 grid, 
+                 timestepper, 
+                 solution, 
+                 bcs, 
+                 mixing_length, 
+                 eddy_diffusivities,
+                 tke_wall_model, 
+                 tke_equation, 
+                 boundary_layer_depth,
+                 nonlocal_flux, 
+                 background_diffusivities,
+                 constants, 
+                 State(grid, mixing_length, boundary_layer_depth)
+                )
 end
 
-@inline KU(m, i) = m.tke_equation.KU₀ + m.tke_equation.Cᴷu * onface(m.state.K, i)
-@inline KV(m, i) = m.tke_equation.KU₀ + m.tke_equation.Cᴷu * onface(m.state.K, i)
-
-@inline KT(m, i) = m.tke_equation.KT₀ + m.tke_equation.Cᴷu * m.tke_equation.CᴷPr * onface(m.state.K, i)
-@inline KS(m, i) = m.tke_equation.KS₀ + m.tke_equation.Cᴷu * m.tke_equation.CᴷPr * onface(m.state.K, i)
-
-@inline Ke(m, i) = m.tke_equation.Ke₀ + m.tke_equation.Cᴷu * m.tke_equation.CᴷPr * onface(m.state.K, i)
 
 @inline RU(m, i) = @inbounds   m.constants.f * m.solution.V[i]
 @inline RV(m, i) = @inbounds - m.constants.f * m.solution.U[i]
