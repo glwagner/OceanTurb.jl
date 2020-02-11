@@ -41,7 +41,7 @@ Vertical turbulent fluxes are typically associated with
 an implementation of atmospheric and radiative forcings that is shared
 across all models.
 The models therefore differ in the way they
-parameterize convective and wind-driven mechanical mixing.
+parameterize convective and mechanical mixing.
 
 ## Coordinate system
 

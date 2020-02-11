@@ -3,21 +3,24 @@
 > *How inappropriate to call this planet Earth when it is quite clearly Ocean.*
 >> *Arthur C. Clark*
 
-`OceanTurb.jl` implements one-dimensional partial differential equations
-that model turbulent convection and diffusion in the ocean surface boundary layer.
-It's purpose is the exploration, development, and practical usage
-of ocean turbulence models.
+### *Just beneath the ocean surface...*
 
-### In the scheme of things
-
-Just beneath the surface of the ocean, atmospheric fluxes of energy, heat
-fresh water, salinity, and momentum
-due to wind, waves, precipitation, evaporation, heating, cooling,
-and radiation drive turbulence and mediate the exchange of quantities like
-heat, momentum, and carbon between the atmosphere and ocean interior.
+Wind, rain, sun, ice, and waves drive turbulence that churns the surface
+ocean, mediating the exchange of quantities like heat, carbon, and momentum
+between the atmosphere and ocean interior.
 Models that approximate the effects of atmospheric forcing on
 turbulence and turbulent mixing in the upper ocean are critical
 components in ocean circulation models and coupled climate models.
+
+### The basic idea
+
+`OceanTurb.jl` implements one-dimensional partial differential equations
+that model these processes --- namely, turbulent mixing, convection, and transport
+in the ocean surface boundary layer associated with boundary layer currents, surface waves,
+atmospheric fluxes, and solar radiation.
+It's purpose is the exploration and development of
+ocean turbulence schemes intended for use in models of ocean circulation 
+and Earth's climate.
 
 ## Installation
 
@@ -75,14 +78,16 @@ This example, and more, can be found in the `/examples` directory.
 In addition to simple diffusion we have models for
 
 * The K-Profile-Parameterization proposed by
-    [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872)
+    [Large et al (1994)](https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/94rg01872).
 
 * A 'modular', and therefore generic, ``K``-profile parameterization that has multiple models
     for diffusivity, diffusivity shapes and profiles, nonlocal fluxes including a diagnostic plume model, 
     and mixing depth.
 
-* The Pacanowski-Philander parameterization
+* A model for stress-driven mixing that uses a prognostic turbulent kinetic energy variable.
 
-## Authors
+* The Pacanowski-Philander parameterization.
 
-The author of this software is [Gregory L. Wagner](https://glwagner.github.io).
+## Author(s)
+
+[Gregory L. Wagner](https://glwagner.github.io).
