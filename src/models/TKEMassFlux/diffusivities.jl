@@ -64,5 +64,5 @@ const IDP = IndependentDiffusivities
 # Tracer diffusivities:
 @inline KC(m::Model{L, <:IDP}, i) where L = KC₀(m) + m.eddy_diffusivities.Cᴷc * onface(m.state.K, i)
 
-@inline KT(m::Model{L, <:SPD}, i) where L = KC(m, i)
-@inline KS(m::Model{L, <:SPD}, i) where L = KC(m, i)
+@inline KT(m::Model{L, <:IDP}, i) where L = KC(m, i)
+@inline KS(m::Model{L, <:IDP}, i) where L = KC(m, i)

@@ -35,6 +35,7 @@ end
 @inline sqrt_∂B∂z(m, i) = maxsqrt(∂B∂z(m, i))
 
 mutable struct Model{L, K, W, E, H, P, K0, C, ST, G, TS, S, BC, T} <: AbstractModel{TS, G, T}
+
                        clock :: Clock{T}
                         grid :: G
                  timestepper :: TS
@@ -49,6 +50,7 @@ mutable struct Model{L, K, W, E, H, P, K0, C, ST, G, TS, S, BC, T} <: AbstractMo
     background_diffusivities :: K0
                    constants :: C
                        state :: ST
+
 end
 
 include("state.jl")
