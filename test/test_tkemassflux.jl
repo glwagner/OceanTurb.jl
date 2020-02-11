@@ -38,16 +38,15 @@ tke_equation_models = (
 
 mixing_length_models = (
     TKEMassFlux.SimpleMixingLength(),
-    TKEMassFlux.TanEtAl2018MixingLength(),
     TKEMassFlux.EquilibriumMixingLength(),
 )
 
 wall_models = (
     nothing,
     TKEMassFlux.PrescribedNearWallTKE(),
-    TKEMassFlux.SurfaceValueScaling(),
-    TKEMassFlux.SurfaceTKEProductionModel(),
-    TKEMassFlux.MixedSurfaceTKEProductionModel(),
+    TKEMassFlux.PrescribedSurfaceTKEValue(),
+    TKEMassFlux.PrescribedSurfaceTKEFlux(),
+    TKEMassFlux.DynamicSurfaceTKEFlux(),
 )
 
 @testset "TKEMassFlux" begin
