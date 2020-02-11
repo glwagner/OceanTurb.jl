@@ -40,7 +40,7 @@ Use help mode by typing `?` to find information about key functions:
 help?> iterate!
 ```
 
-which should give the information
+which produces
 
 ```@docs
 iterate!
