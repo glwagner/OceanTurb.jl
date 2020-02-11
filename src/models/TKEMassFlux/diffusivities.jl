@@ -15,7 +15,7 @@ end
 #
 
 """
-    struct SinglePrandtlParameters{T} <: AbstractParameters
+    struct SinglePrandtlDiffusivities{T} <: AbstractParameters
 
 A `simple' Prandtl number model that assumes the TKE diffusivity is identical
 to the tracer diffusivity. The momentum diffusivity parameter is Cᴷu, and the 
@@ -38,3 +38,31 @@ const SPD = SinglePrandtlDiffusivities
 @inline KT(m::Model{L, <:SPD}, i) where L = KC(m, i)
 @inline KS(m::Model{L, <:SPD}, i) where L = KC(m, i)
 @inline Ke(m::Model{L, <:SPD}, i) where L = KC(m, i)
+
+
+"""
+    struct IndependentDiffusivityParameters{T} <: AbstractParameters
+
+A diffusivity model in which momentum, tracers, and TKE
+each have their own diffusivity parameter.
+"""
+Base.@kwdef struct IndependentDiffusivityParameters{T} <: AbstractParameters
+     Cᴷu :: T = 0.1   # Diffusivity parameter for velocity
+     Cᴷc :: T = 0.15  # Diffusivity parameter for tracers
+     Cᴷe :: T = 0.15  # Diffusivity parameter for TKE
+end
+
+const IDP = IndependentDiffusivityParameters 
+
+# Momentum diffusivities:
+@inline KU(m::Model{L, <:IDP}, i) where L = KU₀(m) + m.eddy_diffusivities.Cᴷu * onface(m.state.K, i)
+@inline KV(m::Model{L, <:IDP}, i) where L = KU(m, i)
+
+# TKE diffusivity
+@inline Ke(m::Model{L, <:IDP}, i) where L = KC₀(m) + m.eddy_diffusivities.Cᴷe * onface(m.state.K, i)
+
+# Tracer diffusivities:
+@inline KC(m::Model{L, <:IDP}, i) where L = KC₀(m) + m.eddy_diffusivities.Cᴷc * onface(m.state.K, i)
+
+@inline KT(m::Model{L, <:SPD}, i) where L = KC(m, i)
+@inline KS(m::Model{L, <:SPD}, i) where L = KC(m, i)
