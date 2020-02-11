@@ -96,7 +96,7 @@ end
 @inline KT(m, i) = m.tke_equation.KT₀ + m.tke_equation.Cᴷu * m.tke_equation.CᴷPr * onface(m.state.K, i)
 @inline KS(m, i) = m.tke_equation.KS₀ + m.tke_equation.Cᴷu * m.tke_equation.CᴷPr * onface(m.state.K, i)
 
-@inline Ke(m, i) = m.tke_equation.Ke₀ + m.tke_equation.Cᴷe * onface(m.state.K, i)
+@inline Ke(m, i) = m.tke_equation.Ke₀ + m.tke_equation.Cᴷu * m.tke_equation.CᴷPr * onface(m.state.K, i)
 
 @inline RU(m, i) = @inbounds   m.constants.f * m.solution.V[i]
 @inline RV(m, i) = @inbounds - m.constants.f * m.solution.U[i]
