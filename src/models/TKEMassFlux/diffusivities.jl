@@ -1,4 +1,14 @@
 #
+# Generic diffusivity functions
+#
+
+@inline KU(m, i) = KU₀(m) + Cᴷu(m, i) * onface(m.state.K, i)
+@inline KV(m, i) = KV₀(m) + Cᴷv(m, i) * onface(m.state.K, i)
+@inline KT(m, i) = KT₀(m) + CᴷT(m, i) * onface(m.state.K, i)
+@inline KS(m, i) = KS₀(m) + CᴷS(m, i) * onface(m.state.K, i)
+@inline Ke(m, i) = Ke₀(m) + Cᴷe(m, i) * onface(m.state.K, i)
+
+#
 # Background diffusivity parameters
 #
 
@@ -9,6 +19,9 @@ end
 
 @inline KU₀(m) = m.background_diffusivities.KU₀
 @inline KC₀(m) = m.background_diffusivities.KC₀
+@inline KT₀(m) = m.background_diffusivities.KC₀
+@inline KS₀(m) = m.background_diffusivities.KC₀
+@inline Ke₀(m) = m.background_diffusivities.KC₀
 
 #
 # Eddy diffusivity parameters
@@ -28,16 +41,13 @@ end
 
 const SPD = SinglePrandtlDiffusivities
 
-@inline KU(m::Model{L, <:SPD}, i) where L = KU₀(m) + m.eddy_diffusivities.Cᴷu * onface(m.state.K, i)
-@inline KV(m::Model{L, <:SPD}, i) where L = KU(m, i)
+@inline Cᴷu(m::Model{L, <:SPD}, i) = m.eddy_diffusivities.Cᴷu
+@inline Cᴷv(m::Model{L, <:SPD}, i) = m.eddy_diffusivities.Cᴷu
 
-# All tracers share diffusivity.
-@inline KC(m::Model{L, <:SPD}, i) where L = KC₀(m) + m.eddy_diffusivities.Cᴷu /
-                                                     m.eddy_diffusivities.CᴷPr * onface(m.state.K, i)
-
-@inline KT(m::Model{L, <:SPD}, i) where L = KC(m, i)
-@inline KS(m::Model{L, <:SPD}, i) where L = KC(m, i)
-@inline Ke(m::Model{L, <:SPD}, i) where L = KC(m, i)
+@inline Cᴷc(m::Model{L, <:SPD}, i) = m.eddy_diffusivities.Cᴷu / m.eddy_diffusivities.CᴷPr
+@inline CᴷT(m::Model{L, <:SPD}, i) = Cᴷc(m, i)
+@inline CᴷS(m::Model{L, <:SPD}, i) = Cᴷc(m, i)
+@inline Cᴷe(m::Model{L, <:SPD}, i) = Cᴷc(m, i)
 
 
 """
@@ -54,15 +64,13 @@ end
 
 const IDP = IndependentDiffusivities 
 
-# Momentum diffusivities:
-@inline KU(m::Model{L, <:IDP}, i) where L = KU₀(m) + m.eddy_diffusivities.Cᴷu * onface(m.state.K, i)
-@inline KV(m::Model{L, <:IDP}, i) where L = KU(m, i)
+@inline Cᴷu(m::Model{L, <:IDP}, i) = m.eddy_diffusivities.Cᴷu
+@inline Cᴷv(m::Model{L, <:IDP}, i) = m.eddy_diffusivities.Cᴷu
 
-# TKE diffusivity
-@inline Ke(m::Model{L, <:IDP}, i) where L = KC₀(m) + m.eddy_diffusivities.Cᴷe * onface(m.state.K, i)
+@inline Cᴷe(m::Model{L, <:IDP}, i) = m.eddy_diffusivities.Cᴷe
 
-# Tracer diffusivities:
-@inline KC(m::Model{L, <:IDP}, i) where L = KC₀(m) + m.eddy_diffusivities.Cᴷc * onface(m.state.K, i)
+@inline Cᴷc(m::Model{L, <:IDP}, i) = m.eddy_diffusivities.Cᴷc
+@inline CᴷT(m::Model{L, <:IDP}, i) = Cᴷc(m, i)
+@inline CᴷS(m::Model{L, <:IDP}, i) = Cᴷc(m, i)
 
-@inline KT(m::Model{L, <:IDP}, i) where L = KC(m, i)
-@inline KS(m::Model{L, <:IDP}, i) where L = KC(m, i)
+

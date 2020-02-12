@@ -53,26 +53,24 @@ end
         Cᴸᵇ = m.mixing_length.Cᴸᵇ
         Cᴸʷ = m.mixing_length.Cᴸʷ
         Cᴰ  = m.tke_equation.Cᴰ
-        Cᴷu = m.tke_equation.Cᴷu
-
-        # Constant Prandtl number for now
-        Pr = m.tke_equation.CᴷPr
 
         # Extract buoyancy frequency and shear squared.
         N² = oncell_∂B∂z(m, i) 
         S² = oncell(shear_squared, m, i)
 
         # Length scale associated with a production-buoyancy flux-dissipation balance
-        # in the TKE budget. Valid only for a linear equation of state.
-        #ω² = Cᴷᵤ * S² - Cᴷᵤ * Cᴾʳ * N² # can be negative, in which case this model predicts ℓᵀᴷᴱ=0.
-        ω² = Cᴷu * (S² - Pr * N²) # can be negative, in which case this model predicts ℓᵀᴷᴱ=0.
+        # in the TKE budget. Valid only for a linear equation of state with a shared diffusivity
+        # for salinity and temperature.
+        #
+        # Note that ω² = Cᴷu * S² - Cᴷc * N² can be negative, in which case this model predicts ℓᵀᴷᴱ=0.
+        ω² = Cᴷu(m, i) * S² - Cᴷc(m, i) * N²
         ℓᵀᴷᴱ = maxsqrt(Cᴰ * e / ω²)
 
         # Length-scale limitation by strong stratification.
         ℓᵇ = N² <= 0 ? Inf : Cᴸᵇ * √(e / N²)
 
         # Near-wall length scale:
-        ℓʷ = @inbounds - Cᴸʷ * m.grid.zc[i] * u★(m) / √e
+        ℓʷ = @inbounds - Cᴸʷ * m.grid.zᶜ[i] * u★(m) / √e
 
         # Hard minimum for now
         ℓ = min(ℓᵀᴷᴱ, ℓᵇ, ℓʷ)
