@@ -70,7 +70,7 @@ end
         ℓᵇ = N² <= 0 ? Inf : Cᴸᵇ * √(e / N²)
 
         # Near-wall length scale:
-        ℓʷ = @inbounds - Cᴸʷ * m.grid.zᶜ[i] * u★(m) / √e
+        ℓʷ = @inbounds - Cᴸʷ * m.grid.zc[i] * u★(m) / √e
 
         # Hard minimum for now
         ℓ = min(ℓᵀᴷᴱ, ℓᵇ, ℓʷ)
