@@ -57,9 +57,9 @@ A diffusivity model in which momentum, tracers, and TKE
 each have their own diffusivity parameter.
 """
 Base.@kwdef struct IndependentDiffusivities{T} <: AbstractParameters
-     Cᴷu :: T = 0.1   # Diffusivity parameter for velocity
-     Cᴷc :: T = 0.15  # Diffusivity parameter for tracers
-     Cᴷe :: T = 0.15  # Diffusivity parameter for TKE
+     Cᴷu :: T = 0.07549  # Diffusivity parameter for velocity
+     Cᴷc :: T = 0.08382  # Diffusivity parameter for tracers
+     Cᴷe :: T = 0.4757   # Diffusivity parameter for TKE
 end
 
 const IDP = IndependentDiffusivities 

@@ -36,8 +36,8 @@ end
 
 Base.@kwdef struct EquilibriumMixingLength{T} <: AbstractParameters
     Cᴸᵟ :: T = 1.0
-    Cᴸʷ :: T = 0.4  # Limits to Von-Karman constant for stress-driven turbulence
-    Cᴸᵇ :: T = 0.64
+    Cᴸʷ :: T = 1.688 # Limits to Von-Karman constant for stress-driven turbulence
+    Cᴸᵇ :: T = 1.664
 end
 
 @inline function mixing_length(m::Model{<:EquilibriumMixingLength}, i)

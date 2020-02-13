@@ -37,12 +37,29 @@ TKEValueSurfaceConditions(T, wall_model::PrescribedSurfaceTKEValue) =
 #
 
 Base.@kwdef struct PrescribedSurfaceTKEFlux{T} <: AbstractParameters
-    Cʷu★ :: T = 3.75
+    Cʷu★ :: T = 5.227
 end
 
 @inline (boundary_tke::PrescribedSurfaceTKEFlux)(model) = - boundary_tke.Cʷu★ * u★(model)^3 # source...
 
 TKEBoundaryConditions(T, wall_model::PrescribedSurfaceTKEFlux) =
+    FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), FluxBoundaryCondition(wall_model))
+
+#
+# Prescribes the surface flux of turbulent kinetic energy 
+# as propotional to u★^3, scaling the TKE flux with the
+# model free parameter multiplied by the TKE dissipation 
+# parameter.
+#
+
+Base.@kwdef struct ScaledPrescribedSurfaceTKEFlux{T} <: AbstractParameters
+    Cʷu★ :: T = 2.0
+end
+
+@inline (boundary_tke::ScaledPrescribedSurfaceTKEFlux)(model) = 
+    - boundary_tke.Cʷu★ * model.tke_equation.Cᴰ * u★(model)^3 # source...
+
+TKEBoundaryConditions(T, wall_model::ScaledPrescribedSurfaceTKEFlux) =
     FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), FluxBoundaryCondition(wall_model))
 
 #
