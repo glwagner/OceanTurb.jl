@@ -141,7 +141,7 @@ RS(m, i) = - ∂z_explicit_nonlocal_flux_S(m, i) + m.forcing.S(m, i)
 
 MU(m, i) = 0
 MV(m, i) = 0
-MT(m, i) = mass_flux(m, i)
-MS(m, i) = mass_flux(m, i)
+MT(m, i) = -mass_flux(m, i)
+MS(m, i) = -mass_flux(m, i)
 
 end # module
