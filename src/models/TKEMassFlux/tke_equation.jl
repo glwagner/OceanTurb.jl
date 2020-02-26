@@ -1,5 +1,5 @@
 Base.@kwdef struct TKEParameters{T} <: AbstractParameters
-    Cᴰ :: T = 0.33  # Dissipation parameter
+    Cᴰ :: T = 1.891 # Dissipation parameter
 end
 
 # Note: to increase readability, we use 'm' to refer to 'model' in function

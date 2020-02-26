@@ -36,8 +36,8 @@ end
 
 Base.@kwdef struct EquilibriumMixingLength{T} <: AbstractParameters
     Cᴸᵟ :: T = 1.0
-    Cᴸʷ :: T = 0.4  # Limits to Von-Karman constant for stress-driven turbulence
-    Cᴸᵇ :: T = 0.64
+    Cᴸʷ :: T = 1.688 # Limits to Von-Karman constant for stress-driven turbulence
+    Cᴸᵇ :: T = 1.664
 end
 
 @inline function mixing_length(m::Model{<:EquilibriumMixingLength}, i)
@@ -53,19 +53,17 @@ end
         Cᴸᵇ = m.mixing_length.Cᴸᵇ
         Cᴸʷ = m.mixing_length.Cᴸʷ
         Cᴰ  = m.tke_equation.Cᴰ
-        Cᴷu = m.tke_equation.Cᴷu
-
-        # Constant Prandtl number for now
-        Pr = m.tke_equation.CᴷPr
 
         # Extract buoyancy frequency and shear squared.
         N² = oncell_∂B∂z(m, i) 
         S² = oncell(shear_squared, m, i)
 
         # Length scale associated with a production-buoyancy flux-dissipation balance
-        # in the TKE budget. Valid only for a linear equation of state.
-        #ω² = Cᴷᵤ * S² - Cᴷᵤ * Cᴾʳ * N² # can be negative, in which case this model predicts ℓᵀᴷᴱ=0.
-        ω² = Cᴷu * (S² - Pr * N²) # can be negative, in which case this model predicts ℓᵀᴷᴱ=0.
+        # in the TKE budget. Valid only for a linear equation of state with a shared diffusivity
+        # for salinity and temperature.
+        #
+        # Note that ω² = Cᴷu * S² - Cᴷc * N² can be negative, in which case this model predicts ℓᵀᴷᴱ=0.
+        ω² = Cᴷu(m, i) * S² - Cᴷc(m, i) * N²
         ℓᵀᴷᴱ = maxsqrt(Cᴰ * e / ω²)
 
         # Length-scale limitation by strong stratification.
