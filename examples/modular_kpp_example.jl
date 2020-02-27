@@ -16,7 +16,7 @@ N² = 1e-5
 t_plot = (0hour, 12hour, 48hour)
 
 name = "Free convection
-    \\small{with \$ \\overline{w b} |_{z=0} = 10^{-7} \\, \\mathrm{m^2 \\, s^{-3}}\$}"
+with \$ \\overline{w b} |_{z=0} = 10^{-7} \\, \\mathrm{m^2 \\, s^{-3}}\$"
 
 # The standard setup.
         cvmix = ModularKPP.Model(; modelsetup...,
@@ -63,6 +63,10 @@ for model in models
 
     model.bcs.T.top = FluxBoundaryCondition(temperature_flux)
     model.bcs.T.bottom = GradientBoundaryCondition(dTdz)
+
+    if model === cvmix_plumes
+        OceanTurb.set!(model.state.plume.T, T₀)
+    end
 
 end
 
@@ -119,7 +123,7 @@ for i = 1:length(t_plot)
     end
 
     plot(cvmix.solution.T,           "-", color=defaultcolors[i], label=labels[1], alpha=0.8, markersize=1.5)
-    plot(cvmix_plumes.solution.T,   "--", color=defaultcolors[i], label=labels[2], alpha=0.8, markersize=1.5)
+    #plot(cvmix_plumes.solution.T,   "--", color=defaultcolors[i], label=labels[2], alpha=0.8, markersize=1.5)
     plot(holtslag.solution.T,       "-.", color=defaultcolors[i], label=labels[3], alpha=0.8, markersize=1.5)
     plot(roms.solution.T,            "^", color=defaultcolors[i], label=labels[4], alpha=0.8, markersize=1.5)
     plot(holtslag_roms.solution.T,   ":", color=defaultcolors[i], label=labels[5], alpha=0.8, markersize=1.5)
