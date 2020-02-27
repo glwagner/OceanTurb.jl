@@ -70,7 +70,7 @@ for model in models
 
 end
 
-fig, axs = subplots()
+fig, axs = subplots(figsize=(7, 7))
 
 removespines("top", "right")
 xlabel("Temperature \$ \\, {}^\\circ \\mathrm{C} \$")
@@ -87,11 +87,11 @@ for i = 1:length(t_plot)
           mixing depths
           =============
 
-               cvmix h : %.2f
-      cvmix + plumes h : %.2f
-            holtslag h : %.2f
+                 cvmix : %.2f
+      plumes + cvmix h : %.2f
+    holtslag K cvmix h : %.2f
                 roms h : %.2f
-    holtslag + roms  h : %.2f
+     holtslag + roms h : %.2f
     \n""", time(cvmix)/hour,
     cvmix.state.h,
     cvmix_plumes.state.h,
