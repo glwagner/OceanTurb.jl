@@ -100,8 +100,9 @@ In the bottom cell where ``i=1``, on the other hand, the diffusive flux is
 \end{align}
 ```
 
-For negative advective velocities ``A`` defined at cell centers (corresponding
-to downdrafts or down-travelling plumes) imply an advective flux divergence
+With negative advective velocities ``A`` (corresponding
+to downdrafts or down-travelling plumes), *defined at cell centers*, 
+the advective flux divergence is
 
 ```math
 \beq
@@ -113,7 +114,7 @@ to downdrafts or down-travelling plumes) imply an advective flux divergence
 
 To integrate ocean surface boundary layer models forward in time,
 we implement various explicit and implicit-explicit time-stepping schemes.
-The function `iterate!(model, Δt, Nt)` steps a model forward in time.
+The function `time_step!(model, Δt, Nt)` steps a model forward in time.
 
 Timesteppers in `OceanTurb.jl` integrate equations of the form
 
@@ -131,7 +132,7 @@ including the Coriolis force or external forcing.
 
 ## Time integration methods
 
-We implement `iterate!` functions and types for:
+We implement `time_step!` functions and types for:
 
 * explicit forward Euler
 * semi-implicit backward Euler

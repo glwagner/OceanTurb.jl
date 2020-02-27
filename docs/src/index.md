@@ -37,13 +37,13 @@ pkg> add OceanTurb
 Use help mode by typing `?` to find information about key functions:
 
 ```julia
-help?> iterate!
+help?> time_step!
 ```
 
 which produces
 
 ```@docs
-iterate!
+time_step!
 ```  
 
 ## Modules and models
@@ -70,7 +70,7 @@ model.solution.c = c₀
 Time stepping a model forward looks like
 
 ```julia
-iterate!(model, Δt=0.01, Nt=100)
+time_step!(model, Δt=0.01, Nt=100)
 ```
 
 This example, and more, can be found in the `/examples` directory.
