@@ -31,6 +31,7 @@ There are two types of fields:
   1. Fields defined at cell centers with dimension `N+2`: `Field{Cell}`
   2. Fields defined at cell interfaces with dimension `N+1`: `Field{Face}`
 =#
+
 import Base: +, *, /, -, ^, setindex!, getindex, eachindex, lastindex, similar,
              eltype, length, @propagate_inbounds
 
@@ -44,7 +45,7 @@ struct CellField{A, G, T} <: AbstractField{A, G, T}
 end
 
 struct FaceField{A, G, T} <: AbstractField{A, G, T}
-    data :: A
+    data :: OffsetArray{T, 1, A}
     grid :: G
 end
 
@@ -69,8 +70,8 @@ Return a `FaceField` on `grid` with its data initialized to 0.
 """
 function FaceField(A::DataType, grid)
     data = convert(A, fill(0, face_size(grid)))
-    offset_data = OffsetArray(data, 0:grid.N+2)
-    FaceField{typeof(data), typeof(grid), eltype(data)}(data, grid)
+    offset_data = OffsetArray(data, 0:face_length(grid.N)-1)
+    return FaceField(offset_data, grid)
 end
 
 """
@@ -80,8 +81,8 @@ Return a `CellField` on `grid` with its data initialized to 0.
 """
 function CellField(A::DataType, grid)
     data = convert(A, fill(0, cell_size(grid)))
-    offset_data = OffsetArray(data, 0:grid.N+1)
-    CellField{typeof(data), typeof(grid), eltype(data)}(offset_data, grid)
+    offset_data = OffsetArray(data, 0:cell_length(grid.N)-1)
+    return CellField(offset_data, grid)
 end
 
 CellField(grid) = CellField(default_arraytype(eltype(grid)), grid)
@@ -91,12 +92,17 @@ FaceField(grid) = FaceField(default_arraytype(eltype(grid)), grid)
     CellField(data, grid)
 
 Return a `CellField` with its `data` located on the `grid`.
-if `data` is an array, it must be broadcastable to `c.data`, where
-`c` is a `CellField`.
+if `data` is the same *total* size of a `CellField`, `data` is wrapped
+in an `OffsetArray`. Otherwise, `data` must be settable to a `CellField`
+of `size(grid)`.
 """
 function CellField(data, grid)
-    c = CellField(grid)
-    set!(c, data)
+    if length(data) == cell_length(grid)
+        c = CellField(OffsetArray(data, 0:cell_length(grid.N)-1), grid)
+    else
+        c = CellField(grid)
+        set!(c, data)
+    end
     return c
 end
 
@@ -104,12 +110,17 @@ end
     FaceField(data, grid)
 
 Return a `FaceField` with its `data` located on the `grid`.
-if `data` is an array, it must be broadcastable to `f.data`, where
-`f` is a `FaceField`.
+if `data` is the same *total* size of a `FaceField`, `data` is wrapped
+in an `OffsetArray`. Otherwise, `data` must be settable to a `FaceField`
+of `size(grid)`.
 """
 function FaceField(data, grid)
-    f = FaceField(grid)
-    set!(f, data)
+    if length(data) == face_length(grid)
+        f = FaceField(OffsetArray(data, 0:face_length(grid.N)-1), grid)
+    else
+        f = FaceField(grid)
+        set!(f, data)
+    end
     return f
 end
 
@@ -225,8 +236,10 @@ end
 set!(c::AbstractField, data::Number) = fill!(c.data, data)
 
 # Set to a function
-set!(c::FaceField, fcn::Function) = c.data .= fcn.(nodes(c))
+set!(c::FaceField, fcn::Function) = c.data[1:c.grid.N+1] .= fcn.(nodes(c))
+set!(c::CellField, fcn::Function) = c.data[1:c.grid.N] .= fcn.(nodes(c))
 
+#=
 function set!(c::CellField, func::Function)
     data = func.(nodes(c))
     set!(c, data)
@@ -248,18 +261,19 @@ function set!(c::CellField, func::Function)
 
     return nothing
 end
+=#
 
 # Set to an array
-set!(f::FaceField, data::AbstractArray) = f.data .= data
+#set!(f::FaceField, data::AbstractArray) = f.data .= data
 
-function set!(c::CellField, data::AbstractArray)
+function set!(c::AbstractField, data::AbstractArray)
     for i in eachindex(data)
         @inbounds c[i] = data[i]
     end
-    # Default boundary conditions if data is not an OffsetArray
-    typeof(data) <: OffsetArray || set_default_bcs!(c)
     return nothing
 end
+
+#set!(c::AbstractField, data::OffsetArray) = _set!(c, data)
 
 # Set two fields to one another... some shenanigans
 #
