@@ -7,9 +7,9 @@ import Base: eltype, length, size
 
 # Staggered grid lengths and sizes for fields
 cell_length(N) = N+2
-face_length(N) = N+1
-  cell_size(N) = (N+2,)
-  face_size(N) = (N+1,)
+face_length(N) = N+3
+  cell_size(N) = (cell_length(N),)
+  face_size(N) = (face_length(N),)
 
      height(g::Grid) = g.L
      length(g::Grid) = g.N

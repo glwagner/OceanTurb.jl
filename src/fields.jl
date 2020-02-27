@@ -69,6 +69,7 @@ Return a `FaceField` on `grid` with its data initialized to 0.
 """
 function FaceField(A::DataType, grid)
     data = convert(A, fill(0, face_size(grid)))
+    offset_data = OffsetArray(data, 0:grid.N+2)
     FaceField{typeof(data), typeof(grid), eltype(data)}(data, grid)
 end
 
@@ -390,11 +391,11 @@ end
 "Return the diffusive flux divergence at cell i."
 @propagate_inbounds ∇K∇ϕ(Kᵢ₊₁, Kᵢ, ϕ, i) = (K∂z(Kᵢ₊₁, ϕ, i+1) - K∂z(Kᵢ, ϕ, i)) / Δf(ϕ, i)
 
-"Return the upwind advective flux divergence at cell i for M<0."
-@inline ∂zM(Mᵢ₊₁, Mᵢ, ϕ, i) = @inbounds (Mᵢ₊₁ * ϕ[i+1] - Mᵢ * ϕ[i]) / Δc(ϕ, i+1)
+"Return the upwind advective flux divergence at cell i for A<0."
+@inline ∂zA(Aᵢ₊₁, Aᵢ, ϕ, i) = @inbounds (Aᵢ₊₁ * ϕ[i+1] - Aᵢ * ϕ[i]) / Δc(ϕ, i+1)
 
 "Return the total flux (advective + diffusive) across face i."
-@propagate_inbounds flux(M, K, ϕ, i) = M * onface(ϕ, i) - K * ∂z(ϕ, i)
+@propagate_inbounds flux(A, K, ϕ, i) = A * onface(ϕ, i) - K * ∂z(ϕ, i)
 
 #
 # Convenience functions
