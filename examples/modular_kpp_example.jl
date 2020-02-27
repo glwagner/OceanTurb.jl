@@ -123,7 +123,7 @@ for i = 1:length(t_plot)
     end
 
     plot(cvmix.solution.T,           "-", color=defaultcolors[i], label=labels[1], alpha=0.8, markersize=1.5)
-    #plot(cvmix_plumes.solution.T,   "--", color=defaultcolors[i], label=labels[2], alpha=0.8, markersize=1.5)
+    plot(cvmix_plumes.solution.T,   "--", color=defaultcolors[i], label=labels[2], alpha=0.8, markersize=1.5)
     plot(holtslag.solution.T,       "-.", color=defaultcolors[i], label=labels[3], alpha=0.8, markersize=1.5)
     plot(roms.solution.T,            "^", color=defaultcolors[i], label=labels[4], alpha=0.8, markersize=1.5)
     plot(holtslag_roms.solution.T,   ":", color=defaultcolors[i], label=labels[5], alpha=0.8, markersize=1.5)
@@ -133,4 +133,4 @@ title(name)
 legend(fontsize=10)
 gcf()
 
-#savefig("figs/free_convection_intermodel.png", dpi=480)
+savefig("figs/free_convection_intermodel.png", dpi=480)

@@ -141,7 +141,9 @@ RS(m, i) = - ∂z_explicit_nonlocal_flux_S(m, i) + m.forcing.S(m, i)
 
 AU(m, i) = 0
 AV(m, i) = 0
-AT(m, i) = - mass_flux(m, i)
-AS(m, i) = - mass_flux(m, i)
+
+# Using explicit advection for now:
+AT(m, i) = 0 #- mass_flux(m, i)
+AS(m, i) = 0 #- mass_flux(m, i)
 
 end # module
