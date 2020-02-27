@@ -100,12 +100,12 @@ In the bottom cell where ``i=1``, on the other hand, the diffusive flux is
 \end{align}
 ```
 
-For negative advective mass fluxes ``M`` defined at cell centers (corresponding
+For negative advective velocities ``A`` defined at cell centers (corresponding
 to downdrafts or down-travelling plumes) imply an advective flux divergence
 
 ```math
 \beq
-\d_z \left ( M \Phi \right )_i = \frac{M_{i+1} \Phi_{i+1} - M_i \Phi_i}{\Delta c_{i+1}}
+\d_z \left ( A \Phi \right )_i = \frac{A_{i+1} \Phi_{i+1} - A_i \Phi_i}{\Delta c_{i+1}}
 \eeq
 ```
 
@@ -119,11 +119,11 @@ Timesteppers in `OceanTurb.jl` integrate equations of the form
 
 ```math
 \beq \label{equationform}
-\d_t \Phi = - \d_z \left ( M \Phi \right ) + \left ( \d_z K \d_z \right ) \Phi - L \Phi + R(\Phi) \c
+\d_t \Phi = - \d_z \left ( A \Phi \right ) + \left ( \d_z K \d_z \right ) \Phi - L \Phi + R(\Phi) \c
 \eeq
 ```
 where ``\Phi(z, t)`` is a variable like velocity, temperature, or salinity,
-``M``, ``K``, and ``L`` are an advective 'mass flux', diffusivity,
+``A``, ``K``, and ``L`` are an advective 'mass flux', diffusivity,
 and damping coefficient
 which are a general nonlinear functions of ``\Phi``, ``z``, and external parameters,
 and ``R`` is an arbitrary function representing any number of processes,
@@ -143,7 +143,7 @@ obtains ``\Phi`` at time-step ``n+1`` using the formula
 
 ```math
 \beq
-\Phi^{n+1} = \Phi^{n} + \Delta t \, \big [ - \d_z \left ( M^n \Phi^n \right ) + \left ( \d_z K^n \d_z \right ) \Phi^n - L^n \Phi^n + R \left ( \Phi^n \right ) \big ]
+\Phi^{n+1} = \Phi^{n} + \Delta t \, \big [ - \d_z \left ( A^n \Phi^n \right ) + \left ( \d_z K^n \d_z \right ) \Phi^n - L^n \Phi^n + R \left ( \Phi^n \right ) \big ]
 \eeq
 ```
 
@@ -158,7 +158,7 @@ obtains ``\Phi`` at time-step ``n+1`` using the formula
 ```math
 \beq
 \Phi^{n+1}
-  + \Delta t \left [ \d_z \left ( M^n \Phi^{n+1} \right ) - \left ( \d_z K^n \d_z \right ) \Phi^{n+1} + L^n \Phi^{n+1} \right ]
+  + \Delta t \left [ \d_z \left ( A^n \Phi^{n+1} \right ) - \left ( \d_z K^n \d_z \right ) \Phi^{n+1} + L^n \Phi^{n+1} \right ]
     = \Phi^n + \Delta t R \left ( \Phi^n \right )
 \eeq
 ```
@@ -182,12 +182,12 @@ multiplication ``\mathcal{L}^n_{ij} \Phi_j^{n+1}`` has the form
 
 ```math
 \begin{align}
-\mathcal{L}^n_{ij} \Phi_j^{n+1} &= \left [ 1 + \Delta t \left ( \d_z M^n - \d_z K^n \d_z + L^n \right ) \right ]_{ij} \Phi_j^{n+1} \\
+\mathcal{L}^n_{ij} \Phi_j^{n+1} &= \left [ 1 + \Delta t \left ( \d_z A^n - \d_z K^n \d_z + L^n \right ) \right ]_{ij} \Phi_j^{n+1} \\
 
 &= \left [ \begin{matrix}
 
-1 + \Delta t \left ( L^n_1 + \tfrac{K^n_2}{\Delta f_1 \Delta c_2} - \tfrac{M_1^n}{\Delta c_2} \right )
-  & \Delta t \left ( \tfrac{M_2^n}{\Delta c_2} - \tfrac{K^n_2}{\Delta f_1 \Delta c_2} \right )
+1 + \Delta t \left ( L^n_1 + \tfrac{K^n_2}{\Delta f_1 \Delta c_2} - \tfrac{A_1^n}{\Delta c_2} \right )
+  & \Delta t \left ( \tfrac{A_2^n}{\Delta c_2} - \tfrac{K^n_2}{\Delta f_1 \Delta c_2} \right )
     & \cdot & \cdot & \cdot & \cdot \\
 
 \ddots & \ddots & \ddots & \cdot & \cdot & \cdot \\
@@ -195,14 +195,14 @@ multiplication ``\mathcal{L}^n_{ij} \Phi_j^{n+1}`` has the form
 \cdot
   & - \Delta t \tfrac{K^n_i}{\Delta c_i \Delta f_i}
   & 1 + \Delta t
-    \left [ L^n_i + \tfrac{K^n_{i+1}}{\Delta f_i \Delta c_{i+1}} + \tfrac{K^n_i}{\Delta f_i \Delta c_i} - \frac{M^n_i}{\Delta c_{i+1}} \right ]
-  & \Delta t \left ( \tfrac{M^n_{i+1}}{\Delta c_{i+1}} - \tfrac{K^n_{i+1}}{\Delta c_{i+1} \Delta f_{i+1}} \right ) & \cdot & \cdot \\
+    \left [ L^n_i + \tfrac{K^n_{i+1}}{\Delta f_i \Delta c_{i+1}} + \tfrac{K^n_i}{\Delta f_i \Delta c_i} - \frac{A^n_i}{\Delta c_{i+1}} \right ]
+  & \Delta t \left ( \tfrac{A^n_{i+1}}{\Delta c_{i+1}} - \tfrac{K^n_{i+1}}{\Delta c_{i+1} \Delta f_{i+1}} \right ) & \cdot & \cdot \\
 
 \cdot & \cdot & \ddots & \ddots & \ddots & \cdot \\
 
 \cdot & \cdot & \cdot & \cdot
   & - \Delta t \tfrac{K^n_N}{\Delta c_N \Delta f_N}
-  & 1 + \Delta t \left ( L^n_N + \tfrac{K^n_N}{\Delta c_N \Delta f_N} - \tfrac{M^n_N}{\Delta c_{N+1}} \right )
+  & 1 + \Delta t \left ( L^n_N + \tfrac{K^n_N}{\Delta c_N \Delta f_N} - \tfrac{A^n_N}{\Delta c_{N+1}} \right )
 
 \end{matrix} \right ]
 
