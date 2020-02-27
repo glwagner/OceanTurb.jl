@@ -116,6 +116,11 @@ end
     timestepper :: TS
 end
 
+"""
+    run_until!(model, dt, tfinal)
+
+Run `model` until `tfinal` with time-step `dt`.
+"""
 function run_until!(model, dt, tfinal)
     nt = floor(Int, (tfinal - time(model))/dt)
     iterate!(model, dt, nt)
@@ -129,7 +134,7 @@ end
 """
     diffusive_flux!(flux, fieldname, model)
 
-Calculates the diffusive flux associated with `fieldname` in `model.solution.fieldname`i
+Calculates the diffusive flux associated with `fieldname` in `model.solution.fieldname`
 and stores the result in the `FaceField` `flux`.
 """
 function diffusive_flux!(flux, fieldname, model)

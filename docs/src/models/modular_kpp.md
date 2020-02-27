@@ -398,7 +398,8 @@ is instantiated by writing
 nonlocalflux = DiagnosticPlumeModel()
 ```
 
-The diagnostic plume model
+The diagnostic plume model described by
+[Siebesma et al (2007)](https://journals.ametsoc.org/doi/full/10.1175/JAS3888.1)
 integrates equations that describe the quasi-equilibrium vertical momentum and 
 tracer budgets for plumes that plunge downwards from the ocean surface
 due to destabilizing buoyancy flux. 
@@ -414,17 +415,6 @@ vertical velocity, and ``\breve \Phi`` is plume-averaged concentration of the
 tracer ``\phi``.
 When using a plume model in `ModularKPP`, ``\Phi`` must be interpreted as
 the average concentration of ``\phi`` in the environment, excluding plume regions.
-in `OceanTurb.jl`'s implementation of the
-[Siebesma et al (2007)](https://journals.ametsoc.org/doi/full/10.1175/JAS3888.1)
-the plume vertical velocity variance ``\breve W^2`` is used as a diagnostic variable, 
-rather than ``\breve W``. Due to this, the nonlocal flux in `OceanTurb.jl` becomes
-```math
-\beq
-    NL_\phi = -\C{a}{} \sqrt{\breve W^2} \left ( \Phi - \breve \Phi \right ) \, ,
-\eeq
-```
-where we assume that ``\breve W \le 0``.
-
 
 #### Continuous plume equations
 
@@ -437,18 +427,21 @@ The diagnostic, steady-state plume-averaged temperature and salinity budgets boi
 ```
 where ``\breve T`` and ``\breve S`` are the plume-averaged temperature and salinity, 
 and ``T`` and ``S`` are the environment-averaged temperature and salinity and 
-``\epsilon(z, h)`` is the parameterized entrainment rate, 
+``\epsilon(z, h)`` is the parameterized entrainment length, 
 ```math
-\beq
-\epsilon(z) = \C{\epsilon}{} 
-    \left [ \frac{1}{\Delta c_N - z} + \frac{1}{\Delta c_N + \left ( z + h \right )} \right ] \, ,
-\eeq
+\begin{align}
+\epsilon(z) &\equiv \frac{E}{\C{a}{} \breve W} \, , \\
+    &= -\C{\epsilon}{} 
+        \left [ \frac{1}{\Delta c_N - z} + \frac{1}{\Delta c_N + \left ( z + h \right )} \right ] \, ,
+\end{align}
 ```
 where ``\C{\epsilon}{} = 0.4``, ``\Delta c_N`` is the spacing between the boundary and the topmost
 cell interface, and ``h`` is the mixing depth determined via the chosen mixing depth model.
+We note that the definition of ``\epsilon`` in terms of the positive-definite 
+entrainment rate ``E>0``, area fraction ``\C{a}{}``, and negative-definite downdraft plume
+velocity ``\breve W`` implies that ``\epsilon < 0``.
 
 The budget for plume vertical momentum is
-
 ```math
 \beq
     \d_z \breve W^2 = \C{b}{w} \left ( \breve B - B \right ) - \C{\epsilon}{w} \epsilon \, \breve W^2
@@ -489,8 +482,8 @@ through the ocean surface,
 \eeq
 ```
 
-The advetion terms in the diagnostic plume equations are discretized with an downwind 
-scheme, which permits integration of each equation from the surface downward.
+The advection terms in the diagnostic plume equations are discretized with an downwind 
+scheme, !(isfinite(ϕᵢ))ntegration of each equation from the surface downward.
 The plume temperature advection term, for example, is defined at cell centers
 and discretized with
 

@@ -101,8 +101,8 @@ function Model(; N=10, L=1.0,
 
      K = Accessory{Function}(KU, KV, KT, KS)
      R = Accessory{Function}(RU, RV, RT, RS)
-     M = Accessory{Function}(MU, MV, MT, MS)
-    eq = Equation(K=K, R=R, M=M, update=update_state!)
+     A = Accessory{Function}(AU, AV, AT, AS)
+    eq = Equation(K=K, R=R, M=A, update=update_state!)
 
        state = State(diffusivity, nonlocalflux, mixingdepth, grid)
     solution = Solution((CellField(grid) for i=1:nsol)...)
@@ -139,9 +139,9 @@ const KV = KU
 RT(m, i) = - ∂z_explicit_nonlocal_flux_T(m, i) + m.forcing.T(m, i)
 RS(m, i) = - ∂z_explicit_nonlocal_flux_S(m, i) + m.forcing.S(m, i)
 
-MU(m, i) = 0
-MV(m, i) = 0
-MT(m, i) = mass_flux(m, i)
-MS(m, i) = mass_flux(m, i)
+AU(m, i) = 0
+AV(m, i) = 0
+AT(m, i) = - mass_flux(m, i)
+AS(m, i) = - mass_flux(m, i)
 
 end # module
