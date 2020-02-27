@@ -100,8 +100,9 @@ In the bottom cell where ``i=1``, on the other hand, the diffusive flux is
 \end{align}
 ```
 
-For negative advective velocities ``A`` defined at cell centers (corresponding
-to downdrafts or down-travelling plumes) imply an advective flux divergence
+With negative advective velocities ``A`` (corresponding
+to downdrafts or down-travelling plumes), *defined at cell centers*, 
+the advective flux divergence is
 
 ```math
 \beq
