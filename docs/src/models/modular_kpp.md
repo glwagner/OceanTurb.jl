@@ -407,12 +407,13 @@ due to destabilizing buoyancy flux.
 In the diagnostic plume model, the non-local flux of a tracer ``\Phi`` is parameterized as
 ```math
 \beq
-    NL_\phi = \C{a}{} \breve W \left ( \Phi - \breve \Phi \right ) \, ,
+    NL_\phi = \underbrace{\C{a}{} \breve W}_{\equiv M} \left ( \breve \Phi - \Phi \right ) \, ,
 \eeq
 ```
 where ``\C{a}{} = 0.1`` is the plume area fraction, ``\breve W`` is the plume
-vertical velocity, and ``\breve \Phi`` is plume-averaged concentration of the 
-tracer ``\phi``.
+vertical velocity, ``\breve \Phi`` is plume-averaged concentration of the 
+tracer ``\phi``, and we have defined the mass flux ``M``, which is negative for 
+down-travelling plumes.
 When using a plume model in `ModularKPP`, ``\Phi`` must be interpreted as
 the average concentration of ``\phi`` in the environment, excluding plume regions.
 
@@ -482,8 +483,8 @@ through the ocean surface,
 \eeq
 ```
 
-The advection terms in the diagnostic plume equations are discretized with an downwind 
-scheme, !(isfinite(ϕᵢ))ntegration of each equation from the surface downward.
+The advection terms in the diagnostic plume equations are discretized with a downwind
+scheme, which permits integration from the top at ``z=0`` downward.
 The plume temperature advection term, for example, is defined at cell centers
 and discretized with
 
@@ -528,14 +529,29 @@ The plume vertical velocity equation is thus
 
 The plume integration is stopped at grid point `i` when ``\breve W^2_{i+1} < 0``.
 
-To numerically integrate the environment-averaged tracer conservation equation, 
-the mass flux term is divided into two components,
+In terms of the plume velocity variance ``\breve W^2``, the mass flux is 
 ```math
 \beq
-\partial_t \Phi - \partial_z \left ( K_\Phi \partial_z \Phi \right ) 
-                + \partial_z \left ( -\C{a}{} \sqrt{\breve W^2} \Phi \right )
-                = - \C{a}{} \sqrt{\breve W^2} \breve \Phi \, ,
+M \equiv - \C{a}{} \sqrt{\breve W^2} \, ,
 \eeq
 ```
-where the diffusivity and mass flux term on the left are integrated implicitly in time, and the
-mass flux term on the right is integrated explicitly in time.
+which implies that the non-local flux ``NL_\phi`` is 
+```math
+\beq
+NL_\phi = - \C{a}{} \sqrt{\breve W^2} \left ( \breve \Phi - \Phi \right ) \, .
+\eeq
+```
+
+Stable numerical integration of the environment-averaged tracer conservation equation
+relies on the division of the mass flux term into two components, such that
+the conservation law for ``\Phi`` becomes
+```math
+\begin{gather}
+\partial_t \Phi = \d_z \left ( K_\phi \partial_z \right ) \Phi - \partial_z NL_\phi \\
+\partial_t \Phi - \partial_z \left ( K_\Phi \partial_z \Phi \right ) 
+                + \partial_z \left ( \C{a}{} \sqrt{\breve W^2} \Phi \right )
+                = \C{a}{} \sqrt{\breve W^2} \breve \Phi \, ,
+\end{gather}
+```
+where the diffusivity and mass flux term on the left are integrated implicitly in time, while
+mass flux term on the right is treated explicitly.
