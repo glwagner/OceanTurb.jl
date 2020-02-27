@@ -18,7 +18,7 @@ function test_pp_diffusion_cosine()
     model.solution.T = c_init
 
     dt = 1e-3
-    iterate!(model, dt)
+    time_step!(model, dt)
 
     # The error tolerance is a bit arbitrary.
     norm(c_ans.(z, time(model)) .- data(model.solution.T)) < model.grid.N*1e-6

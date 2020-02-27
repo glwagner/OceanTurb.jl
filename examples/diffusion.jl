@@ -8,7 +8,7 @@ using OceanTurb, Printf
 # diffusivity 0.01, and a backward Euler timestepper.
 model = Diffusion.Model(
     N = 100,
-    L = 1.0,
+    H = 1.0,
     K = 0.01,
     stepper = :BackwardEuler)
 

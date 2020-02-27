@@ -2,9 +2,9 @@ using JLD2, Printf, OceanTurb
 
 # For this example we use the same "simple flux" scenario used in kpp_examples.ipynb.
 
-function simple_flux_model(; N=10, L=100, Tz=0.01, Fb=1e-8, Fu=0, parameters=KPP.Parameters())
+function simple_flux_model(; N=10, H=100, Tz=0.01, Fb=1e-8, Fu=0, parameters=KPP.Parameters())
 
-    model = KPP.Model(N=N, L=L, parameters=parameters, stepper=:BackwardEuler)
+    model = KPP.Model(N=N, H=H, parameters=parameters, stepper=:BackwardEuler)
 
     # Initial condition
     T₀(z) = 20 + Tz*z
@@ -70,7 +70,7 @@ filepath = joinpath(".", "test_free_convection.jld2")
 
 model = simple_flux_model(
      N = 100,
-     L = 100,
+     H = 100,
     Tz = 4.08e-4,
     Fb = 5e-8,
     Fu = 0
@@ -96,7 +96,7 @@ file = jldopen(filepath, "r")
 @show file
 
 N = file["grid/N"]
-L = file["grid/L"]
+H = file["grid/H"]
 @show iters = parse.(Int, keys(file["timeseries/t"]))
 
 close(file)
@@ -105,7 +105,7 @@ close(file)
 #
 # Now we can plot the data (and otherwise analyze it if we wish).
 
-grid = UniformGrid(N, L)
+grid = UniformGrid(N, H)
 
 function get_t_and_T(path, i)
     file = jldopen(path, "r")

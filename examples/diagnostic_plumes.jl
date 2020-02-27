@@ -49,14 +49,13 @@ function makeplot!(axs, model)
     return nothing
 end
 
-modelsetup = (N=64, L=256, stepper=:ForwardEuler)
-
 Qb = 1e-7
 N² = 1e-5
 Δt = 1minute
 
 # The standard setup except with a plume model rather than a counter-gradient flux model.
-model = ModularKPP.Model(; modelsetup...,
+model = ModularKPP.Model(;         grid = UniformGrid(N=64, H=256), 
+                                stepper = :ForwardEuler,
                            nonlocalflux = DiagnosticPlumeModel(Ca=0.1, Ce=0.4, Cα=1.0))
 
 # Initial condition and fluxes
