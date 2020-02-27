@@ -32,10 +32,10 @@ end
 
 function cell_∂z(T)
     grid = UniformGrid(T, 2, 2.0)
-    c = CellField([2, 4], grid)
+    c = CellField([2, 5], grid)
     cz = ∂z(c)
-    cz_answer = FaceField([0, 2, 0], grid)
-    cz.data == cz_answer.data
+    cz_answer = FaceField([2, 3, -5], grid)
+    cz.data[1:3] == cz_answer.data[1:3]
 end
 
 function face_∂z(T)
