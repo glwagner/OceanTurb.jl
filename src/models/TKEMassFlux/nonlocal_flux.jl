@@ -1,22 +1,22 @@
+# Fallbacks!
+∂z_NLᵁ(m, i) = 0
+∂z_NLⱽ(m, i) = 0
+∂z_NLᵀ(m, i) = 0
+∂z_NLˢ(m, i) = 0
+∂z_NLᵉ(m, i) = 0
+
 #####
 ##### Counter gradient flux model proposed by Large et al (1994)
 #####
 
-Base.@kwdef struct LMDCounterGradientFlux{T} <: AbstractParameters
-    CNL :: T = 6.33 # Mass flux proportionality constant
+Base.@kwdef struct CounterGradientFlux{T} <: AbstractParameters
+    Cᴺ :: T = 1.0 # Mass flux proportionality constant
 end
 
-const CGModel = Model{K, <:LMDCounterGradientFlux} where K
+const CGModel = Model{L, K, W, <:CounterGradientFlux} where {L, K, W}
 
-update_nonlocal_flux!(model::CGModel) = nothing
-
-instantiate_plume(::LMDCounterGradientFlux, grid) = (T=nothing, S=nothing, W²=nothing)
-
-∂z_explicit_nonlocal_flux_T(m::Model{K, <:LMDCounterGradientFlux}, i) where K =
-    KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Qθ, d(m, i+1), d(m, i), Δf(m.grid, i), m)
-
-∂z_explicit_nonlocal_flux_S(m::Model{K, <:LMDCounterGradientFlux}, i) where K =
-    KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Qs, d(m, i+1), d(m, i), Δf(m.grid, i), m)
+#∂z_NLᵀ(m::CGModel, i) where K = ∂NL∂z(m.nonlocal_flux.Cᴺ, m.state.Qθ, m)
+#∂z_NLˢ(m::CGModel, i) where K = ∂NL∂z(m.nonlocal_flux.Cᴺ, m.state.Qs, m)
 
 #####
 ##### Diagnostic plume model
@@ -24,7 +24,7 @@ instantiate_plume(::LMDCounterGradientFlux, grid) = (T=nothing, S=nothing, W²=n
 
 abstract type AbstractDiagnosticPlumeModel <: AbstractParameters end
 
-Base.@kwdef struct SiebesmaDiagnosticPlumeModel{T} <: AbstractDiagnosticPlumeModel
+Base.@kwdef struct WitekDiagnosticPlumeModel{T} <: AbstractDiagnosticPlumeModel
      Ca :: T = 0.1
     Cbw :: T = 2.86
      Ce :: T = 0.4
@@ -34,10 +34,10 @@ Base.@kwdef struct SiebesmaDiagnosticPlumeModel{T} <: AbstractDiagnosticPlumeMod
     Cσb :: T = 1.32
 end
 
-const DiagnosticPlumeModel = SiebesmaDiagnosticPlumeModel
+const ModelWithPlumes = Model{L, K, W, <:AbstractDiagnosticPlumeModel} where {L, K, W}
 
 instantiate_plume(::AbstractDiagnosticPlumeModel, grid) = 
-    (T=CellField(grid), S=CellField(grid), W²=FaceField(grid))
+    (T=CellField(grid), S=CellField(grid), W²=FaceField(grid), e=nothing)
 
 #####
 ##### Empirical standard deviation
@@ -51,8 +51,8 @@ instantiate_plume(::AbstractDiagnosticPlumeModel, grid) =
     end
 end
 
-@inline w_standard_dev(m, i) = @inbounds w_standard_dev(w★(m), u★(m), m.nonlocalflux.Cστ, 
-                                                        m.nonlocalflux.Cσb, -m.grid.zc[i] / m.state.h)
+@inline w_standard_dev(m, i) = @inbounds w_standard_dev(w★(m), u★(m), m.nonlocal_flux.Cστ, 
+                                                        m.nonlocal_flux.Cσb, -m.grid.zc[i] / m.state.h)
 
 #####
 ##### Entrainment
@@ -63,8 +63,8 @@ end
     return ifelse(ϵ < 0, ϵ, -Ce / Δz)
 end
 
-@inline entrainment(z, model::Model{K, <:SiebesmaDiagnosticPlumeModel}) where K = 
-    @inbounds siebesma_entrainment(z, Δc(model.grid, model.grid.N), model.nonlocalflux.Ce, model.state.h)
+@inline entrainment(z, model::ModelWithPlumes) where K = 
+    @inbounds siebesma_entrainment(z, Δc(model.grid, model.grid.N), model.nonlocal_flux.Ce, model.state.h)
                                                       
 #####
 ##### Plume boundary conditions
@@ -136,13 +136,13 @@ function clip_negative!(ϕ)
     return nothing
 end
 
-function update_nonlocal_flux!(model::Model{K, <:AbstractDiagnosticPlumeModel}) where K
+function update_nonlocal_flux!(model::ModelWithPlumes) where K
 
     set_tracer_plume_bc!(model.state.plume.T, model.solution.T,
-                         model.state.Qθ, model.nonlocalflux.Cα, model)
+                         model.state.Qθ, model.nonlocal_flux.Cα, model)
 
     set_tracer_plume_bc!(model.state.plume.S, model.solution.S,
-                         model.state.Qs, model.nonlocalflux.Cα, model)
+                         model.state.Qs, model.nonlocal_flux.Cα, model)
 
     set_vertical_momentum_plume_bc!(model.state.plume.W²)
 
@@ -152,7 +152,6 @@ function update_nonlocal_flux!(model::Model{K, <:AbstractDiagnosticPlumeModel}) 
     clip_infinite!(model.state.plume.W²)
     clip_negative!(model.state.plume.W²)
     clip_infinite!(model.state.plume.T)
-    clip_infinite!(model.state.plume.S)
 
     return nothing
 end
@@ -164,7 +163,7 @@ function integrate_plume_equations!(T̆, S̆, W̆², T, S, grid, model)
     # Vertical momentum at the nᵗʰ cell interface, approximating excess buoyancy at
     # interface with excess at top cell center:
     ΔB̆ᵢ₊₁ = plume_buoyancy_excess(n, grid, model)
-    @inbounds W̆²[n] = -model.nonlocalflux.Cbw * Δf(grid, n) * ΔB̆ᵢ₊₁
+    @inbounds W̆²[n] = -model.nonlocal_flux.Cbw * Δf(grid, n) * ΔB̆ᵢ₊₁
 
     # Integrate from surface cell `N-1` downwards
     for i in n-1 : -1 : 1
@@ -182,8 +181,8 @@ function integrate_plume_equations!(T̆, S̆, W̆², T, S, grid, model)
             ΔB̆ᵢ₊₁ = onface(i+1, grid, plume_buoyancy_excess, model)
                                                              
             @inbounds W̆²[i] = W̆²[i+1] - Δf(grid, i+1) * (
-                               model.nonlocalflux.Cbw * ΔB̆ᵢ₊₁
-                             - model.nonlocalflux.Cew * entrainment(grid.zf[i+1], model) * W̆²[i+1])
+                               model.nonlocal_flux.Cbw * ΔB̆ᵢ₊₁
+                             - model.nonlocal_flux.Cew * entrainment(grid.zf[i+1], model) * W̆²[i+1])
         end
     end
 
@@ -196,9 +195,9 @@ end
 
 maxzero(ϕ::T) where T = max(zero(T), ϕ)
 
-@inline M(m, i) = @inbounds -m.nonlocalflux.Ca * sqrt(oncell(m.state.plume.W², i))
+@inline M(m, i) = @inbounds -m.nonlocal_flux.Ca * sqrt(oncell(m.state.plume.W², i))
 
-@inline function ∂z_explicit_nonlocal_flux_T(m::Model{K, <:AbstractDiagnosticPlumeModel}, i) where K
+@inline function ∂z_NLᵀ(m::ModelWithPlumes, i)
     ΔTᵢ₊₁ = onface(m.state.plume.T, i+1) - onface(m.solution.T, i+1)
     ΔTᵢ   = onface(m.state.plume.T, i)   - onface(m.solution.T, i)
 
@@ -206,7 +205,7 @@ maxzero(ϕ::T) where T = max(zero(T), ϕ)
     return 1 / (2 * Δf(m.grid, i)) * (M(m, i+1) * ΔTᵢ₊₁ - M(m, i) * ΔTᵢ)
 end
 
-@inline function ∂z_explicit_nonlocal_flux_S(m::Model{K, <:AbstractDiagnosticPlumeModel}, i) where K
+@inline function ∂z_NLˢ(m::ModelWithPlumes, i)
     ΔSᵢ₊₁ = onface(m.state.plume.S, i+1) - onface(m.solution.S, i+1)
     ΔSᵢ   = onface(m.state.plume.S, i)   - onface(m.solution.S, i)
 

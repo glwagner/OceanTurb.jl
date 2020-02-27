@@ -34,7 +34,7 @@ end
 
 @inline sqrt_∂B∂z(m, i) = maxsqrt(∂B∂z(m, i))
 
-mutable struct Model{L, K, W, E, H, P, K0, C, ST, G, TS, S, BC, T} <: AbstractModel{TS, G, T}
+mutable struct Model{L, K, W, N, E, H, K0, C, ST, G, TS, S, BC, T} <: AbstractModel{TS, G, T}
 
                        clock :: Clock{T}
                         grid :: G
@@ -46,7 +46,7 @@ mutable struct Model{L, K, W, E, H, P, K0, C, ST, G, TS, S, BC, T} <: AbstractMo
               tke_wall_model :: W
                 tke_equation :: E
         boundary_layer_depth :: H
-               nonlocal_flux :: P
+               nonlocal_flux :: N
     background_diffusivities :: K0
                    constants :: C
                        state :: ST
@@ -54,6 +54,7 @@ mutable struct Model{L, K, W, E, H, P, K0, C, ST, G, TS, S, BC, T} <: AbstractMo
 end
 
 include("state.jl")
+include("nonlocal_flux.jl")
 include("mixing_length.jl")
 include("tke_equation.jl")
 include("wall_models.jl")
@@ -105,17 +106,17 @@ function Model(;
                  nonlocal_flux, 
                  background_diffusivities,
                  constants, 
-                 State(grid, mixing_length, boundary_layer_depth)
+                 State(grid, mixing_length, boundary_layer_depth, nonlocal_flux)
                 )
 end
 
 
-@inline RU(m, i) = @inbounds   m.constants.f * m.solution.V[i]
-@inline RV(m, i) = @inbounds - m.constants.f * m.solution.U[i]
-@inline RT(m, i) = 0
-@inline RS(m, i) = 0
+@inline RU(m, i) = @inbounds   m.constants.f * m.solution.V[i] - ∂z_NLᵁ(m, i)
+@inline RV(m, i) = @inbounds - m.constants.f * m.solution.U[i] - ∂z_NLⱽ(m, i)
+@inline RT(m, i) = - ∂z_NLᵀ(m, i)
+@inline RS(m, i) = - ∂z_NLˢ(m, i)
 
-@inline Re(m, i) = production(m, i) + buoyancy_flux(m, i) - dissipation(m, i)
+@inline Re(m, i) = production(m, i) + buoyancy_flux(m, i) - dissipation(m, i) - ∂z_NLᵉ(m, i)
 @inline Le(m, i) = 0
 
 end # module
