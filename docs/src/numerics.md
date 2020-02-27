@@ -113,7 +113,7 @@ to downdrafts or down-travelling plumes) imply an advective flux divergence
 
 To integrate ocean surface boundary layer models forward in time,
 we implement various explicit and implicit-explicit time-stepping schemes.
-The function `iterate!(model, Δt, Nt)` steps a model forward in time.
+The function `time_step!(model, Δt, Nt)` steps a model forward in time.
 
 Timesteppers in `OceanTurb.jl` integrate equations of the form
 
@@ -131,7 +131,7 @@ including the Coriolis force or external forcing.
 
 ## Time integration methods
 
-We implement `iterate!` functions and types for:
+We implement `time_step!` functions and types for:
 
 * explicit forward Euler
 * semi-implicit backward Euler
