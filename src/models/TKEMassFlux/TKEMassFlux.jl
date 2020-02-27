@@ -6,7 +6,7 @@ using OceanTurb: nan2inf, inf2zero
 using Printf
 
 import ..OceanTurb: oncell, onface
-import .KPP: ∂B∂z, u★, isunstable
+import .KPP: ∂B∂z, u★, w★, isunstable
 import .ModularKPP: AbstractModularKPPModel
 
 const nsol = 5
@@ -33,6 +33,9 @@ end
 @inline oncell_∂B∂z(m, i) = oncell(∂B∂z, m, i) # Fallback valid for linear equations of state
 
 @inline sqrt_∂B∂z(m, i) = maxsqrt(∂B∂z(m, i))
+
+"Returns a velocity scale associated with convection across grid cell i."
+@inline wΔ³(m, i=m.grid.N) = max(zero(eltype(m.grid)), m.state.Qb) * Δc(m.grid, i)
 
 mutable struct Model{L, K, W, N, E, H, K0, C, ST, G, TS, S, BC, T} <: AbstractModel{TS, G, T}
 

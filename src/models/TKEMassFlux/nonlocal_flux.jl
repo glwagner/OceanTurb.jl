@@ -29,7 +29,7 @@ Base.@kwdef struct WitekDiagnosticPlumeModel{T} <: AbstractDiagnosticPlumeModel
     Cbw :: T = 2.86
      Ce :: T = 0.4
     Cew :: T = 0.572
-     Cα :: T = 1.0
+     Cβ :: T = 1.0
     Cστ :: T = 2.2
     Cσb :: T = 1.32
 end
@@ -38,21 +38,6 @@ const ModelWithPlumes = Model{L, K, W, <:AbstractDiagnosticPlumeModel} where {L,
 
 instantiate_plume(::AbstractDiagnosticPlumeModel, grid) = 
     (T=CellField(grid), S=CellField(grid), W²=FaceField(grid), e=nothing)
-
-#####
-##### Empirical standard deviation
-#####
-
-@inline function w_standard_dev(w★, u★, Cστ, Cσb, d::T) where T
-    if 0 < d < 1
-        return (Cστ * u★^3 + Cσb * w★^3 * d)^(1/3) * (1 - d)^(1/2)
-    else
-        return zero(T)
-    end
-end
-
-@inline w_standard_dev(m, i) = @inbounds w_standard_dev(w★(m), u★(m), m.nonlocal_flux.Cστ, 
-                                                        m.nonlocal_flux.Cσb, -m.grid.zc[i] / m.state.h)
 
 #####
 ##### Entrainment
@@ -70,11 +55,14 @@ end
 ##### Plume boundary conditions
 #####
 
-function set_tracer_plume_bc!(ϕ̆, Φ, Qϕ, Cα, model)
+function set_tracer_plume_bc!(ϕ̆, Φ, Qϕ, Cβ, model)
     n = ϕ̆.grid.N
 
-    # Surface layer model: √w² Δϕ̆ = - C Qϕ, where Δϕ̆ is plume excess.
-    @inbounds ϕ̆[n] = Φ[n] - Cα * Qϕ / w_standard_dev(model, n)
+    v★ = maxsqrt(model.solution.e, n) # turbulent velocity scale at the surface
+
+    # Surface layer model: √e Δϕ̆ = - C Qϕ, where Δϕ̆ is plume excess.
+    # Also, lumes can't exist if v★=0. This makes no sense, but our best option atm.
+    @inbounds ϕ̆[n] = ifelse(v★==0, Φ[n], Φ[n] - Cβ * Qϕ / v★)
 
     return nothing
 end
@@ -139,10 +127,10 @@ end
 function update_nonlocal_flux!(model::ModelWithPlumes) where K
 
     set_tracer_plume_bc!(model.state.plume.T, model.solution.T,
-                         model.state.Qθ, model.nonlocal_flux.Cα, model)
+                         model.state.Qθ, model.nonlocal_flux.Cβ, model)
 
     set_tracer_plume_bc!(model.state.plume.S, model.solution.S,
-                         model.state.Qs, model.nonlocal_flux.Cα, model)
+                         model.state.Qs, model.nonlocal_flux.Cβ, model)
 
     set_vertical_momentum_plume_bc!(model.state.plume.W²)
 
