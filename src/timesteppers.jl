@@ -43,9 +43,9 @@ function calc_explicit_rhs!(rhs, eqn, bcs, solution, m)
 
     # Function barrier for better performance and forced specialization
     # on Kϕ and Rϕ
-    function kernel!(rhs, bcs, ϕ, M::MF, L::LF, K::KF, R::RF, m) where {MF, LF, KF, RF}
+    function kernel!(rhs, bcs, ϕ, A::AF, L::LF, K::KF, R::RF, m) where {AF, LF, KF, RF}
         for i in eachindex(ϕ)
-            @inbounds rhs[i] = (-L(m, i) * ϕ[i] - ∂zM(M(m, i+1), M(m, i), ϕ, i)
+            @inbounds rhs[i] = (-L(m, i) * ϕ[i] - ∂zA(A(m, i+1), A(m, i), ϕ, i)
                                     + ∇K∇ϕ(K(m, i+1), K(m, i), ϕ, i) + R(m, i))
         end
 
@@ -58,12 +58,12 @@ function calc_explicit_rhs!(rhs, eqn, bcs, solution, m)
            ϕ = solution[j]
         rhsϕ = rhs[j]
         bcsϕ = bcs[j]
-          Mϕ = eqn.M[j]
+          Aϕ = eqn.A[j]
           Lϕ = eqn.L[j]
           Kϕ = eqn.K[j]
           Rϕ = eqn.R[j]
 
-        kernel!(rhsϕ, bcsϕ, ϕ, Mϕ, Lϕ, Kϕ, Rϕ, m)
+        kernel!(rhsϕ, bcsϕ, ϕ, Aϕ, Lϕ, Kϕ, Rϕ, m)
     end
     return nothing
 end
@@ -81,7 +81,7 @@ function calc_implicit_rhs!(rhs, eqn, bcs, solution, m)
            ϕ = solution[j]
         rhsϕ = rhs[j]
         bcsϕ = bcs[j]
-          Mϕ = eqn.M[j]
+          Aϕ = eqn.A[j]
           Kϕ = eqn.K[j]
           Rϕ = eqn.R[j]
 
@@ -92,7 +92,7 @@ function calc_implicit_rhs!(rhs, eqn, bcs, solution, m)
             @inbounds rhsϕ[i] = Rϕ(m, i)
         end
 
-        @inbounds rhsϕ[N] = (-∂zM(Mϕ(m, N+1), Mϕ(m, N), ϕ, N)
+        @inbounds rhsϕ[N] = (-∂zA(Aϕ(m, N+1), Aϕ(m, N), ϕ, N)
                                 + ∇K∇ϕ(Kϕ(m, N+1), -zero(eltype(ϕ)), ϕ, N) + Rϕ(m, N))
 
         apply_bottom_bc!(rhsϕ, bcsϕ.bottom, m)
@@ -105,34 +105,34 @@ end
     calc_implicit_rhs!(m.timestepper.rhs, m.timestepper.eqn, m.bcs, m.solution, m)
 
 @inline K_op(m, K, iᶠ, iᶜ) = K(m, iᶠ) / Δc(m.grid, iᶠ) / Δf(m.grid, iᶜ)
-@inline M_op(m, M, iᴹ, iᶜ) = M(m, iᴹ) / Δc(m.grid, iᶜ)
+@inline A_op(m, A, iᴹ, iᶜ) = A(m, iᴹ) / Δc(m.grid, iᶜ)
 
 "Build backward Euler operator for diffusive problems."
 function calc_diffusive_lhs!(lhs, eqn, solution, Δt::T, m) where T
     ntuple(Val(length(solution))) do j
         Base.@_inline_meta
          ϕ = solution[j]
-        Mϕ = eqn.M[j]
+        Aϕ = eqn.A[j]
         Lϕ = eqn.L[j]
         Kϕ = eqn.K[j]
          L = lhs[j]
 
         for i in interiorindices(ϕ)
             @inbounds begin
-                L.du[i]   = Δt * (M_op(m, Mϕ, i+1, i+1) - K_op(m, Kϕ, i+1, i))
-                L.d[i]    = one(T) + Δt * (Lϕ(m, i) + K_op(m, Kϕ, i+1, i) + K_op(m, Kϕ, i, i) - M_op(m, Mϕ, i, i+1))
+                L.du[i]   = Δt * (A_op(m, Aϕ, i+1, i+1) - K_op(m, Kϕ, i+1, i))
+                L.d[i]    = one(T) + Δt * (Lϕ(m, i) + K_op(m, Kϕ, i+1, i) + K_op(m, Kϕ, i, i) - A_op(m, Aϕ, i, i+1))
                 L.dl[i-1] = -Δt * K_op(m, Kϕ, i, i)
             end
         end
 
         # Bottom row
-        @inbounds L.du[1] = Δt * (M_op(m, Mϕ, 2, 2) - K_op(m, Kϕ, 2, 1))
-        @inbounds L.d[1] = one(T) + Δt*(Lϕ(m, 1) + K_op(m, Kϕ, 2, 1) - M_op(m, Mϕ, 1, 2))
+        @inbounds L.du[1] = Δt * (A_op(m, Aϕ, 2, 2) - K_op(m, Kϕ, 2, 1))
+        @inbounds L.d[1] = one(T) + Δt*(Lϕ(m, 1) + K_op(m, Kϕ, 2, 1) - A_op(m, Aϕ, 1, 2))
 
         # Top row
         N = length(ϕ)
         @inbounds L.dl[end] = -Δt * K_op(m, Kϕ, N, N)
-        @inbounds L.d[end]  = one(T) + Δt * (Lϕ(m, N) + K_op(m, Kϕ, N, N) - M_op(m, Mϕ, N, N+1))
+        @inbounds L.d[end]  = one(T) + Δt * (Lϕ(m, N) + K_op(m, Kϕ, N, N) - A_op(m, Aϕ, N, N+1))
     end
 
     return nothing

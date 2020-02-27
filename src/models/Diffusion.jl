@@ -33,7 +33,7 @@ function Model(; N=10, L=1.0, K=0.1, W=0.0, μ=0.0,
       W = (c=Wc,)
       L = (c=Lc,)
 
-    eqn = Equation(K=K, M=W, L=L)
+    eqn = Equation(K=K, A=W, L=L)
     lhs = build_lhs(solution)
 
     timestepper = Timestepper(stepper, eqn, solution, lhs)

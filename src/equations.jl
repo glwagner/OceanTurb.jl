@@ -7,13 +7,13 @@ Construct an Equation that represents a PDE of the form
 
 so that K is a diffusivity and R captures 'remaining' terms.
 
-In OceanTurb, K and R are arrays of functions.
+In OceanTurb, K and R are tuples of functions.
 The functions K[j](m, i) and R[j](m, i) calculate the
 diffusivity K and remaining terms R for the model `m` at
 grid point `i`.
 """
-struct Equation{TM, TL, TK, TR, U}
-    M       :: TM
+struct Equation{TA, TL, TK, TR, U}
+    A       :: TA
     L       :: TL
     K       :: TK
     R       :: TR
@@ -25,10 +25,10 @@ funkynothing(args...) = nothing
 
 function Equation(;
          K,
-         M = Tuple(minuszero for i=1:length(K)),
+         A = Tuple(minuszero for i=1:length(K)),
          L = Tuple(minuszero for i=1:length(K)),
          R = Tuple(minuszero for i=1:length(K)),
     update = funkynothing
     )
-    return Equation(M, L, K, R, update)
+    return Equation(A, L, K, R, update)
 end
