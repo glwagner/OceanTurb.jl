@@ -128,7 +128,7 @@ end
 # Basic 'Field' functionality
 #
 
-data(c::FaceField) = c.data
+data(c::FaceField) = view(c.data, 1:c.grid.N+1)
 data(c::CellField) = view(c.data, 1:c.grid.N)
 
 nodes(c::CellField) = c.grid.zc
