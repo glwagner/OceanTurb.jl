@@ -53,7 +53,7 @@ xlabel("Temperature (\$ {}^\\circ \\mathrm{C} \$)")
 ylabel(L"z \, \mathrm{(m)}")
 ```
 
-to make this plot:
+to make a plot that looks something like this:
 
 <img src="examples/figs/kpp_free_convection.png" width="600">
 
