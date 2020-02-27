@@ -2,18 +2,18 @@
 # Tests for the moular K-Profile-Parameterization module
 #
 
-function test_default_model_init(N=4, L=4.3)
-    model = ModularKPP.Model(N=N, L=L)
-    return model.grid.N == N && model.grid.L == L
+function test_default_model_init(N=4, H=4.3)
+    model = ModularKPP.Model(N=N, H=H)
+    return model.grid.N == N && model.grid.H == H
 end
 
 function time_step_model(diffusivity, nonlocalflux, mixingdepth, kprofile)
 
-    model = ModularKPP.Model(N=4, L=3, 
-                             diffusivity = diffusivity,
-                            nonlocalflux = nonlocalflux,
-                             mixingdepth = mixingdepth,
-                                kprofile = kprofile)
+    model = ModularKPP.Model(        grid = UniformGrid(N=4, H=4), 
+                              diffusivity = diffusivity,
+                             nonlocalflux = nonlocalflux,
+                              mixingdepth = mixingdepth,
+                                 kprofile = kprofile)
 
     iterate!(model, 1e-16)
     return true

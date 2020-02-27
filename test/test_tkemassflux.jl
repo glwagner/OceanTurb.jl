@@ -2,14 +2,14 @@
 # Tests for the TKE + mass flux module
 #
 
-function test_default_model_init(N=4, L=4.3)
-    model = TKEMassFlux.Model(grid=UniformGrid(N=N, L=L))
-    return model.grid.N == N && model.grid.L == L
+function test_default_model_init(N=4, H=4.3)
+    model = TKEMassFlux.Model(grid=UniformGrid(N=N, H=H))
+    return model.grid.N == N && model.grid.H == H
 end
 
 function time_step_tke_mass_flux_model(boundary_layer_depth, mixing_length, nonlocal_flux, tke_equation, tke_wall_model)
 
-    model = TKEMassFlux.Model(                grid = UniformGrid(N=4, L=4), 
+    model = TKEMassFlux.Model(                grid = UniformGrid(N=4, H=4), 
                               boundary_layer_depth = boundary_layer_depth,
                                      mixing_length = mixing_length,
                                      nonlocal_flux = nonlocal_flux,

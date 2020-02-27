@@ -87,8 +87,8 @@ include("nonlocal_flux.jl")
 
 Construct a KPP Model.
 """
-function Model(; N=10, L=1.0,
-            grid = UniformGrid(N, L),
+function Model(;
+            grid = UniformGrid(3, 1.0),
        constants = Constants(),
      diffusivity = LMDDiffusivity(),
     nonlocalflux = LMDCounterGradientFlux(),
