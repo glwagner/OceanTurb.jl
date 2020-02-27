@@ -210,7 +210,7 @@ end
 #
 
 include("models/Diffusion.jl")
-include("models/KPP/KPP.jl")
+include("models/KPP.jl")
 include("models/ModularKPP/ModularKPP.jl")
 include("models/TKEMassFlux/TKEMassFlux.jl")
 include("models/PacanowskiPhilander.jl")

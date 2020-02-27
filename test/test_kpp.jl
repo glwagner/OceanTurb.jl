@@ -13,25 +13,25 @@ function test_constants(; kwargs...)
     return result
 end
 
-function test_model_init(N=4, L=4.3)
-    model = KPP.Model(N=N, L=L)
-    model.grid.N == N && model.grid.L == L
+function test_model_init(N=4, H=4.3)
+    model = KPP.Model(N=N, H=H)
+    model.grid.N == N && model.grid.H == H
 end
 
 addone(m, i) = 1
 
-function test_model_init_with_forcing(N=4, L=4.3)
-    model = KPP.Model(N=N, L=L, forcing=KPP.Forcing(U=addone))
-    model.grid.N == N && model.grid.L == L
+function test_model_init_with_forcing(N=4, H=4.3)
+    model = KPP.Model(N=N, H=H, forcing=KPP.Forcing(U=addone))
+    model.grid.N == N && model.grid.H == H
 end
 
 function test_surface_layer_average_simple(;
     N = 10,
-    L = 1.1,
+    H = 1.1,
     i = 9
     )
 
-    model = KPP.Model(N=N, L=L)
+    model = KPP.Model(N=N, H=H)
 
     T_test = 2.1
     model.solution.T = T_test
@@ -45,9 +45,9 @@ function test_surface_layer_average_simple(;
     !any(@. !isapprox(avg, T_test))
 end
 
-function test_surface_layer_average_linear(; N=10, L=4.1, γ=7.9)
+function test_surface_layer_average_linear(; N=10, H=4.1, γ=7.9)
     CSL = 1.0 # test only works with full depth layer fraction
-    model = KPP.Model(N=N, L=L)
+    model = KPP.Model(N=N, H=H)
     T_test(z) = γ*z
     model.solution.T = T_test
 
@@ -63,7 +63,7 @@ function test_surface_layer_average_linear(; N=10, L=4.1, γ=7.9)
 end
 
 function analytical_surface_layer_average()
-    CSL, N, L = 0.5, 10, 10.0
+    CSL, N, H = 0.5, 10, 10.0
     T, avg = zeros(N), zeros(N+1)
 
     T[1:8] .= 0
@@ -75,12 +75,12 @@ function analytical_surface_layer_average()
     avg[9:10] .= 3
     avg[11] = 0.0
 
-    return CSL, N, L, T, avg
+    return CSL, N, H, T, avg
 end
 
 function test_surface_layer_average_steps()
-    CSL, N, L, T, avg_answer = analytical_surface_layer_average()
-    model = KPP.Model(N=N, L=L)
+    CSL, N, H, T, avg_answer = analytical_surface_layer_average()
+    model = KPP.Model(N=N, H=H)
     model.solution.T = T
 
     avg = zeros(N+1)
@@ -91,9 +91,9 @@ function test_surface_layer_average_steps()
     avg ≈ avg_answer
 end
 
-function test_surface_layer_average_epsilon(; γ=2.1, CSL=0.01, N=10, L=1.0, T₀₀=281.2)
+function test_surface_layer_average_epsilon(; γ=2.1, CSL=0.01, N=10, H=1.0, T₀₀=281.2)
     T₀(z) = T₀₀*γ*z
-    model = KPP.Model(N=N, L=L)
+    model = KPP.Model(N=N, H=H)
     model.solution.T = T₀
 
     i = 2
@@ -114,9 +114,9 @@ end
 
 
 function test_Δ1()
-    CSL, N, L, T, surf_avg = analytical_surface_layer_average()
+    CSL, N, H, T, surf_avg = analytical_surface_layer_average()
     parameters = KPP.Parameters(CSL=CSL)
-    model = KPP.Model(N=N, L=L, parameters=parameters)
+    model = KPP.Model(N=N, H=H, parameters=parameters)
     model.solution.T = T
 
     Δ_lower = surf_avg[2]
@@ -125,8 +125,8 @@ function test_Δ1()
     KPP.Δ(model.solution.T, CSL, 2) == Δ_lower && KPP.Δ(model.solution.T, CSL, 10) == Δ_upper
 end
 
-function test_Δ2(; γ=2.1, CSL=0.001, N=10, L=1.0, i=N)
-    model = KPP.Model(N=N, L=L)
+function test_Δ2(; γ=2.1, CSL=0.001, N=10, H=1.0, i=N)
+    model = KPP.Model(N=N, H=H)
     T₀(z) = γ*z
     model.solution.T = T₀
     T = model.solution.T
@@ -136,10 +136,10 @@ function test_Δ2(; γ=2.1, CSL=0.001, N=10, L=1.0, i=N)
 end
 
 
-function test_Δ3(; CSL=0.5, N=20, L=20)
+function test_Δ3(; CSL=0.5, N=20, H=20)
     U₀ = 3
     parameters = KPP.Parameters(CSL=CSL)
-    model = KPP.Model(N=N, L=L, parameters=parameters)
+    model = KPP.Model(N=N, H=H, parameters=parameters)
     U, V, T, S = model.solution
 
     ih = 12
@@ -149,8 +149,8 @@ function test_Δ3(; CSL=0.5, N=20, L=20)
     KPP.Δ(U, CSL, ih) == U₀
 end
 
-function test_buoyancy_gradient(; γ=0.01, g=9.81, ρ₀=1028, α=2e-4, β=0.0, N=10, L=1.0)
-    model = KPP.Model(N=N, L=L)
+function test_buoyancy_gradient(; γ=0.01, g=9.81, ρ₀=1028, α=2e-4, β=0.0, N=10, H=1.0)
+    model = KPP.Model(N=N, H=H)
     T₀(z) = γ*z
     model.solution.T = T₀
     Bz_answer = g * α * γ
@@ -159,11 +159,11 @@ function test_buoyancy_gradient(; γ=0.01, g=9.81, ρ₀=1028, α=2e-4, β=0.0, 
 end
 
 function test_unresolved_KE(; CKE=0.1, CKE₀=1e-11, Qb=1e-7, γ=0.01, g=9.81,
-                                ρ₀=1028, α=2e-4, β=0.0, N=10, L=1.0)
+                                ρ₀=1028, α=2e-4, β=0.0, N=10, H=1.0)
     Bz = g * α * γ
     T₁(z) = γ*z
     T₂(z) = -γ*z
-    model = KPP.Model(N=N, L=L)
+    model = KPP.Model(N=N, H=H)
     U, V, T, S = model.solution
 
     i = 2
@@ -184,8 +184,8 @@ function test_unresolved_KE(; CKE=0.1, CKE₀=1e-11, Qb=1e-7, γ=0.01, g=9.81,
     return ke₂ ≈ ke₂_answer && ke₁ ≈ ke₁_answer
 end
 
-function test_update_state(; N=10, L=20, Qθ=5.1e-3)
-    model = KPP.Model(N=N, L=L)
+function test_update_state(; N=10, H=20, Qθ=5.1e-3)
+    model = KPP.Model(N=N, H=H)
     temperature_bc = FluxBoundaryCondition(Qθ)
     model.bcs.T.top = temperature_bc
 
@@ -195,10 +195,10 @@ function test_update_state(; N=10, L=20, Qθ=5.1e-3)
 end
 
 function test_bulk_richardson_number(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
-                                       CKE₀=0.0, γ=0.01, N=20, L=20, Qb=2.1e-5)
+                                       CKE₀=0.0, γ=0.01, N=20, H=20, Qb=2.1e-5)
     parameters = KPP.Parameters(CRi=CRi, CKE=CKE, CKE₀=CKE₀, CSL=0.1/N)
     constants = KPP.Constants(g=g, α=α)
-    model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
+    model = KPP.Model(N=N, H=H, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
 
     # Initial condition and top flux
@@ -230,10 +230,10 @@ function test_bulk_richardson_number(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
 end
 
 function test_mixing_depth_convection(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
-                                       γ=0.01, N=200, L=20, Qb=4.1e-5)
+                                       γ=0.01, N=200, H=20, Qb=4.1e-5)
     parameters = KPP.Parameters(CRi=CRi, CKE=CKE, CKE₀=0.0, CSL=0.1/N)
     constants = KPP.Constants(g=g, α=α)
-    model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
+    model = KPP.Model(N=N, H=H, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
 
     T₀(z) = γ*z
@@ -256,16 +256,16 @@ function test_mixing_depth_convection(; g=9.81, α=2.1e-4, CRi=0.3, CKE=1.04,
     isapprox(h, h_answer, rtol=1e-3)
 end
 
-function test_mixing_depth_shear(; CSL=0.5, N=20, L=20, CRi=1.0)
+function test_mixing_depth_shear(; CSL=0.5, N=20, H=20, CRi=1.0)
     T₀ = 1
     U₀ = 3
     parameters = KPP.Parameters(CRi=CRi, CSL=CSL, CKE₀=0.0)
     constants = KPP.Constants(g=1, α=1)
-    model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
+    model = KPP.Model(N=N, H=H, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
 
     h = CRi * U₀^2 / T₀ / (1 - 0.5*model.parameters.CSL)
-    ih = Int(N*(1 - h/L) + 1)
+    ih = Int(N*(1 - h/H) + 1)
     @views T.data[ih:N] .= T₀
     @views U.data[ih:N] .= U₀
 
@@ -318,11 +318,11 @@ function test_convective_velocity()
     KPP.w★(model) ≈ (h*Qb)^(1/3)
 end
 
-function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, CSL=1e-16)
+function test_turb_velocity_pure_convection(N=20, H=20, Cb_U=3.1, Cb_T=1.7, CSL=1e-16)
     # Zero wind + convection => 𝒲_U = Cb_U * CSL^(1/3) * w★.
     parameters = KPP.Parameters(CRi=1.0, CKE=1.0, CKE₀=0.0, CSL=CSL, Cb_U=Cb_U, Cb_T=Cb_T)
     constants = KPP.Constants(g=1, α=1)
-    model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
+    model = KPP.Model(N=N, H=H, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
 
     T₀(z) = z
@@ -343,16 +343,16 @@ function test_turb_velocity_pure_convection(N=20, L=20, Cb_U=3.1, Cb_T=1.7, CSL=
      KPP.𝒲_S(model, i) ≈ Cb_T * CSL^(1/3) * w★ )
 end
 
-function test_turb_velocity_pure_wind(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1.0)
+function test_turb_velocity_pure_wind(; CSL=0.5, Cτ=0.7, N=20, H=20, CRi=1.0)
     T₀ = 1
     U₀ = 3
     parameters = KPP.Parameters(CRi=CRi, Cτ=Cτ, CSL=CSL)
     constants = KPP.Constants(g=1, α=1)
-    model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
+    model = KPP.Model(N=N, H=H, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
 
     h = CRi * U₀^2 / T₀
-    ih = Int(N*(1 - h/L) + 1)
+    ih = Int(N*(1 - h/H) + 1)
     @views T.data[ih:N] .= T₀
     @views U.data[ih:N] .= U₀
 
@@ -372,16 +372,16 @@ function test_turb_velocity_pure_wind(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1.0)
 end
 
 
-function test_turb_velocity_wind_stab(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1.0, Cstab=0.3)
+function test_turb_velocity_wind_stab(; CSL=0.5, Cτ=0.7, N=20, H=20, CRi=1.0, Cstab=0.3)
     T₀ = 1
     U₀ = 3
     parameters = KPP.Parameters(CRi=CRi, Cτ=Cτ, CSL=CSL, Cstab=Cstab)
     constants = KPP.Constants(g=1, α=1)
-    model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
+    model = KPP.Model(N=N, H=H, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
 
     h = CRi * U₀^2 / T₀
-    ih = Int(N*(1 - h/L) + 1) # 12
+    ih = Int(N*(1 - h/H) + 1) # 12
     @views T.data[ih:N] .= T₀
     @views U.data[ih:N] .= U₀
 
@@ -407,17 +407,17 @@ function test_turb_velocity_wind_stab(; CSL=0.5, Cτ=0.7, N=20, L=20, CRi=1.0, C
 end
 
 function test_turb_velocity_wind_unstab(; CKE=0.0, CSL=0.5, Cτ=0.7, N=20,
-                                        L=20, CRi=(1-0.5CSL), Cunst=0.3)
+                                        H=20, CRi=(1-0.5CSL), Cunst=0.3)
     T₀ = 1
     U₀ = 3
     parameters = KPP.Parameters(CRi=CRi, Cτ=Cτ, CKE=CKE, CKE₀=0.0,
                                 CSL=CSL, Cunst=Cunst, Cd_U=Inf, Cd_T=Inf)
     constants = KPP.Constants(g=1, α=1)
-    model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
+    model = KPP.Model(N=N, H=H, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
 
     h = CRi * U₀^2 / T₀ / (1-0.5CSL)
-    ih = Int(N*(1 - h/L) + 1) # 12
+    ih = Int(N*(1 - h/H) + 1) # 12
     @views T.data[ih:N] .= T₀
     @views U.data[ih:N] .= U₀
 
@@ -452,7 +452,7 @@ function test_turb_velocity_wind_unstab(; CKE=0.0, CSL=0.5, Cτ=0.7, N=20,
      KPP.𝒲_S(model, id2) ≈ 𝒲_T2 )
 end
 
-function test_conv_velocity_wind(; CKE=0.0, CKE₀=0.0, CSL=0.5, Cτ=0.7, N=20, L=20, CRi=(1-0.5CSL),
+function test_conv_velocity_wind(; CKE=0.0, CKE₀=0.0, CSL=0.5, Cτ=0.7, N=20, H=20, CRi=(1-0.5CSL),
                                  Cb_U=1.1, Cb_T=0.1)
     T₀ = 1
     U₀ = 3
@@ -461,11 +461,11 @@ function test_conv_velocity_wind(; CKE=0.0, CKE₀=0.0, CSL=0.5, Cτ=0.7, N=20, 
                                 Cb_U=1.1, Cb_T=0.1)
 
     constants = KPP.Constants(g=1, α=1)
-    model = KPP.Model(N=N, L=L, parameters=parameters, constants=constants)
+    model = KPP.Model(N=N, H=H, parameters=parameters, constants=constants)
     U, V, T, S = model.solution
 
     h = CRi * U₀^2 / T₀ / (1-0.5CSL)
-    ih = Int(N*(1 - h/L) + 1) # 12
+    ih = Int(N*(1 - h/H) + 1) # 12
     @views T.data[ih:N] .= T₀
     @views U.data[ih:N] .= U₀
 
@@ -530,7 +530,7 @@ end
 
 function test_kpp_diffusion_cosine(stepper=:ForwardEuler)
     parameters = KPP.Parameters(KT₀=1.0, KS₀=1.0)
-    model = KPP.Model(N=100, L=π/2, parameters=parameters, stepper=stepper)
+    model = KPP.Model(N=100, H=π/2, parameters=parameters, stepper=stepper)
     z = model.grid.zc
 
     c_init(z) = cos(2z)
@@ -552,7 +552,7 @@ function test_kpp_diffusion_cosine(stepper=:ForwardEuler)
 end
 
 function test_flux(stepper=:ForwardEuler; fieldname=:U, top_flux=0.3, bottom_flux=0.13, N=10)
-    model = KPP.Model(N=N, L=1, stepper=stepper)
+    model = KPP.Model(N=N, H=1, stepper=stepper)
 
     bcs = getproperty(model.bcs, fieldname)
     bcs.top = FluxBoundaryCondition(top_flux)
@@ -569,8 +569,8 @@ function test_flux(stepper=:ForwardEuler; fieldname=:U, top_flux=0.3, bottom_flu
     return C(time(model)) ≈ integral(c)
 end
 
-function test_nonlocal_salinity_flux_util(N=4, L=4.3)
-    model = KPP.Model(N=N, L=L)
+function test_nonlocal_salinity_flux_util(N=4, H=4.3)
+    model = KPP.Model(N=N, H=H)
 
     try
         flux = KPP.nonlocal_salinity_flux(model)
@@ -582,8 +582,8 @@ function test_nonlocal_salinity_flux_util(N=4, L=4.3)
     return true
 end
 
-function test_nonlocal_temperature_flux_util(N=4, L=4.3)
-    model = KPP.Model(N=N, L=L)
+function test_nonlocal_temperature_flux_util(N=4, H=4.3)
+    model = KPP.Model(N=N, H=H)
 
     try
         flux = KPP.nonlocal_temperature_flux(model)

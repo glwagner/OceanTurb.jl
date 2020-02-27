@@ -120,8 +120,8 @@ end
 
 Construct a KPP Model.
 """
-function Model(; N=10, L=1.0,
-            grid = UniformGrid(N, L),
+function Model(; N=10, H=1.0,
+            grid = UniformGrid(N, H),
        constants = Constants(),
       parameters = Parameters(),
          stepper = :ForwardEuler,

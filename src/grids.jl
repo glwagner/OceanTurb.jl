@@ -11,7 +11,7 @@ face_length(N) = N+3
   cell_size(N) = (cell_length(N),)
   face_size(N) = (face_length(N),)
 
-     height(g::Grid) = g.L
+     height(g::Grid) = g.H
      length(g::Grid) = g.N
        size(g::Grid) = (g.N,)
 cell_length(g::Grid) = cell_length(g.N)
@@ -36,36 +36,36 @@ implement new array types.
 arraytype(grid::Grid{T}) where T = Array{T, 1} # default array type
 
 """
-    UniformGrid([T], L, N)
+    UniformGrid([T], H, N)
 
 Construct a 1D finite-volume grid with type `T` and array type `A`,
-with `N` cells on the domain `z = [0, L]`.
+with `N` cells on the domain `z = [0, -H]`.
 A `Grid` has two type parameters: an element type `T`,
 and and a range type `R`. `T` defaults to Float64.
 """
 struct UniformGrid{T, R} <: Grid{T, R}
     N  :: Int
-    L  :: T
+    H  :: T
     Δc :: T
     Δf :: T
     zc :: R
     zf :: R
 end
 
-function UniformGrid(T, N::Int, L::Number)
-    Δ = convert(T, L/N)
-    L = convert(T, L)
+function UniformGrid(T, N::Int, H::Number)
+    Δ = convert(T, H/N)
+    H = convert(T, H)
     half_Δ = convert(T, 0.5Δ)
 
-    zc = range(-L+half_Δ; length=N, stop=-half_Δ)
-    zf = range(-L; length=N+1, stop=zero(T))
+    zc = range(-H+half_Δ; length=N, stop=-half_Δ)
+    zf = range(-H; length=N+1, stop=zero(T))
 
-    UniformGrid(N, L, Δ, Δ, zc, zf)
+    UniformGrid(N, H, Δ, Δ, zc, zf)
 end
 
 # Defaults
-UniformGrid(N, L) = UniformGrid(Float64, N, L)
-UniformGrid(T=Float64; N=3, L=1) = UniformGrid(T, N, L)
+UniformGrid(N, H) = UniformGrid(Float64, N, H)
+UniformGrid(T=Float64; N=3, H=1) = UniformGrid(T, N, H)
 
 "Return the cell spacing at index i."
 @inline Δc(grid::UniformGrid, i) = grid.Δc

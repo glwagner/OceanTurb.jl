@@ -8,14 +8,14 @@ function fill_ghost_cells!(c, κtop, κbottom, model, fieldbcs)
     return nothing
 end
 
-function cell_field_construction(T, N, L)
-    grid = UniformGrid(T, N, L)
+function cell_field_construction(T, N, H)
+    grid = UniformGrid(T, N, H)
     c = CellField(grid)
     typeof(c) <: CellField
 end
 
-function face_field_construction(T, N, L)
-    grid = UniformGrid(T, N, L)
+function face_field_construction(T, N, H)
+    grid = UniformGrid(T, N, H)
     f = FaceField(grid)
     typeof(f) <: FaceField
 end
@@ -111,11 +111,11 @@ end
 function integral_is_correct(T)
     grid = UniformGrid(T, 3, 3.0)
     c = CellField([1, 2, 3], grid)
-    integral(c) / grid.L == 2
+    integral(c) / grid.H == 2
 end
 
-function integral_range(T, N, L, z₋, z₊)
-    grid = UniformGrid(T, N, L)
+function integral_range(T, N, H, z₋, z₊)
+    grid = UniformGrid(T, N, H)
     c = CellField(ones(N), grid)
     integral(c, z₋, z₊) == z₊ - z₋
 end
@@ -177,16 +177,16 @@ function absolute_error_is_correct(T)
 end
 
 function absolute_error_fine_to_coarse()
-    fine_grid = UniformGrid(N=4, L=1)
-    coarse_grid = UniformGrid(N=2, L=1)
+    fine_grid = UniformGrid(N=4, H=1)
+    coarse_grid = UniformGrid(N=2, H=1)
     fine_field = CellField([2, 4, 6, 8], fine_grid)
     coarse_field = CellField([0, 1], coarse_grid)
     return absolute_error(coarse_field, fine_field) == sqrt(45/2)
 end
 
 function absolute_error_coarse_to_fine()
-    fine_grid = UniformGrid(N=4, L=1)
-    coarse_grid = UniformGrid(N=2, L=1)
+    fine_grid = UniformGrid(N=4, H=1)
+    coarse_grid = UniformGrid(N=2, H=1)
     fine_field = CellField([2, 4, 6, 8], fine_grid)
     coarse_field = CellField([0, 1], coarse_grid)
     return absolute_error(fine_field, coarse_field) == sqrt(47/2)
@@ -200,10 +200,10 @@ function relative_error_is_correct(T)
 end
 
 @testset "Fields" begin
-    nz, Lz = 3, 4.2
+    N, H = 3, 4.2
     for T in (Float64,)
-        @test cell_field_construction(T, nz, Lz)
-        @test face_field_construction(T, nz, Lz)
+        @test cell_field_construction(T, N, H)
+        @test face_field_construction(T, N, H)
         @test cell_∂z(T)
         @test face_∂z(T)
         @test cell_plus(T)
