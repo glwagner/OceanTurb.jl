@@ -59,7 +59,7 @@ function test_surface_layer_average_linear(; N=10, L=4.1, γ=7.9)
 
     h = -model.grid.zf
     avg_answer = @. -0.5 * γ * CSL * h
-    isapprox(avg.data, avg_answer)
+    isapprox(avg.data[1:N+1], avg_answer)
 end
 
 function analytical_surface_layer_average()
@@ -521,10 +521,10 @@ function test_diffusivity_plain(; K₀=1.1)
         KS[i] = KPP.KS(model, i)
     end
 
-    return (!any(@. KU.data != K₀) &&
-            !any(@. KV.data != K₀) &&
-            !any(@. KT.data != K₀) &&
-            !any(@. KS.data != K₀) )
+    return (!any(@. KU.data[1:m.grid.N] != K₀) &&
+            !any(@. KV.data[1:m.grid.N] != K₀) &&
+            !any(@. KT.data[1:m.grid.N] != K₀) &&
+            !any(@. KS.data[1:m.grid.N] != K₀) )
 end
 
 

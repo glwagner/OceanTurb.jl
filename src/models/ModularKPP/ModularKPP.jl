@@ -4,7 +4,7 @@ Here we implement a 'modular' KPP model, with three interchangable components:
 
 1. A model for mixing depth, h
 2. A model for the local diffusivity, K
-3. A model for the nonlocal flux term, M
+3. A model for the nonlocal flux term, A
 
 Note below the following acronyms:
 
@@ -102,7 +102,7 @@ function Model(; N=10, L=1.0,
      K = Accessory{Function}(KU, KV, KT, KS)
      R = Accessory{Function}(RU, RV, RT, RS)
      A = Accessory{Function}(AU, AV, AT, AS)
-    eq = Equation(K=K, R=R, M=A, update=update_state!)
+    eq = Equation(K=K, R=R, A=A, update=update_state!)
 
        state = State(diffusivity, nonlocalflux, mixingdepth, grid)
     solution = Solution((CellField(grid) for i=1:nsol)...)
