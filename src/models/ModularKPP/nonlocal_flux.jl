@@ -12,8 +12,6 @@ update_nonlocal_flux!(model::CGModel) = nothing
 
 instantiate_plume(::LMDCounterGradientFlux, grid) = (T=nothing, S=nothing, W²=nothing)
 
-mass_flux(m::CGModel, i) = 0
-
 ∂z_explicit_nonlocal_flux_T(m::Model{K, <:LMDCounterGradientFlux}, i) where K =
     KPP.∂NL∂z(m.nonlocalflux.CNL, m.state.Qθ, d(m, i+1), d(m, i), Δf(m.grid, i), m)
 
@@ -198,14 +196,20 @@ end
 
 maxzero(ϕ::T) where T = max(zero(T), ϕ)
 
-@inline mass_flux(m::Model{K, <:AbstractDiagnosticPlumeModel}, i) where K = 
-    @inbounds -m.nonlocalflux.Ca * sqrt(oncell(m.state.plume.W², i))
+@inline M(m, i) = @inbounds -m.nonlocalflux.Ca * sqrt(oncell(m.state.plume.W², i))
 
-@inline M_Φ(i, grid, Φ, m) = @inbounds mass_flux(m, i) * Φ[i]
+@inline function ∂z_explicit_nonlocal_flux_T(m::Model{K, <:AbstractDiagnosticPlumeModel}, i) where K
+    ΔTᵢ₊₁ = onface(m.state.plume.T, i+1) - onface(m.solution.T, i+1)
+    ΔTᵢ   = onface(m.state.plume.T, i)   - onface(m.solution.T, i)
 
-# Use upwards-biased difference to effect upwind differencing for a downward-travelling plume:
-@inline ∂z_explicit_nonlocal_flux_T(m::Model{K, <:AbstractDiagnosticPlumeModel}, i) where K =
-    @inbounds ∂z⁺(i, m.grid, M_Φ, m.state.plume.T, m)
+    # Centered-difference advective flux for `M` at cell interfaces:
+    return 1 / (2 * Δf(m.grid, i)) * (M(m, i+1) * ΔTᵢ₊₁ - M(m, i) * ΔTᵢ)
+end
 
-@inline ∂z_explicit_nonlocal_flux_S(m::Model{K, <:AbstractDiagnosticPlumeModel}, i) where K =
-    @inbounds ∂z⁺(i, m.grid, M_Φ, m.state.plume.S, m)
+@inline function ∂z_explicit_nonlocal_flux_S(m::Model{K, <:AbstractDiagnosticPlumeModel}, i) where K
+    ΔSᵢ₊₁ = onface(m.state.plume.S, i+1) - onface(m.solution.S, i+1)
+    ΔSᵢ   = onface(m.state.plume.S, i)   - onface(m.solution.S, i)
+
+    # Centered-difference advective flux for `M` at cell interfaces:
+    return 1 / (2 * Δf(m.grid, i)) * (M(m, i+1) * ΔSᵢ₊₁ - M(m, i) * ΔSᵢ)
+end

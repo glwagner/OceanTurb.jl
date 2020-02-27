@@ -55,7 +55,7 @@ N² = 1e-5
 
 # The standard setup except with a plume model rather than a counter-gradient flux model.
 model = ModularKPP.Model(;         grid = UniformGrid(N=64, H=256), 
-                                stepper = :ForwardEuler,
+                                stepper = :BackwardEuler,
                            nonlocalflux = DiagnosticPlumeModel(Ca=0.1, Ce=0.4, Cα=1.0))
 
 # Initial condition and fluxes
@@ -71,5 +71,5 @@ model.bcs.T.bottom = GradientBoundaryCondition(dTdz)
 
 fig, axs = subplots(ncols=4, sharey=true)
 
-run_until!(model, Δt, 6hour)
+run_until!(model, Δt, 24hour)
 makeplot!(axs, model)
