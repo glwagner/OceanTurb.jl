@@ -13,7 +13,7 @@ c_ans(z, t) = exp(-4t) * c_init(z)
 function c_err(model, dt, nt=1)
     model.solution.c = c_init
     reset!(model.clock)
-    iterate!(model, dt, nt)
+    time_step!(model, dt, nt)
     norm(c_ans.(z, model.clock.time) .- data(model.solution.c))
 end
 
