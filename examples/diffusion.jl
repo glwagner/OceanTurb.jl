@@ -1,5 +1,3 @@
-using Pkg; Pkg.activate(".."); Pkg.instantiate()
-
 using OceanTurb, Printf
 
 @use_pyplot_utils
@@ -17,14 +15,14 @@ c₀(z) = exp(-(z + 0.5)^2 / 0.005)
 model.solution.c = c₀
 
 # Iterate the model forward
-iterate!(model, Δt=0.01, Nt=100)
+time_step!(model, Δt=0.01, Nt=100)
 
 # Plot some results
 fig, axs = subplots()
 xlabel(L"c")
 ylabel(L"z")
 
-plot(c₀.(model.grid.zc), label=L"t=0")
+plot(c₀.(model.grid.zc), model.grid.zc, label=L"t=0")
 gcf()
 
 plot(model.solution.c, label=@sprintf("\$ t = %0.2f \$", time(model)))
