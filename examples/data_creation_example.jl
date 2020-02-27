@@ -1,8 +1,10 @@
 using JLD2, Printf, OceanTurb
 
+@use_pyplot_utils
+
 # For this example we use the same "simple flux" scenario used in kpp_examples.ipynb.
 
-function simple_flux_model(; N=10, H=100, Tz=0.01, Fb=1e-8, Fu=0, parameters=KPP.Parameters())
+function simple_flux_model(; N=10, H=100, Tz=0.01, Qb=1e-8, Qu=0, parameters=KPP.Parameters())
 
     model = KPP.Model(N=N, H=H, parameters=parameters, stepper=:BackwardEuler)
 
@@ -38,17 +40,17 @@ function save_data(path, model)
 end
 
 function init_data(path, model)
-    Fu = OceanTurb.getbc(model, model.bcs.U.top)
-    Fb = OceanTurb.getbc(model, model.bcs.T.top) * model.constants.α * model.constants.g
+    Qu = OceanTurb.getbc(model, model.bcs.U.top)
+    Qb = OceanTurb.getbc(model, model.bcs.T.top) * model.constants.α * model.constants.g
     Tz = OceanTurb.getbc(model, model.bcs.T.bottom)
     
     jldopen(path, "a+") do file
-        for gridfield in (:N, :L)
+        for gridfield in (:N, :H)
             file["grid/$gridfield"] = getproperty(model.grid, gridfield)
         end
 
-        file["bcs/Fu"] = Fu
-        file["bcs/Fb"] = Fb
+        file["bcs/Qu"] = Qu
+        file["bcs/Qb"] = Qb
         file["bcs/Tz"] = Tz
     end
 
@@ -72,8 +74,8 @@ model = simple_flux_model(
      N = 100,
      H = 100,
     Tz = 4.08e-4,
-    Fb = 5e-8,
-    Fu = 0
+    Qb = 5e-8,
+    Qu = 0
 )
 
 isfile(filepath) && rm(filepath)
@@ -81,7 +83,7 @@ init_data(filepath, model)
 
 for i = 1:nout
     @printf "\nrunning from iter %d" iter(model)
-    @time iterate!(model, dt, nint)
+    @time time_step!(model, dt, nint)
 
     @printf "    ...saving at iter %d" iter(model)
     @time save_data(filepath, model)
