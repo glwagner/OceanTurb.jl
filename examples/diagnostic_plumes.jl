@@ -71,7 +71,5 @@ model.bcs.T.bottom = GradientBoundaryCondition(dTdz)
 
 fig, axs = subplots(ncols=4, sharey=true)
 
-#iterate!(model, Δt)
+run_until!(model, Δt, 6hour)
 makeplot!(axs, model)
-
-#makeplot!(axs, model)
