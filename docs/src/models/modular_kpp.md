@@ -541,17 +541,4 @@ which implies that the non-local flux ``NL_\phi`` is
 NL_\phi = - \C{a}{} \sqrt{\breve W^2} \left ( \breve \Phi - \Phi \right ) \, .
 \eeq
 ```
-
-Stable numerical integration of the environment-averaged tracer conservation equation
-relies on the division of the mass flux term into two components, such that
-the conservation law for ``\Phi`` becomes
-```math
-\begin{gather}
-\partial_t \Phi = \d_z \left ( K_\phi \partial_z \right ) \Phi - \partial_z NL_\phi \\
-\partial_t \Phi - \partial_z \left ( K_\Phi \partial_z \Phi \right ) 
-                + \partial_z \left ( \C{a}{} \sqrt{\breve W^2} \Phi \right )
-                = \C{a}{} \sqrt{\breve W^2} \breve \Phi \, ,
-\end{gather}
-```
-where the diffusivity and mass flux term on the left are integrated implicitly in time, while
-mass flux term on the right is treated explicitly.
+In `ModularKPP`, ``NL_\phi`` is treated explicitly.
