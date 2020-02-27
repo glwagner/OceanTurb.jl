@@ -7,7 +7,7 @@ using OceanTurb.ModularKPP: HoltslagDiffusivity, ROMSMixingDepth, LMDCounterGrad
 
 usecmbright()
 
-modelsetup = (N=256, L=256, stepper=:BackwardEuler)
+modelsetup = (grid=UniformGrid(N=256, H=256), stepper=:BackwardEuler)
 
 buoyancy_flux = 1e-7
 wind_stress = 0.0

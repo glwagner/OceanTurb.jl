@@ -5,7 +5,7 @@ function test_zeros(T=Float64, dims=(13, 45))
 end
 
 function test_run_until(stepper=:ForwardEuler)
-    model = Diffusion.Model(N=3, L=1, K=1.0, stepper=stepper)
+    model = Diffusion.Model(N=3, H=1, K=1.0, stepper=stepper)
 
     dt, tfinal = 0.5, 1.3
     run_until!(model, dt, tfinal)
@@ -14,7 +14,7 @@ function test_run_until(stepper=:ForwardEuler)
 end
 
 function test_diffusive_flux()
-    model = Diffusion.Model(N=4, L=2, K=0.1)
+    model = Diffusion.Model(N=4, H=2, K=0.1)
     c0(z) = z
     model.solution.c = c0
     flux = OceanTurb.diffusive_flux(:c, model)

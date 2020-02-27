@@ -545,7 +545,7 @@ function test_kpp_diffusion_cosine(stepper=:ForwardEuler)
     m = model
     i = 3
     dt = 1e-3
-    iterate!(model, dt)
+    time_step!(model, dt)
 
     # The error tolerance is a bit arbitrary.
     return norm(c_ans.(z, time(model)) .- data(model.solution.T)) < model.grid.N*1e-6
@@ -564,7 +564,7 @@ function test_flux(stepper=:ForwardEuler; fieldname=:U, top_flux=0.3, bottom_flu
     C(t) = C₀ - (top_flux - bottom_flux) * t
 
     dt = 1e-6
-    iterate!(model, dt, 10)
+    time_step!(model, dt, 10)
 
     return C(time(model)) ≈ integral(c)
 end

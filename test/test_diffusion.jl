@@ -3,19 +3,19 @@
 #
 
 function test_diffusion_basic()
-    model = Diffusion.Model(N=4, L=2, K=0.1)
+    model = Diffusion.Model(N=4, H=2, K=0.1)
     model.parameters.K == 0.1
 end
 
 function test_diffusion_set_c()
-    model = Diffusion.Model(N=4, L=2, K=0.1)
+    model = Diffusion.Model(N=4, H=2, K=0.1)
     c0 = 1:4
     model.solution.c = c0
     model.solution.c.data[1:model.grid.N] == c0
 end
 
 function test_diffusive_flux(stepper=:ForwardEuler; top_flux=0.3, bottom_flux=0.13, N=10)
-    model = Diffusion.Model(N=N, L=1, K=1.0, stepper=stepper)
+    model = Diffusion.Model(N=N, H=1, K=1.0, stepper=stepper)
     model.bcs.c.top = FluxBoundaryCondition(top_flux)
     model.bcs.c.bottom = FluxBoundaryCondition(bottom_flux)
 
@@ -23,13 +23,13 @@ function test_diffusive_flux(stepper=:ForwardEuler; top_flux=0.3, bottom_flux=0.
     C(t) = C₀ - (top_flux - bottom_flux) * t
 
     dt = 1e-6
-    iterate!(model, dt, 10)
+    time_step!(model, dt, 10)
 
     return C(time(model)) ≈ integral(model.solution.c)
 end
 
 function test_diffusion_cosine(stepper=:ForwardEuler)
-    model = Diffusion.Model(N=100, L=π/2, K=1.0, stepper=stepper)
+    model = Diffusion.Model(N=100, H=π/2, K=1.0, stepper=stepper)
     z = model.grid.zc
 
     c_init(z) = cos(2z)
@@ -38,14 +38,14 @@ function test_diffusion_cosine(stepper=:ForwardEuler)
     model.solution.c = c_init
 
     dt = 1e-3
-    iterate!(model, dt)
+    time_step!(model, dt)
 
     # The error tolerance is a bit arbitrary.
     norm(c_ans.(z, time(model)) .- data(model.solution.c)) < model.grid.N*1e-6
 end
 
 function test_diffusion_cosine_run_until(stepper=:ForwardEuler)
-    model = Diffusion.Model(N=100, L=π/2, K=1.0, stepper=stepper)
+    model = Diffusion.Model(N=100, H=π/2, K=1.0, stepper=stepper)
     z = model.grid.zc
 
     c_init(z) = cos(2z)
@@ -63,12 +63,12 @@ end
 
 
 function test_advection(stepper=:ForwardEuler)
-    L = 1.0
+    H = 1.0
     W = -1.0
-    δ = L/10
-    h = L/2
+    δ = H/10
+    h = H/2
 
-    model = Diffusion.Model(N=100, L=L, K=0.0, W=W, stepper=stepper,
+    model = Diffusion.Model(N=100, H=H, K=0.0, W=W, stepper=stepper,
                             bcs = Diffusion.BoundaryConditions(FieldBoundaryConditions(
                                     GradientBoundaryCondition(0.0),
                                     GradientBoundaryCondition(0.0))))
@@ -77,7 +77,7 @@ function test_advection(stepper=:ForwardEuler)
     c₀(z) = c_gauss(z+h, 0)
     model.solution.c = c₀
 
-    iterate!(model, 1e-3, 10)
+    time_step!(model, 1e-3, 10)
 
     c_current(z) = c_gauss(z+h, time(model))
     c_answer = CellField(model.grid)
@@ -87,10 +87,10 @@ function test_advection(stepper=:ForwardEuler)
 end
 
 function test_damping(stepper=:ForwardEuler)
-    L = 1.0
+    H = 1.0
     μ = 0.1
 
-    model = Diffusion.Model(N=3, L=L, K=0.0, μ=μ, stepper=stepper,
+    model = Diffusion.Model(N=3, H=H, K=0.0, μ=μ, stepper=stepper,
                             bcs = Diffusion.BoundaryConditions(FieldBoundaryConditions(
                                     GradientBoundaryCondition(0.0),
                                     GradientBoundaryCondition(0.0))))
@@ -99,7 +99,7 @@ function test_damping(stepper=:ForwardEuler)
     c₀(z) = c_damp(0)
     model.solution.c = c₀
 
-    iterate!(model, 1e-3, 100)
+    time_step!(model, 1e-3, 100)
 
     c_current(t) = c_damp(time(model))
     c_answer = CellField(model.grid)

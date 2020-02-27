@@ -123,10 +123,10 @@ Run `model` until `tfinal` with time-step `dt`.
 """
 function run_until!(model, dt, tfinal)
     nt = floor(Int, (tfinal - time(model))/dt)
-    iterate!(model, dt, nt)
+    time_step!(model, dt, nt)
 
     last_dt = tfinal - time(model)
-    iterate!(model, last_dt)
+    time_step!(model, last_dt)
 
     return nothing
 end

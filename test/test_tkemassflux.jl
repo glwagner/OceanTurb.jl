@@ -16,7 +16,7 @@ function time_step_tke_mass_flux_model(boundary_layer_depth, mixing_length, nonl
                                       tke_equation = tke_equation,
                                     tke_wall_model = tke_wall_model,
                                            stepper = :BackwardEuler)
-    iterate!(model, 1e-16, 3) 
+    time_step!(model, 1e-16, 3) 
     return true
 end
 

@@ -79,7 +79,7 @@ end
 constants = Constants(f=1e-4)
 
  N = 128        # Model resolution
- L = 128        # Vertical extent of the model domain
+ H = 128        # Vertical extent of the model domain
 Qᵘ = -1e-4      # Surface buoyancy flux (positive implies cooling)
 N² = 1e-5       # Interior/initial temperature gradient
 Δt = 1minute
@@ -87,7 +87,7 @@ N² = 1e-5       # Interior/initial temperature gradient
 dTdz = constants.α * constants.g * N²
 
 # Build the model with a Backward Euler timestepper
-model = TKEMassFlux.Model(     grid = UniformGrid(N=N, L=L), 
+model = TKEMassFlux.Model(     grid = UniformGrid(N=N, H=H), 
                             stepper = :BackwardEuler,
                           constants = constants)
 

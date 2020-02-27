@@ -20,8 +20,8 @@ struct Model{P, TS, G, T, S} <: AbstractModel{TS, G, T}
     parameters  :: P
 end
 
-function Model(; N=10, L=1.0, K=0.1, W=0.0, μ=0.0,
-          grid = UniformGrid(N, L),
+function Model(; N=10, H=1.0, K=0.1, W=0.0, μ=0.0,
+          grid = UniformGrid(N, H),
     parameters = Parameters(K, W, μ),
        stepper = :ForwardEuler,
            bcs = BoundaryConditions(ZeroFluxBoundaryConditions())

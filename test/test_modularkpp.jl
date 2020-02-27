@@ -3,7 +3,7 @@
 #
 
 function test_default_model_init(N=4, H=4.3)
-    model = ModularKPP.Model(N=N, H=H)
+    model = ModularKPP.Model(grid=UniformGrid(N=N, H=H))
     return model.grid.N == N && model.grid.H == H
 end
 
@@ -15,7 +15,7 @@ function time_step_model(diffusivity, nonlocalflux, mixingdepth, kprofile)
                               mixingdepth = mixingdepth,
                                  kprofile = kprofile)
 
-    iterate!(model, 1e-16)
+    time_step!(model, 1e-16)
     return true
 end
 
@@ -38,7 +38,6 @@ shape_functions = (
     ModularKPP.StandardCubicPolynomial(),
     ModularKPP.GeneralizedCubicPolynomial()
 )
-
 
 @testset "Modular KPP" begin
     @test test_default_model_init()

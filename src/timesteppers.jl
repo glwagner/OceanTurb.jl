@@ -13,19 +13,19 @@ function Timestepper(stepper, args...)
     return eval(Expr(:call, fullsteppername, args...))
 end
 
-function iterate!(model, Δt, Nt)
+function time_step!(model, Δt, Nt)
     for step = 1:Nt
-        iterate!(model, Δt)
+        time_step!(model, Δt)
     end
     return nothing
 end
 
 """
-    iterate!(model; Δt, Nt)
+    time_step!(model; Δt, Nt)
 
 Step `model` forward in time for `Nt` steps with step size Δt.
 """
-iterate!(model; Δt, Nt) = iterate!(model, Δt, Nt)
+time_step!(model; Δt, Nt) = time_step!(model, Δt, Nt)
 
 "Update the clock after one iteration."
 function tick!(clock, Δt)
@@ -200,7 +200,7 @@ end
     forward_euler_step!(m.timestepper.rhs, m.solution, Δt)
 
 # Forward Euler timestepping
-function iterate!(m::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
+function time_step!(m::AbstractModel{TS}, Δt) where TS <: ForwardEulerTimestepper
     update!(m)
     calc_explicit_rhs!(m)
     forward_euler_step!(m, Δt)
@@ -265,7 +265,7 @@ end
     backward_euler_step!(m.timestepper.rhs, m.timestepper.lhs, m.solution, Δt)
 
 "Step forward `m` by `Δt` with the backward Euler method."
-function iterate!(m::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimestepper
+function time_step!(m::AbstractModel{TS}, Δt) where TS <: BackwardEulerTimestepper
     update!(m)
     calc_implicit_rhs!(m)
     calc_diffusive_lhs!(m, Δt)

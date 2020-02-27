@@ -70,7 +70,7 @@ export # This file, core functionality:
     Equation,
     Timestepper,
     implicit,
-    iterate!,
+    time_step!,
     ForwardEulerTimestepper,
     BackwardEulerTimestepper,
 
