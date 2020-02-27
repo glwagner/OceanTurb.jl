@@ -129,9 +129,4 @@ NL_\phi = \C{\NL}{} F_\phi d (1 - d)^2 \c
 M \equiv - \C{a}{} \sqrt{\breve W^2} \, ,
 \eeq\]</div><p>which implies that the non-local flux <span>$NL_\phi$</span> is </p><div>\[\beq
 NL_\phi = - \C{a}{} \sqrt{\breve W^2} \left ( \breve \Phi - \Phi \right ) \, .
-\eeq\]</div><p>Stable numerical integration of the environment-averaged tracer conservation equation relies on the division of the mass flux term into two components, such that the conservation law for <span>$\Phi$</span> becomes</p><div>\[\begin{gather}
-\partial_t \Phi = \d_z \left ( K_\phi \partial_z \right ) \Phi - \partial_z NL_\phi \\
-\partial_t \Phi - \partial_z \left ( K_\Phi \partial_z \Phi \right ) 
-                + \partial_z \left ( \C{a}{} \sqrt{\breve W^2} \Phi \right )
-                = \C{a}{} \sqrt{\breve W^2} \breve \Phi \, ,
-\end{gather}\]</div><p>where the diffusivity and mass flux term on the left are integrated implicitly in time, while mass flux term on the right is treated explicitly.</p><footer><hr/><a class="previous" href="../kpp/"><span class="direction">Previous</span><span class="title">The K-Profile-Parameterization (KPP)</span></a><a class="next" href="../tke_mass_flux/"><span class="direction">Next</span><span class="title">An eddy-diffusivity mass-flux (EDMF) scheme with prognostic turbulent kinetic energy</span></a></footer></article></body></html>
+\eeq\]</div><p>In <code>ModularKPP</code>, <span>$NL_\phi$</span> is treated explicitly.</p><footer><hr/><a class="previous" href="../kpp/"><span class="direction">Previous</span><span class="title">The K-Profile-Parameterization (KPP)</span></a><a class="next" href="../tke_mass_flux/"><span class="direction">Next</span><span class="title">An eddy-diffusivity mass-flux (EDMF) scheme with prognostic turbulent kinetic energy</span></a></footer></article></body></html>
