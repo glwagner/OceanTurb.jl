@@ -18,7 +18,7 @@ makedocs(
                 "Turbulence models" => Any[
                   "models/kpp.md",
                   "models/modular_kpp.md",
-                  "models/edmf.md",
+                  "models/tke_mass_flux.md",
                   "models/pacanowskiphilander.md"],
                 "DocStrings" => Any[
                       "man/types.md",
