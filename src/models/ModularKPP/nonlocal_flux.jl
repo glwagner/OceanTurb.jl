@@ -24,7 +24,9 @@ mass_flux(m::CGModel, i) = 0
 ##### Diagnostic plume model
 #####
 
-Base.@kwdef struct DiagnosticPlumeModel{T} <: AbstractParameters
+abstract type AbstractDiagnosticPlumeModel <: AbstractParameters end
+
+Base.@kwdef struct SiebesmaDiagnosticPlumeModel{T} <: AbstractDiagnosticPlumeModel
      Ca :: T = 0.1
     Cbw :: T = 2.86
      Ce :: T = 0.4
@@ -34,8 +36,10 @@ Base.@kwdef struct DiagnosticPlumeModel{T} <: AbstractParameters
     Cσb :: T = 1.32
 end
 
-instantiate_plume(::DiagnosticPlumeModel, grid) = 
-    (T=CellField(grid), S=CellField(grid), W=FaceField(grid))
+const DiagnosticPlumeModel = SiebesmaDiagnosticPlumeModel
+
+instantiate_plume(::AbstractDiagnosticPlumeModel, grid) = 
+    (T=CellField(grid), S=CellField(grid), W²=FaceField(grid))
 
 #####
 ##### Empirical standard deviation
@@ -56,17 +60,13 @@ end
 ##### Entrainment
 #####
 
-@inline function entrainment(z, Δz, Ce, h::T) where T
-    if z > -h
-        e = -Ce * (1 / (Δz - z) + 1 / (Δz + z + h))
-        return ifelse(e < 0, e, Ce / Δz)
-    else
-        return -T(Inf)
-    end
+@inline function siebesma_entrainment(z, Δz, Ce, h::T) where T
+    ϵ = -Ce * (1 / (Δz - z) + 1 / (Δz + z + h))
+    return ifelse(ϵ < 0, ϵ, -Ce / Δz)
 end
 
-@inline entrainment(z, model) = 
-    @inbounds entrainment(z, Δc(model.grid, model.grid.N), model.nonlocalflux.Ce, model.state.h)
+@inline entrainment(z, model::Model{K, <:SiebesmaDiagnosticPlumeModel}) where K = 
+    @inbounds siebesma_entrainment(z, Δc(model.grid, model.grid.N), model.nonlocalflux.Ce, model.state.h)
                                                       
 #####
 ##### Plume boundary conditions
@@ -126,7 +126,19 @@ function clip_positive!(ϕ)
     return nothing
 end
 
-function update_nonlocal_flux!(model::Model{K, <:DiagnosticPlumeModel}) where K
+function clip_negative!(ϕ)
+    for i in eachindex(ϕ)
+        @inbounds begin
+            ϕᵢ = ϕ[i]
+            if ϕᵢ < 0
+                ϕ[i] = 0
+            end
+        end
+    end
+    return nothing
+end
+
+function update_nonlocal_flux!(model::Model{K, <:AbstractDiagnosticPlumeModel}) where K
 
     set_tracer_plume_bc!(model.state.plume.T, model.solution.T,
                          model.state.Qθ, model.nonlocalflux.Cα, model)
@@ -134,33 +146,32 @@ function update_nonlocal_flux!(model::Model{K, <:DiagnosticPlumeModel}) where K
     set_tracer_plume_bc!(model.state.plume.S, model.solution.S,
                          model.state.Qs, model.nonlocalflux.Cα, model)
 
-    set_vertical_momentum_plume_bc!(model.state.plume.W)
+    set_vertical_momentum_plume_bc!(model.state.plume.W²)
 
-    integrate_plume_equations!(model.state.plume.T, model.state.plume.S, model.state.plume.W,
+    integrate_plume_equations!(model.state.plume.T, model.state.plume.S, model.state.plume.W²,
                                model.solution.T, model.solution.S, model.grid, model)
 
-    clip_positive!(model.state.plume.W)
-    clip_infinite!(model.state.plume.W)
+    clip_infinite!(model.state.plume.W²)
+    clip_negative!(model.state.plume.W²)
     clip_infinite!(model.state.plume.T)
-    clip_infinite!(model.state.plume.S)
 
     return nothing
 end
 
-function integrate_plume_equations!(T̆, S̆, W̆, T, S, grid, model)
+function integrate_plume_equations!(T̆, S̆, W̆², T, S, grid, model)
 
     n = grid.N
 
     # Vertical momentum at the nᵗʰ cell interface, approximating excess buoyancy at
     # interface with excess at top cell center:
     ΔB̆ᵢ₊₁ = plume_buoyancy_excess(n, grid, model)
-    @inbounds W̆[n] = ΔB̆ᵢ₊₁ <= 0 ? zero(eltype(grid)) :
-                     - sqrt(model.nonlocalflux.Cbw * Δf(grid, n) * ΔB̆ᵢ₊₁)
+    #@inbounds W̆²[n] = ΔB̆ᵢ₊₁ >= 0 ? zero(eltype(grid)) : -model.nonlocalflux.Cbw * Δf(grid, n) * ΔB̆ᵢ₊₁
+    @inbounds W̆²[n] = -model.nonlocalflux.Cbw * Δf(grid, n) * ΔB̆ᵢ₊₁
 
     # Integrate from surface cell `N-1` downwards
     for i in n-1 : -1 : 1
-        if W̆[i+1] <= 0 # plume is stopped
-            @inbounds W̆[i] = 0
+        if W̆²[i+1] <= 0 # plume is stopped
+            @inbounds W̆²[i] = 0
             @inbounds T̆[i] = T[i]
             @inbounds S̆[i] = S[i]
         else # plume still lives
@@ -172,9 +183,9 @@ function integrate_plume_equations!(T̆, S̆, W̆, T, S, grid, model)
             # Integrate vertical momentum
             ΔB̆ᵢ₊₁ = onface(i+1, grid, plume_buoyancy_excess, model)
                                                              
-            @inbounds W̆[i] = W̆[i+1] - Δf(grid, i+1) * (
-                               model.nonlocalflux.Cbw * ΔB̆ᵢ₊₁ / W̆[i+1]
-                             - model.nonlocalflux.Cew * entrainment(grid.zf[i+1], model) * W̆[i+1])
+            @inbounds W̆²[i] = W̆²[i+1] - Δf(grid, i+1) * (
+                               model.nonlocalflux.Cbw * ΔB̆ᵢ₊₁
+                             - model.nonlocalflux.Cew * entrainment(grid.zf[i+1], model) * W̆²[i+1])
         end
     end
 
@@ -187,14 +198,14 @@ end
 
 maxzero(ϕ::T) where T = max(zero(T), ϕ)
 
-@inline mass_flux(m::Model{K, <:DiagnosticPlumeModel}, i) where K = 
-    @inbounds m.nonlocalflux.Ca * m.state.plume.W[i]
+@inline mass_flux(m::Model{K, <:AbstractDiagnosticPlumeModel}, i) where K = 
+    @inbounds -m.nonlocalflux.Ca * sqrt(oncell(m.state.plume.W², i))
 
 @inline M_Φ(i, grid, Φ, m) = @inbounds mass_flux(m, i) * Φ[i]
 
 # Use upwards-biased difference to effect upwind differencing for a downward-travelling plume:
-@inline ∂z_explicit_nonlocal_flux_T(m::Model{K, <:DiagnosticPlumeModel}, i) where K =
+@inline ∂z_explicit_nonlocal_flux_T(m::Model{K, <:AbstractDiagnosticPlumeModel}, i) where K =
     @inbounds ∂z⁺(i, m.grid, M_Φ, m.state.plume.T, m)
 
-@inline ∂z_explicit_nonlocal_flux_S(m::Model{K, <:DiagnosticPlumeModel}, i) where K =
+@inline ∂z_explicit_nonlocal_flux_S(m::Model{K, <:AbstractDiagnosticPlumeModel}, i) where K =
     @inbounds ∂z⁺(i, m.grid, M_Φ, m.state.plume.S, m)
