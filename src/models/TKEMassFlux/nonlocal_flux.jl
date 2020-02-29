@@ -30,10 +30,11 @@ const CGModel = Model{L, K, W, <:CounterGradientFlux} where {L, K, W}
 
 abstract type AbstractDiagnosticPlumeModel <: AbstractParameters end
 
-Base.@kwdef struct WitekDiagnosticPlumeModel{T} <: AbstractDiagnosticPlumeModel
+Base.@kwdef struct DiagnosticPlumeModel{T} <: AbstractDiagnosticPlumeModel
      Ca :: T = 0.1
     Cbw :: T = 2.86
-     Ce :: T = 0.1
+    Ce⁺ :: T = 0.1
+    Ce⁻ :: T = 1.0
     Cew :: T = 0.572
      CQ :: T = 1.0
 end
@@ -56,19 +57,20 @@ Returns
 
 which is always less than zero.
 """
-@inline dynamic_entrainment(Ce, ΔB̆, W̆²::T) where T =
-    ifelse(W̆²==0, zero(T), Ce * min(zero(T), ΔB̆ / W̆²))
+@inline dynamic_entrainment(Ce⁺, Ce⁻, ΔB̆, W̆²::T) where T =
+    ifelse(W̆²==0, zero(T),  Ce⁻ * min(zero(T), ΔB̆ / W̆²) 
+                          - Ce⁺ * max(zero(T), ΔB̆ / W̆²))
 
 @inline function tracer_entrainment(m::ModelWithPlumes, i)
     ΔB̆ = plume_buoyancy_excess(i, m.grid, m)
     W̆² = oncell(m.state.plume.W², i)
-    return dynamic_entrainment(m.nonlocal_flux.Ce, ΔB̆, W̆²)
+    return dynamic_entrainment(m.nonlocal_flux.Ce⁺, m.nonlocal_flux.Ce⁻, ΔB̆, W̆²)
 end
 
 @inline function momentum_entrainment(m::ModelWithPlumes, i)
     ΔB̆ = onface(i, m.grid, plume_buoyancy_excess, m)
     W̆² = @inbounds m.state.plume.W²[i]
-    return dynamic_entrainment(m.nonlocal_flux.Ce, ΔB̆, W̆²)
+    return dynamic_entrainment(m.nonlocal_flux.Ce⁺, m.nonlocal_flux.Ce⁻, ΔB̆, W̆²)
 end
 
 #####
