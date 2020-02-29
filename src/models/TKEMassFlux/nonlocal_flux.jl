@@ -29,9 +29,7 @@ Base.@kwdef struct WitekDiagnosticPlumeModel{T} <: AbstractDiagnosticPlumeModel
     Cbw :: T = 2.86
      Ce :: T = 0.4
     Cew :: T = 0.572
-     Cβ :: T = 1.0
-    Cστ :: T = 2.2
-    Cσb :: T = 1.32
+     CQ :: T = 1.0
 end
 
 const ModelWithPlumes = Model{L, K, W, <:AbstractDiagnosticPlumeModel} where {L, K, W}
@@ -43,26 +41,42 @@ instantiate_plume(::AbstractDiagnosticPlumeModel, grid) =
 ##### Entrainment
 #####
 
-@inline function siebesma_entrainment(z, Δz, Ce, h::T) where T
-    ϵ = -Ce * (1 / (Δz - z) + 1 / (Δz + z + h))
-    return ifelse(ϵ < 0, ϵ, -Ce / Δz)
+"""
+    dynamic_entrainment(Ce, ΔB̆, W̆²)
+
+Returns 
+
+``C^e * min(0, ΔB̆ / W̆²) ``,
+
+which is always less than zero.
+"""
+@inline dynamic_entrainment(Ce, ΔB̆, W̆²::T) where T =
+    ifelse(W̆²==0, zero(T), Ce * min(zero(T), ΔB̆ / W̆²))
+
+@inline function tracer_entrainment(m::ModelWithPlumes, i)
+    ΔB̆ = plume_buoyancy_excess(i, m.grid, m)
+    W̆² = oncell(m.state.plume.W², i)
+    return dynamic_entrainment(m.nonlocal_flux.Ce, ΔB̆, W̆²)
 end
 
-@inline entrainment(z, model::ModelWithPlumes) where K = 
-    @inbounds siebesma_entrainment(z, Δc(model.grid, model.grid.N), model.nonlocal_flux.Ce, model.state.h)
-                                                      
+@inline function momentum_entrainment(m::ModelWithPlumes, i)
+    ΔB̆ = onface(i, m.grid, plume_buoyancy_excess, m)
+    W̆² = @inbounds m.state.plume.W²[i]
+    return dynamic_entrainment(m.nonlocal_flux.Ce, ΔB̆, W̆²)
+end
+
 #####
 ##### Plume boundary conditions
 #####
 
-function set_tracer_plume_bc!(ϕ̆, Φ, Qϕ, Cβ, model)
+function set_tracer_plume_bc!(ϕ̆, Φ, Qϕ, CQ, model)
     n = ϕ̆.grid.N
 
     v★ = maxsqrt(model.solution.e, n) # turbulent velocity scale at the surface
 
     # Surface layer model: √e Δϕ̆ = - C Qϕ, where Δϕ̆ is plume excess.
-    # Also, lumes can't exist if v★=0. This makes no sense, but our best option atm.
-    @inbounds ϕ̆[n] = ifelse(v★==0, Φ[n], Φ[n] - Cβ * Qϕ / v★)
+    # Also, plumes can't exist if v★=0. This makes no sense, but our best option atm.
+    @inbounds ϕ̆[n] = ifelse(v★==0, Φ[n], Φ[n] - CQ * Qϕ / v★)
 
     return nothing
 end
@@ -127,10 +141,10 @@ end
 function update_nonlocal_flux!(model::ModelWithPlumes) where K
 
     set_tracer_plume_bc!(model.state.plume.T, model.solution.T,
-                         model.state.Qθ, model.nonlocal_flux.Cβ, model)
+                         model.state.Qθ, model.nonlocal_flux.CQ, model)
 
     set_tracer_plume_bc!(model.state.plume.S, model.solution.S,
-                         model.state.Qs, model.nonlocal_flux.Cβ, model)
+                         model.state.Qs, model.nonlocal_flux.CQ, model)
 
     set_vertical_momentum_plume_bc!(model.state.plume.W²)
 
@@ -162,15 +176,15 @@ function integrate_plume_equations!(T̆, S̆, W̆², T, S, grid, model)
         else # plume still lives
 
             # Integrate temperature and salinity
-            @inbounds T̆[i] = T̆[i+1] + Δc(grid, i+1) * entrainment(grid.zc[i+1], model) * (T̆[i+1] - T[i+1])
-            @inbounds S̆[i] = S̆[i+1] + Δc(grid, i+1) * entrainment(grid.zc[i+1], model) * (S̆[i+1] - S[i+1])
+            @inbounds T̆[i] = T̆[i+1] + Δc(grid, i+1) * tracer_entrainment(model, i) * (T̆[i+1] - T[i+1])
+            @inbounds S̆[i] = S̆[i+1] + Δc(grid, i+1) * tracer_entrainment(model, i) * (S̆[i+1] - S[i+1])
 
             # Integrate vertical momentum
             ΔB̆ᵢ₊₁ = onface(i+1, grid, plume_buoyancy_excess, model)
                                                              
             @inbounds W̆²[i] = W̆²[i+1] - Δf(grid, i+1) * (
-                               model.nonlocal_flux.Cbw * ΔB̆ᵢ₊₁
-                             - model.nonlocal_flux.Cew * entrainment(grid.zf[i+1], model) * W̆²[i+1])
+                                model.nonlocal_flux.Cbw * ΔB̆ᵢ₊₁
+                              - model.nonlocal_flux.Cew * momentum_entrainment(model, i) * W̆²[i+1])
         end
     end
 
@@ -183,20 +197,26 @@ end
 
 maxzero(ϕ::T) where T = max(zero(T), ϕ)
 
-@inline M(m, i) = @inbounds -m.nonlocal_flux.Ca * sqrt(oncell(m.state.plume.W², i))
+@inline M(m, i) = @inbounds -m.nonlocal_flux.Ca * maxsqrt(m.state.plume.W², i)
 
+"Returns the temperature transport for a plume model, with mass flux on cell interfaces."
 @inline function ∂z_NLᵀ(m::ModelWithPlumes, i)
-    ΔTᵢ₊₁ = onface(m.state.plume.T, i+1) - onface(m.solution.T, i+1)
-    ΔTᵢ   = onface(m.state.plume.T, i)   - onface(m.solution.T, i)
+    ΔTᵢ = @inbounds m.state.plume.T[i] - m.solution.T[i]
+    ΔTᵢ₊₁ = @inbounds m.state.plume.T[i+1] - m.solution.T[i+1]
 
-    # Centered-difference advective flux for `M` at cell interfaces:
-    return 1 / (2 * Δf(m.grid, i)) * (M(m, i+1) * ΔTᵢ₊₁ - M(m, i) * ΔTᵢ)
+    Mᵢ = oncell(M, m, i)
+    Mᵢ₊₁ = oncell(M, m, i+1)
+
+    return 1 / (2 * Δc(m.grid, i+1)) * (ΔTᵢ₊₁ * Mᵢ₊₁ - ΔTᵢ * Mᵢ)
 end
 
+"Returns the salinity transport for a plume model, with mass flux on cell interfaces."
 @inline function ∂z_NLˢ(m::ModelWithPlumes, i)
-    ΔSᵢ₊₁ = onface(m.state.plume.S, i+1) - onface(m.solution.S, i+1)
-    ΔSᵢ   = onface(m.state.plume.S, i)   - onface(m.solution.S, i)
+    ΔSᵢ = @inbounds m.state.plume.S[i] - m.solution.S[i]
+    ΔSᵢ₊₁ = @inbounds m.state.plume.S[i+1] - m.solution.S[i+1]
 
-    # Centered-difference advective flux for `M` at cell interfaces:
-    return 1 / (2 * Δf(m.grid, i)) * (M(m, i+1) * ΔSᵢ₊₁ - M(m, i) * ΔSᵢ)
+    Mᵢ = oncell(M, m, i)
+    Mᵢ₊₁ = oncell(M, m, i+1)
+
+    return 1 / (2 * Δc(m.grid, i+1)) * (ΔSᵢ₊₁ * Mᵢ₊₁ - ΔSᵢ * Mᵢ)
 end

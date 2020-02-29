@@ -64,7 +64,7 @@ include("wall_models.jl")
 include("diffusivities.jl")
 
 function Model(; 
-                      grid = UniformGrid(N, H),
+                          grid = UniformGrid(N, H),
                  constants = Constants(),
              mixing_length = EquilibriumMixingLength(),
         eddy_diffusivities = SinglePrandtlDiffusivities(),
