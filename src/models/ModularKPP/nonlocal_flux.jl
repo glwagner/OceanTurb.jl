@@ -196,7 +196,7 @@ end
 
 maxzero(ϕ::T) where T = max(zero(T), ϕ)
 
-@inline M(m, i) = @inbounds -m.nonlocalflux.Ca * sqrt(oncell(m.state.plume.W², i))
+@inline M(m, i) = @inbounds -m.nonlocalflux.Ca * maxsqrt(m.state.plume.W², i)
 
 @inline function ∂z_explicit_nonlocal_flux_T(m::Model{K, <:AbstractDiagnosticPlumeModel}, i) where K
     ΔTᵢ₊₁ = onface(m.state.plume.T, i+1) - onface(m.solution.T, i+1)
