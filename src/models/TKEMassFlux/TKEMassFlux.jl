@@ -5,17 +5,12 @@ using OceanTurb: nan2inf, inf2zero
 
 using Printf
 
-import ..OceanTurb: oncell, onface
-import .KPP: ∂B∂z, u★, isunstable
+import ..OceanTurb: oncell, onface, maxsqrt, minuszero
+import .KPP: ∂B∂z, u★, w★, isunstable
 import .ModularKPP: AbstractModularKPPModel
 
 const nsol = 5
 @solution U V T S e
-
-@inline minuszero(args...) = -0
-
-@inline maxsqrt(ϕ::T) where T = sqrt(max(zero(T), ϕ))
-@inline maxsqrt(ϕ, i) = @inbounds maxsqrt(ϕ[i])
 
 "Returns √ϕ if ϕ is positive and not NaN. Otherwise returns 0."
 @inline function zeroed_sqrt(ϕ)
@@ -34,7 +29,10 @@ end
 
 @inline sqrt_∂B∂z(m, i) = maxsqrt(∂B∂z(m, i))
 
-mutable struct Model{L, K, W, E, H, P, K0, C, ST, G, TS, S, BC, T} <: AbstractModel{TS, G, T}
+"Returns a velocity scale associated with convection across grid cell i."
+@inline wΔ³(m, i=m.grid.N) = max(zero(eltype(m.grid)), m.state.Qb) * Δc(m.grid, i)
+
+mutable struct Model{L, K, W, N, E, H, K0, C, ST, G, TS, S, BC, T} <: AbstractModel{TS, G, T}
 
                        clock :: Clock{T}
                         grid :: G
@@ -46,7 +44,7 @@ mutable struct Model{L, K, W, E, H, P, K0, C, ST, G, TS, S, BC, T} <: AbstractMo
               tke_wall_model :: W
                 tke_equation :: E
         boundary_layer_depth :: H
-               nonlocal_flux :: P
+               nonlocal_flux :: N
     background_diffusivities :: K0
                    constants :: C
                        state :: ST
@@ -54,13 +52,14 @@ mutable struct Model{L, K, W, E, H, P, K0, C, ST, G, TS, S, BC, T} <: AbstractMo
 end
 
 include("state.jl")
+include("nonlocal_flux.jl")
 include("mixing_length.jl")
 include("tke_equation.jl")
 include("wall_models.jl")
 include("diffusivities.jl")
 
 function Model(; 
-                      grid = UniformGrid(N, H),
+                          grid = UniformGrid(N, H),
                  constants = Constants(),
              mixing_length = EquilibriumMixingLength(),
         eddy_diffusivities = SinglePrandtlDiffusivities(),
@@ -105,17 +104,17 @@ function Model(;
                  nonlocal_flux, 
                  background_diffusivities,
                  constants, 
-                 State(grid, mixing_length, boundary_layer_depth)
+                 State(grid, mixing_length, boundary_layer_depth, nonlocal_flux)
                 )
 end
 
 
-@inline RU(m, i) = @inbounds   m.constants.f * m.solution.V[i]
-@inline RV(m, i) = @inbounds - m.constants.f * m.solution.U[i]
-@inline RT(m, i) = 0
-@inline RS(m, i) = 0
+@inline RU(m, i) = @inbounds   m.constants.f * m.solution.V[i] - ∂z_NLᵁ(m, i)
+@inline RV(m, i) = @inbounds - m.constants.f * m.solution.U[i] - ∂z_NLⱽ(m, i)
+@inline RT(m, i) = - ∂z_NLᵀ(m, i)
+@inline RS(m, i) = - ∂z_NLˢ(m, i)
 
-@inline Re(m, i) = production(m, i) + buoyancy_flux(m, i) - dissipation(m, i)
+@inline Re(m, i) = production(m, i) + buoyancy_flux(m, i) - dissipation(m, i) - ∂z_NLᵉ(m, i)
 @inline Le(m, i) = 0
 
 end # module

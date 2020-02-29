@@ -33,46 +33,19 @@ TKEValueSurfaceConditions(T, wall_model::PrescribedSurfaceTKEValue) =
 
 #
 # Prescribes the surface flux of turbulent kinetic energy 
-# as propotional to u★^3
+# as propotional to the sum of u★^3 and wΔ^3 = Δz * max(0, Qb), where Qb is the buoyancy flux.
+# The free parameters for both u★ and wΔ are multiplied by the TKE dissipation parameter
+# to prevent their mutual correlation.
 #
 
 Base.@kwdef struct PrescribedSurfaceTKEFlux{T} <: AbstractParameters
-    Cʷu★ :: T = 5.227
+    Cʷu★ :: T = 2.0
+    CʷwΔ :: T = 1.0
 end
 
-@inline (boundary_tke::PrescribedSurfaceTKEFlux)(model) = - boundary_tke.Cʷu★ * u★(model)^3 # source...
+@inline (boundary_tke::PrescribedSurfaceTKEFlux)(model) = 
+    - model.tke_equation.Cᴰ * (   boundary_tke.Cʷu★ * u★(model)^3
+                                + boundary_tke.CʷwΔ * wΔ³(model)  )
 
 TKEBoundaryConditions(T, wall_model::PrescribedSurfaceTKEFlux) =
-    FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), FluxBoundaryCondition(wall_model))
-
-#
-# Prescribes the surface flux of turbulent kinetic energy 
-# as propotional to u★^3, scaling the TKE flux with the
-# model free parameter multiplied by the TKE dissipation 
-# parameter.
-#
-
-Base.@kwdef struct ScaledPrescribedSurfaceTKEFlux{T} <: AbstractParameters
-    Cʷu★ :: T = 2.0
-end
-
-@inline (boundary_tke::ScaledPrescribedSurfaceTKEFlux)(model) = 
-    - boundary_tke.Cʷu★ * model.tke_equation.Cᴰ * u★(model)^3 # source...
-
-TKEBoundaryConditions(T, wall_model::ScaledPrescribedSurfaceTKEFlux) =
-    FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), FluxBoundaryCondition(wall_model))
-
-#
-# Prescribes the surface flux of turbulent kinetic energy 
-# as propotional to sqrt(e) u★^2, where sqrt(e) is the near-wall
-# turbulent velocity at the upper grid cell i = N.
-#
-
-Base.@kwdef struct DynamicSurfaceTKEFlux{T} <: AbstractParameters
-    Cʷu★ :: T = 3.75
-end
-
-@inline (boundary_tke::DynamicSurfaceTKEFlux)(m) = @inbounds - boundary_tke.Cʷu★ * sqrt_e(m, m.grid.N) * u★(m)^2 # source...
-
-TKEBoundaryConditions(T, wall_model::DynamicSurfaceTKEFlux) =
     FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), FluxBoundaryCondition(wall_model))

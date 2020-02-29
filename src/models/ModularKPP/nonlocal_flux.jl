@@ -152,6 +152,7 @@ function update_nonlocal_flux!(model::Model{K, <:AbstractDiagnosticPlumeModel}) 
     clip_infinite!(model.state.plume.W²)
     clip_negative!(model.state.plume.W²)
     clip_infinite!(model.state.plume.T)
+    clip_infinite!(model.state.plume.S)
 
     return nothing
 end
@@ -163,7 +164,6 @@ function integrate_plume_equations!(T̆, S̆, W̆², T, S, grid, model)
     # Vertical momentum at the nᵗʰ cell interface, approximating excess buoyancy at
     # interface with excess at top cell center:
     ΔB̆ᵢ₊₁ = plume_buoyancy_excess(n, grid, model)
-    #@inbounds W̆²[n] = ΔB̆ᵢ₊₁ >= 0 ? zero(eltype(grid)) : -model.nonlocalflux.Cbw * Δf(grid, n) * ΔB̆ᵢ₊₁
     @inbounds W̆²[n] = -model.nonlocalflux.Cbw * Δf(grid, n) * ΔB̆ᵢ₊₁
 
     # Integrate from surface cell `N-1` downwards
@@ -196,7 +196,7 @@ end
 
 maxzero(ϕ::T) where T = max(zero(T), ϕ)
 
-@inline M(m, i) = @inbounds -m.nonlocalflux.Ca * sqrt(oncell(m.state.plume.W², i))
+@inline M(m, i) = @inbounds -m.nonlocalflux.Ca * maxsqrt(m.state.plume.W², i)
 
 @inline function ∂z_explicit_nonlocal_flux_T(m::Model{K, <:AbstractDiagnosticPlumeModel}, i) where K
     ΔTᵢ₊₁ = onface(m.state.plume.T, i+1) - onface(m.solution.T, i+1)

@@ -1,19 +1,21 @@
-mutable struct State{T, D, L, H}
-    Qu :: T
-    Qv :: T
-    Qθ :: T
-    Qs :: T
-    Qb :: T
-    K :: D
-    ℓ :: L
-    h :: H # boundary layer depth
+mutable struct State{T, D, L, H, P}
+       Qu :: T
+       Qv :: T
+       Qθ :: T
+       Qs :: T
+       Qb :: T
+        K :: D
+        ℓ :: L
+        h :: H # boundary layer depth
+    plume :: P # plumes
 end
 
-function State(grid, mixing_length, boundary_layer_depth; T=Float64)
+function State(grid, mixing_length, boundary_layer_depth, nonlocal_flux; T=Float64)
     mixing_length = instantiate_mixing_length(mixing_length)
-    boundary_layer_depth = instantiate_boundary_layer_depth(boundary_layer_depth)
+    boundary_layer_depth = 4.0 #instantiate_boundary_layer_depth(boundary_layer_depth)
+    plume = instantiate_plume(nonlocal_flux, grid)
     K = CellField(grid)
-    return State((zero(T) for i=1:5)..., K, mixing_length, boundary_layer_depth)
+    return State((zero(T) for i=1:5)..., K, mixing_length, boundary_layer_depth, plume)
 end
 
 """
@@ -35,11 +37,14 @@ function update_state!(m)
 
     update_mixing_length!(m)
     update_diffusivity!(m)
+    update_nonlocal_flux!(m)
 
     return nothing
 end
 
 # Fallbacks
+instantiate_plume(nonlocal_flux, grid) = nothing #(T=nothing, S=nothing, e=nothing, W²=nothing)
+update_nonlocal_flux!(model) = nothing
 update_near_wall_tke!(m) = nothing
 instantiate_mixing_length(mixing_length_parameters) = nothing
 instantiate_boundary_layer_depth(boundary_layer_depth_parameters) = nothing
