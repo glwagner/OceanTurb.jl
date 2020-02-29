@@ -55,7 +55,8 @@ N² = 1e-5
 
 # The standard setup except with a plume model rather than a counter-gradient flux model.
 model = TKEMassFlux.Model(         grid = UniformGrid(N=64, H=64), 
-                          nonlocal_flux = TKEMassFlux.WitekDiagnosticPlumeModel(CQ=4.0, Ca=0.1, Ce=4.0),
+                          nonlocal_flux = TKEMassFlux.DiagnosticPlumeModel(CQ=4.0, Ca=0.1),
+                          mixing_length = TKEMassFlux.SimpleMixingLength(Cᴸʷ=10.0),
                                 stepper = :BackwardEuler
                          )
 
