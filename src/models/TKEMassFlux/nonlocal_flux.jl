@@ -1,4 +1,10 @@
 # Fallbacks!
+NLᵁ(m, i) = 0
+NLⱽ(m, i) = 0
+NLᵀ(m, i) = 0
+NLˢ(m, i) = 0
+NLᵉ(m, i) = 0
+
 ∂z_NLᵁ(m, i) = 0
 ∂z_NLⱽ(m, i) = 0
 ∂z_NLᵀ(m, i) = 0
@@ -199,24 +205,23 @@ maxzero(ϕ::T) where T = max(zero(T), ϕ)
 
 @inline M(m, i) = @inbounds -m.nonlocal_flux.Ca * maxsqrt(m.state.plume.W², i)
 
-"Returns the temperature transport for a plume model, with mass flux on cell interfaces."
-@inline function ∂z_NLᵀ(m::ModelWithPlumes, i)
-    ΔTᵢ = @inbounds m.state.plume.T[i] - m.solution.T[i]
-    ΔTᵢ₊₁ = @inbounds m.state.plume.T[i+1] - m.solution.T[i+1]
-
+"Returns the non-local flux of temperature at cell centers."
+@inline function NLᵀ(m::ModelWithPlumes, i)
     Mᵢ = oncell(M, m, i)
-    Mᵢ₊₁ = oncell(M, m, i+1)
-
-    return 1 / (2 * Δc(m.grid, i+1)) * (ΔTᵢ₊₁ * Mᵢ₊₁ - ΔTᵢ * Mᵢ)
+    ΔTᵢ = @inbounds m.state.plume.T[i] - m.solution.T[i]
+    return Mᵢ * ΔTᵢ
 end
+
+"Returns the non-local flux of salinity at cell centers."
+@inline function NLˢ(m::ModelWithPlumes, i)
+    Mᵢ = oncell(M, m, i)
+    ΔSᵢ = @inbounds m.state.plume.S[i] - m.solution.S[i]
+    return Mᵢ * ΔSᵢ
+end
+
+"Returns the temperature transport for a plume model, with mass flux on cell interfaces."
+@inline ∂z_NLᵀ(m::ModelWithPlumes, i) = 1 / (2 * Δc(m.grid, i+1)) * (NLᵀ(m, i+1) - NLᵀ(m, i))
 
 "Returns the salinity transport for a plume model, with mass flux on cell interfaces."
-@inline function ∂z_NLˢ(m::ModelWithPlumes, i)
-    ΔSᵢ = @inbounds m.state.plume.S[i] - m.solution.S[i]
-    ΔSᵢ₊₁ = @inbounds m.state.plume.S[i+1] - m.solution.S[i+1]
+@inline ∂z_NLˢ(m::ModelWithPlumes, i) = 1 / (2 * Δc(m.grid, i+1)) * (NLˢ(m, i+1) - NLˢ(m, i))
 
-    Mᵢ = oncell(M, m, i)
-    Mᵢ₊₁ = oncell(M, m, i+1)
-
-    return 1 / (2 * Δc(m.grid, i+1)) * (ΔSᵢ₊₁ * Mᵢ₊₁ - ΔSᵢ * Mᵢ)
-end
