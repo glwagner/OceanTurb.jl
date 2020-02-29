@@ -9,6 +9,9 @@ const year = 365day
 const stellaryear = 23hour + 56minute + 4.098903691
 const Ω = 2π/stellaryear
 
+@inline minuszero(args...) = -0
+@inline maxsqrt(ϕ::T) where T = sqrt(max(zero(T), ϕ))
+@inline maxsqrt(ϕ, i) = @inbounds maxsqrt(ϕ[i])
 @inline nan2inf(a::T) where T = ifelse(isnan(a), T(Inf), a)
 @inline inf2zero(a::T) where T = ifelse(isinf(a), zero(T), a)
 

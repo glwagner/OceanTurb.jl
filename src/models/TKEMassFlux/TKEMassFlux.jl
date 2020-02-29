@@ -5,17 +5,12 @@ using OceanTurb: nan2inf, inf2zero
 
 using Printf
 
-import ..OceanTurb: oncell, onface
+import ..OceanTurb: oncell, onface, maxsqrt, minuszero
 import .KPP: ∂B∂z, u★, w★, isunstable
 import .ModularKPP: AbstractModularKPPModel
 
 const nsol = 5
 @solution U V T S e
-
-@inline minuszero(args...) = -0
-
-@inline maxsqrt(ϕ::T) where T = sqrt(max(zero(T), ϕ))
-@inline maxsqrt(ϕ, i) = @inbounds maxsqrt(ϕ[i])
 
 "Returns √ϕ if ϕ is positive and not NaN. Otherwise returns 0."
 @inline function zeroed_sqrt(ϕ)

@@ -43,7 +43,7 @@ using
     OceanTurb,
     LinearAlgebra
 
-using OceanTurb: ∂z⁺ # upwards-biased difference
+using OceanTurb: maxsqrt, ∂z⁺ # upwards-biased difference
 
 import OceanTurb.KPP: 𝒲_unstable, 𝒲_stable, u★, w★, d,
                       isunstable, isforced, unresolved_kinetic_energy,
