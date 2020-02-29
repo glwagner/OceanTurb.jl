@@ -13,7 +13,7 @@ function makeplot!(axs, model)
 
     ϵ = CellField(model.grid)
     for i in eachindex(ϵ)
-        @inbounds ϵ[i] = TKEMassFlux.entrainment(model.grid.zc[i], model)
+        @inbounds ϵ[i] = TKEMassFlux.tracer_entrainment(model, i)
     end
 
     for ax in axs
@@ -51,11 +51,11 @@ end
 
 Qb = 1e-7
 N² = 1e-5
-Δt = 1minute
+Δt = 1second
 
 # The standard setup except with a plume model rather than a counter-gradient flux model.
-model = TKEMassFlux.Model(         grid = UniformGrid(N=64, H=256), 
-                          nonlocal_flux = TKEMassFlux.WitekDiagnosticPlumeModel(),
+model = TKEMassFlux.Model(         grid = UniformGrid(N=64, H=64), 
+                          nonlocal_flux = TKEMassFlux.WitekDiagnosticPlumeModel(CQ=4.0, Ca=0.1, Ce=4.0),
                                 stepper = :BackwardEuler
                          )
 
@@ -70,7 +70,9 @@ Qθ = Qb / (model.constants.α * model.constants.g)
 model.bcs.T.top = FluxBoundaryCondition(Qθ)
 model.bcs.T.bottom = GradientBoundaryCondition(dTdz)
 
+close("all")
+
 fig, axs = subplots(ncols=4, sharey=true)
 
-#run_until!(model, Δt, 1minute)
+run_until!(model, Δt, 1minute)
 makeplot!(axs, model)
