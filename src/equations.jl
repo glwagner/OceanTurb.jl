@@ -20,7 +20,6 @@ struct Equation{TA, TL, TK, TR, U}
     update! :: U
 end
 
-minuszero(args...) = -0
 funkynothing(args...) = nothing
 
 function Equation(;
