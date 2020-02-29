@@ -33,7 +33,7 @@ abstract type AbstractDiagnosticPlumeModel <: AbstractParameters end
 Base.@kwdef struct WitekDiagnosticPlumeModel{T} <: AbstractDiagnosticPlumeModel
      Ca :: T = 0.1
     Cbw :: T = 2.86
-     Ce :: T = 0.4
+     Ce :: T = 0.1
     Cew :: T = 0.572
      CQ :: T = 1.0
 end
