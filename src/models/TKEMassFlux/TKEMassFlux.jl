@@ -58,30 +58,32 @@ include("tke_equation.jl")
 include("wall_models.jl")
 include("diffusivities.jl")
 
+function ModelBoundaryConditions(FT=Float64; U = DefaultBoundaryConditions(FT),
+                                             V = DefaultBoundaryConditions(FT),
+                                             T = DefaultBoundaryConditions(FT),
+                                             S = DefaultBoundaryConditions(FT),
+                                 )
+
+    return (U=U, V=V, T=T, S=S)
+end
+
 function Model(; 
-                          grid = UniformGrid(N, H),
-                 constants = Constants(),
-             mixing_length = EquilibriumMixingLength(),
-        eddy_diffusivities = SinglePrandtlDiffusivities(),
-            tke_wall_model = PrescribedSurfaceTKEFlux(),
-              tke_equation = TKEParameters(),
-      boundary_layer_depth = nothing,
-             nonlocal_flux = nothing,
-  background_diffusivities = BackgroundDiffusivities(),
-                   stepper = :BackwardEuler,
-)
+                                   grid = UniformGrid(N, H),
+                              constants = Constants(),
+                          mixing_length = SimpleMixingLength(),
+                     eddy_diffusivities = IndependentDiffusivities(),
+                         tke_wall_model = PrescribedSurfaceTKEFlux(),
+                           tke_equation = TKEParameters(),
+                   boundary_layer_depth = nothing,
+                          nonlocal_flux = nothing,
+               background_diffusivities = BackgroundDiffusivities(),
+                                stepper = :BackwardEuler,
+                                    bcs = ModelBoundaryConditions(eltype(grid))
+              )
+
+    bcs = merge(bcs, (e = TKEBoundaryConditions(eltype(grid), tke_wall_model),))
 
     solution = Solution((CellField(grid) for i=1:nsol)...)
-
-    tke_bcs = TKEBoundaryConditions(eltype(grid), tke_wall_model)
-
-    bcs = (
-        U = DefaultBoundaryConditions(eltype(grid)),
-        V = DefaultBoundaryConditions(eltype(grid)),
-        T = DefaultBoundaryConditions(eltype(grid)),
-        S = DefaultBoundaryConditions(eltype(grid)),
-        e = tke_bcs
-    )
 
     Kϕ = (U=KU, V=KV, T=KT, S=KS, e=Ke)
     Rϕ = (U=RU, V=RV, T=RT, S=RS, e=Re)
