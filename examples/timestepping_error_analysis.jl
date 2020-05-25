@@ -4,7 +4,7 @@ using OceanTurb, OceanTurb.Diffusion, LinearAlgebra
 @use_pyplot_utils
 
 # First, we define the model.
-model = Diffusion.Model(N=100, H=π/2, K=1.0)
+model = Diffusion.Model(N=100, H=π/2, K=1.0, stepper=:ForwardEuler)
 z = model.grid.zc
 
 c_init(z) = cos(2z)
