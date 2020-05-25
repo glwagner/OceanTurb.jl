@@ -11,8 +11,8 @@
 
 Base.@kwdef struct SimpleMixingLength{T} <: AbstractParameters
     Cᴸᵟ :: T = 1.0
-    Cᴸʷ :: T = 0.4
-    Cᴸᵇ :: T = 0.64
+    Cᴸʷ :: T = 3.4684
+    Cᴸᵇ :: T = 3.9302
 end
 
 @inline function mixing_length(m::Model{<:SimpleMixingLength}, i)
