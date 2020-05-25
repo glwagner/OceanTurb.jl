@@ -39,7 +39,7 @@ TKEValueSurfaceConditions(T, wall_model::PrescribedSurfaceTKEValue) =
 #
 
 Base.@kwdef struct PrescribedSurfaceTKEFlux{T} <: AbstractParameters
-    Cʷu★ :: T = 2.0
+    Cʷu★ :: T = 1.3717
     CʷwΔ :: T = 1.0
 end
 
