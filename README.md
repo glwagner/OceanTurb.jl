@@ -82,5 +82,5 @@ on turbulence models we have implemented.
 [docs-img]: https://img.shields.io/badge/docs-latest-blue.svg
 [docs-url]: https://glwagner.github.io/OceanTurb.jl/latest/
 
-[travis-img]: https://travis-ci.org/glwagner/OceanTurb.jl.svg?branch=master
-[travis-url]: https://travis-ci.org/glwagner/OceanTurb.jl
+[travis-img]: https://travis-ci.com/glwagner/OceanTurb.jl.svg?branch=master
+[travis-url]: https://travis-ci.com/github/glwagner/OceanTurb.jl
