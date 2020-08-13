@@ -72,3 +72,79 @@ const IDP = IndependentDiffusivities
 @inline Cᴷe(m::Model{L, <:IDP}, i) where L = m.eddy_diffusivities.Cᴷe
 
 
+"""
+    struct RiDependentDiffusivities{T} <: AbstractParameters
+
+A diffusivity model in which momentum, tracers, and TKE
+each have independent Richardson number dependent diffusivities.
+
+The Richardson number is
+
+    ``Ri = ∂z B / ( (∂z U)² + (∂z V)² )`` ,
+
+where ``B`` is buoyancy and ``∂z`` denotes a vertical derviative.
+
+The Richardson-number dependent diffusivities are multiplied by the stability
+function
+
+    ``σ(Ri) = σ⁰ + σᵟ * step(Ri, Riᶜ, Riʷ)``
+    
+where ``σ⁰``, ``σᵟ``, ``Riᶜ``, and ``Riʷ`` are free parameters,
+and ``step`` is a smooth step function defined by
+
+    ``step(x, c, w) = 1/2 * (1 + tanh((x - c) / w))``.
+"""
+Base.@kwdef struct RiDependentDiffusivities{T} <: AbstractParameters
+     Cᴷu⁰ :: T = 0.0274 # Convection diffusivity parameter for velocity
+     Cᴷuᵟ :: T = 0.0    # Shift diffusivity parameter for velocity
+     Cᴷuᶜ :: T = 0.0    # Ri inflection diffusivity parameter for velocity
+     Cᴷuʷ :: T = 1.0    # Ri width Diffusivity parameter for velocity
+     Cᴷc⁰ :: T = 0.0498 # Convection diffusivity parameter for tracers
+     Cᴷcᵟ :: T = 0.0    # Shift diffusivity parameter for tracers
+     Cᴷcᶜ :: T = 0.0    # Ri inflection diffusivity parameter for tracers
+     Cᴷcʷ :: T = 1.0    # Ri width diffusivity parameter for tracers
+     Cᴷe⁰ :: T = 0.0329 # Convection diffusivity parameter for TKE
+     Cᴷeᵟ :: T = 0.0    # Shift diffusivity parameter for TKE
+     Cᴷeᶜ :: T = 0.0    # Ri inflection diffusivity parameter for TKE
+     Cᴷeʷ :: T = 1.0    # Ri width diffusivity parameter for TKE
+end
+
+const RiD = RiDependentDiffusivities
+
+@inline function Richardson_number(m, i)
+    N² = ∂B∂z(m, i)
+    return ifelse(N² == 0, 0.0, N² / shear_squared(m, i))
+end
+
+@inline step(x, c, w) = 1/2 * (1 + tanh((x - c) / w))
+
+@inline stability_function(Ri, σ⁰, σᵟ, Riᶜ, Riʷ) = σ⁰ + σᵟ * step(Ri, Riᶜ, Riʷ)
+
+@inline Cᴷu(m::Model{L, <:RiD}, i) where L = stability_function(
+                                                                Richardson_number(m, i),
+                                                                m.eddy_diffusivities.Cᴷu⁰,
+                                                                m.eddy_diffusivities.Cᴷuᵟ,
+                                                                m.eddy_diffusivities.Cᴷuᶜ,
+                                                                m.eddy_diffusivities.Cᴷuʷ,
+                                                               )
+
+@inline Cᴷv(m::Model{L, <:RiD}, i) where L = Cᴷu(m, i)
+
+@inline Cᴷc(m::Model{L, <:RiD}, i) where L = stability_function(
+                                                                Richardson_number(m, i),
+                                                                m.eddy_diffusivities.Cᴷc⁰,
+                                                                m.eddy_diffusivities.Cᴷcᵟ,
+                                                                m.eddy_diffusivities.Cᴷcᶜ,
+                                                                m.eddy_diffusivities.Cᴷcʷ,
+                                                               )
+
+@inline CᴷT(m::Model{L, <:RiD}, i) where L = Cᴷc(m, i)
+@inline CᴷS(m::Model{L, <:RiD}, i) where L = Cᴷc(m, i)
+
+@inline Cᴷe(m::Model{L, <:RiD}, i) where L = stability_function(
+                                                                Richardson_number(m, i),
+                                                                m.eddy_diffusivities.Cᴷe⁰,
+                                                                m.eddy_diffusivities.Cᴷeᵟ,
+                                                                m.eddy_diffusivities.Cᴷeᶜ,
+                                                                m.eddy_diffusivities.Cᴷeʷ,
+                                                               )

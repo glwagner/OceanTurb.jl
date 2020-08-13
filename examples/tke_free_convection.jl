@@ -80,9 +80,10 @@ dTdz = N² / (constants.α * constants.g)
 Qᶿ = Qᵇ / (constants.α * constants.g)
 
 # Build the model with a Backward Euler timestepper
-model = TKEMassFlux.Model(     grid = UniformGrid(N=N, H=H), 
-                            stepper = :BackwardEuler,
-                          constants = constants)
+model = TKEMassFlux.Model(              grid = UniformGrid(N=N, H=H), 
+                                     stepper = :BackwardEuler,
+                          eddy_diffusivities = TKEMassFlux.RiDependentDiffusivities(),
+                                   constants = constants)
 
 # Set initial condition
 T₀(z) = 20 + dTdz * z
