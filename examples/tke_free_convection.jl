@@ -58,14 +58,6 @@ function makeplot!(fig, axs, model)
     removespines("top", "right", "left")
     xlabel(L"K")
 
-    sca(axs[6])
-    cla()
-    plot(model.solution.U; label=L"U", linestyle="-", markerkwargs...)
-    plot(model.solution.V; label=L"V", linestyle="--", markerkwargs...)
-    removespines("top", "right", "left")
-    legend()
-    xlabel(L"U")
-
     for i = 2:length(axs)
         axs[i].tick_params(left=false, labelleft=false)
     end
@@ -80,11 +72,12 @@ constants = Constants(f=1e-4)
 
  N = 128        # Model resolution
  H = 128        # Vertical extent of the model domain
-Qᵘ = -1e-4      # Surface buoyancy flux (positive implies cooling)
+Qᵇ = 1e-7       # Surface buoyancy flux (positive implies cooling)
 N² = 1e-5       # Interior/initial temperature gradient
 Δt = 1minute
 
 dTdz = N² / (constants.α * constants.g)
+Qᶿ = Qᵇ / (constants.α * constants.g)
 
 # Build the model with a Backward Euler timestepper
 model = TKEMassFlux.Model(     grid = UniformGrid(N=N, H=H), 
@@ -96,11 +89,11 @@ T₀(z) = 20 + dTdz * z
 model.solution.T = T₀
 
 # Set boundary conditions
-model.bcs.U.top = FluxBoundaryCondition(Qᵘ)
+model.bcs.T.top = FluxBoundaryCondition(Qᶿ)
 model.bcs.T.bottom = GradientBoundaryCondition(dTdz)
 
 # Run the model
-fig, axs = subplots(ncols=6, figsize=(16, 5), sharey=true)
+fig, axs = subplots(ncols=5, figsize=(16, 5), sharey=true)
 
 for iplot = 1:12
     run_until!(model, Δt, iplot * 1hour)

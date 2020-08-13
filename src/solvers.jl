@@ -6,7 +6,7 @@ import LinearAlgebra: ldiv!
 Solve the tridiagonal system `A*x = b`, where `A` is tridiagonal and defined
 by the upper diagonal `u`, diagonal `d`, and lower diagonal `l`
 """
-function ldiv!(x, A::Tridiagonal, b)
+function ldiv!(x::AbstractArray, A::Tridiagonal, b::AbstractArray)
     N = length(x)
     N == length(b) || throw("x and b must have the same length.")
     return _tridiagonalsolve!(x, b, A.dl, A.d, A.du, N)
