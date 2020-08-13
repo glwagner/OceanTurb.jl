@@ -22,9 +22,14 @@ end
 
 @inline sqrt_e(m, i) = @inbounds maxsqrt(m.solution.e[i])
 
+"Returns (∂z U)^2 + (∂z V)^2 at cell interfaces."
+@inline shear_squared(m, i) = ∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2
+
+"Returns ∂z B at cell interfaces."
 @inline ∂B∂z(m, i) = ∂B∂z(m.solution.T, m.solution.S, 
                           m.constants.g, m.constants.α, m.constants.β, i)
 
+"Returns ∂z B at cell centers."
 @inline oncell_∂B∂z(m, i) = oncell(∂B∂z, m, i) # Fallback valid for linear equations of state
 
 @inline sqrt_∂B∂z(m, i) = maxsqrt(∂B∂z(m, i))

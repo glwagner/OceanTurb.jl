@@ -2,9 +2,6 @@
 @inline diffusivity_mixing_length(m, i) = mixing_length(m, i)
 @inline dissipation_length(m, i) = mixing_length(m, i)
 
-"Returns (∂z U)^2 + (∂z V)^2 at cell interfaces."
-@inline shear_squared(m, i) = ∂z(m.solution.U, i)^2 + ∂z(m.solution.V, i)^2
-
 #
 # A "simple" mixing length
 #
