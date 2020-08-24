@@ -95,18 +95,18 @@ and ``step`` is a smooth step function defined by
     ``step(x, c, w) = 1/2 * (1 + tanh((x - c) / w))``.
 """
 Base.@kwdef struct RiDependentDiffusivities{T} <: AbstractParameters
-     Cᴷu⁰ :: T = 0.0274 # Convection diffusivity parameter for velocity
-     Cᴷuᵟ :: T = 0.0    # Shift diffusivity parameter for velocity
+     Cᴷu⁰ :: T = 0.02   # Convection diffusivity parameter for velocity
+     Cᴷuᵟ :: T = 0.01   # Shift diffusivity parameter for velocity
      Cᴷuᶜ :: T = 0.0    # Ri inflection diffusivity parameter for velocity
-     Cᴷuʷ :: T = 1.0    # Ri width Diffusivity parameter for velocity
-     Cᴷc⁰ :: T = 0.0498 # Convection diffusivity parameter for tracers
-     Cᴷcᵟ :: T = 0.0    # Shift diffusivity parameter for tracers
+     Cᴷuʷ :: T = 0.1    # Ri width Diffusivity parameter for velocity
+     Cᴷc⁰ :: T = 0.04   # Convection diffusivity parameter for tracers
+     Cᴷcᵟ :: T = 0.01   # Shift diffusivity parameter for tracers
      Cᴷcᶜ :: T = 0.0    # Ri inflection diffusivity parameter for tracers
-     Cᴷcʷ :: T = 1.0    # Ri width diffusivity parameter for tracers
-     Cᴷe⁰ :: T = 0.0329 # Convection diffusivity parameter for TKE
-     Cᴷeᵟ :: T = 0.0    # Shift diffusivity parameter for TKE
+     Cᴷcʷ :: T = 0.1    # Ri width diffusivity parameter for tracers
+     Cᴷe⁰ :: T = 0.02   # Convection diffusivity parameter for TKE
+     Cᴷeᵟ :: T = 0.01   # Shift diffusivity parameter for TKE
      Cᴷeᶜ :: T = 0.0    # Ri inflection diffusivity parameter for TKE
-     Cᴷeʷ :: T = 1.0    # Ri width diffusivity parameter for TKE
+     Cᴷeʷ :: T = 0.1    # Ri width diffusivity parameter for TKE
 end
 
 const RiD = RiDependentDiffusivities
