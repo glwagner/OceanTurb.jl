@@ -113,11 +113,11 @@ end
 
 @inline step(x, c, w) = 1/2 * (1 + tanh((x - c) / w))
 
-@inline stability_function(Ri, σ⁰, σᵟ, Δ) = σ⁰ + σᵟ * step(Ri, 0.0, Δ)
+@inline stability_function(Ri, σ⁻, σᵟ, Δ) = σ⁻ + σᵟ * step(Ri, 0.0, Δ)
 
 @inline Cᴷu(m::Model{L, <:RiD}, i) where L = stability_function(
                                                                 Richardson_number(m, i),
-                                                                m.eddy_diffusivities.Cᴷu⁰,
+                                                                m.eddy_diffusivities.Cᴷu⁻,
                                                                 m.eddy_diffusivities.Cᴷuᵟ,
                                                                 m.eddy_diffusivities.CᴷΔRi,
                                                                )
@@ -126,7 +126,7 @@ end
 
 @inline Cᴷc(m::Model{L, <:RiD}, i) where L = stability_function(
                                                                 Richardson_number(m, i),
-                                                                m.eddy_diffusivities.Cᴷc⁰,
+                                                                m.eddy_diffusivities.Cᴷc⁻,
                                                                 m.eddy_diffusivities.Cᴷcᵟ,
                                                                 m.eddy_diffusivities.CᴷΔRi,
                                                                )
@@ -136,7 +136,7 @@ end
 
 @inline Cᴷe(m::Model{L, <:RiD}, i) where L = stability_function(
                                                                 Richardson_number(m, i),
-                                                                m.eddy_diffusivities.Cᴷe⁰,
+                                                                m.eddy_diffusivities.Cᴷe⁻,
                                                                 m.eddy_diffusivities.Cᴷeᵟ,
                                                                 m.eddy_diffusivities.CᴷΔRi,
                                                                )
