@@ -101,7 +101,8 @@ Base.@kwdef struct RiDependentDiffusivities{T} <: AbstractParameters
      Cᴷcᵟ  :: T = 0.01   # Shift diffusivity parameter for tracers
      Cᴷe⁻  :: T = 0.02   # Convection diffusivity parameter for TKE
      Cᴷeᵟ  :: T = 0.01   # Shift diffusivity parameter for TKE
-     CᴷΔRi :: T = 0.1    # Ri width Diffusivity parameter for velocity
+     CᴷRiʷ :: T = 0.1    # Ri width parameter
+     CᴷRiᶜ :: T = 0.1    # "Central" Ri parameter
 end
 
 const RiD = RiDependentDiffusivities
@@ -113,13 +114,14 @@ end
 
 @inline step(x, c, w) = 1/2 * (1 + tanh((x - c) / w))
 
-@inline stability_function(Ri, σ⁻, σᵟ, Δ) = σ⁻ + σᵟ * step(Ri, 0.0, Δ)
+@inline stability_function(Ri, σ⁻, σᵟ, c, w) = σ⁻ + σᵟ * step(Ri, c, w)
 
 @inline Cᴷu(m::Model{L, <:RiD}, i) where L = stability_function(
                                                                 Richardson_number(m, i),
                                                                 m.eddy_diffusivities.Cᴷu⁻,
                                                                 m.eddy_diffusivities.Cᴷuᵟ,
-                                                                m.eddy_diffusivities.CᴷΔRi,
+                                                                m.eddy_diffusivities.CᴷRiᶜ,
+                                                                m.eddy_diffusivities.CᴷRiʷ,
                                                                )
 
 @inline Cᴷv(m::Model{L, <:RiD}, i) where L = Cᴷu(m, i)
@@ -128,7 +130,8 @@ end
                                                                 Richardson_number(m, i),
                                                                 m.eddy_diffusivities.Cᴷc⁻,
                                                                 m.eddy_diffusivities.Cᴷcᵟ,
-                                                                m.eddy_diffusivities.CᴷΔRi,
+                                                                m.eddy_diffusivities.CᴷRiᶜ,
+                                                                m.eddy_diffusivities.CᴷRiʷ,
                                                                )
 
 @inline CᴷT(m::Model{L, <:RiD}, i) where L = Cᴷc(m, i)
@@ -138,5 +141,6 @@ end
                                                                 Richardson_number(m, i),
                                                                 m.eddy_diffusivities.Cᴷe⁻,
                                                                 m.eddy_diffusivities.Cᴷeᵟ,
-                                                                m.eddy_diffusivities.CᴷΔRi,
+                                                                m.eddy_diffusivities.CᴷRiᶜ,
+                                                                m.eddy_diffusivities.CᴷRiʷ,
                                                                )
