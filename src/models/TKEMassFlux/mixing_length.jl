@@ -12,7 +12,7 @@ end
 
 @inline function mixing_length(m::Model{<:SimpleMixingLength}, i)
     # Two mixing lengths based on stratification and distance from surface:
-    @inbounds ℓᶻ = - m.grid.zc[i]
+    @inbounds ℓᶻ = abs(m.grid.zc[i])
     ℓᵇ = nan2inf(m.mixing_length.Cᴸᵇ * sqrt_e(m, i) / oncell(sqrt_∂B∂z, m, i))
 
     # Take hard minimum:
