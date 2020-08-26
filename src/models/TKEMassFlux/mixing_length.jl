@@ -14,13 +14,16 @@ end
     # Two mixing lengths:
     
     # 1. Based on distance from surface (and limited by grid spacing)
-    @inbounds ℓᶻ = max(m.grid.Δf / 2, - m.grid.zc[i]) # mixing length may be evaluated above surface
+    @inbounds ℓᶻ = - m.grid.zc[i]
 
     # 2. Based on stratification
     ℓᵇ = nan2inf(m.mixing_length.Cᴸᵇ * sqrt_e(m, i) / oncell(sqrt_∂B∂z, m, i))
 
     # Take hard minimum between the two:
     ℓ = min(ℓᶻ, ℓᵇ)
+
+    # Limit mixing length to half cell width
+    ℓ = max(ℓ, Δf(m.grid, i) / 2)
 
     return ℓ
 end
