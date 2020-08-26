@@ -95,18 +95,13 @@ and ``step`` is a smooth step function defined by
     ``step(x, c, w) = 1/2 * (1 + tanh((x - c) / w))``.
 """
 Base.@kwdef struct RiDependentDiffusivities{T} <: AbstractParameters
-     Cᴷu⁰ :: T = 0.02   # Convection diffusivity parameter for velocity
-     Cᴷuᵟ :: T = 0.01   # Shift diffusivity parameter for velocity
-     Cᴷuᶜ :: T = 0.0    # Ri inflection diffusivity parameter for velocity
-     Cᴷuʷ :: T = 0.1    # Ri width Diffusivity parameter for velocity
-     Cᴷc⁰ :: T = 0.04   # Convection diffusivity parameter for tracers
-     Cᴷcᵟ :: T = 0.01   # Shift diffusivity parameter for tracers
-     Cᴷcᶜ :: T = 0.0    # Ri inflection diffusivity parameter for tracers
-     Cᴷcʷ :: T = 0.1    # Ri width diffusivity parameter for tracers
-     Cᴷe⁰ :: T = 0.02   # Convection diffusivity parameter for TKE
-     Cᴷeᵟ :: T = 0.01   # Shift diffusivity parameter for TKE
-     Cᴷeᶜ :: T = 0.0    # Ri inflection diffusivity parameter for TKE
-     Cᴷeʷ :: T = 0.1    # Ri width diffusivity parameter for TKE
+     Cᴷu⁻  :: T = 0.02   # Convection diffusivity parameter for velocity
+     Cᴷuᵟ  :: T = 0.01   # Shift diffusivity parameter for velocity
+     Cᴷc⁻  :: T = 0.04   # Convection diffusivity parameter for tracers
+     Cᴷcᵟ  :: T = 0.01   # Shift diffusivity parameter for tracers
+     Cᴷe⁻  :: T = 0.02   # Convection diffusivity parameter for TKE
+     Cᴷeᵟ  :: T = 0.01   # Shift diffusivity parameter for TKE
+     CᴷΔRi :: T = 0.1    # Ri width Diffusivity parameter for velocity
 end
 
 const RiD = RiDependentDiffusivities
@@ -118,14 +113,13 @@ end
 
 @inline step(x, c, w) = 1/2 * (1 + tanh((x - c) / w))
 
-@inline stability_function(Ri, σ⁰, σᵟ, Riᶜ, Riʷ) = σ⁰ + σᵟ * step(Ri, Riᶜ, Riʷ)
+@inline stability_function(Ri, σ⁰, σᵟ, Δ) = σ⁰ + σᵟ * step(Ri, 0.0, Δ)
 
 @inline Cᴷu(m::Model{L, <:RiD}, i) where L = stability_function(
                                                                 Richardson_number(m, i),
                                                                 m.eddy_diffusivities.Cᴷu⁰,
                                                                 m.eddy_diffusivities.Cᴷuᵟ,
-                                                                m.eddy_diffusivities.Cᴷuᶜ,
-                                                                m.eddy_diffusivities.Cᴷuʷ,
+                                                                m.eddy_diffusivities.CᴷΔRi,
                                                                )
 
 @inline Cᴷv(m::Model{L, <:RiD}, i) where L = Cᴷu(m, i)
@@ -134,8 +128,7 @@ end
                                                                 Richardson_number(m, i),
                                                                 m.eddy_diffusivities.Cᴷc⁰,
                                                                 m.eddy_diffusivities.Cᴷcᵟ,
-                                                                m.eddy_diffusivities.Cᴷcᶜ,
-                                                                m.eddy_diffusivities.Cᴷcʷ,
+                                                                m.eddy_diffusivities.CᴷΔRi,
                                                                )
 
 @inline CᴷT(m::Model{L, <:RiD}, i) where L = Cᴷc(m, i)
@@ -145,6 +138,5 @@ end
                                                                 Richardson_number(m, i),
                                                                 m.eddy_diffusivities.Cᴷe⁰,
                                                                 m.eddy_diffusivities.Cᴷeᵟ,
-                                                                m.eddy_diffusivities.Cᴷeᶜ,
-                                                                m.eddy_diffusivities.Cᴷeʷ,
+                                                                m.eddy_diffusivities.CᴷΔRi,
                                                                )
