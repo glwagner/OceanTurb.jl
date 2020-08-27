@@ -87,12 +87,12 @@ where ``B`` is buoyancy and ``∂z`` denotes a vertical derviative.
 The Richardson-number dependent diffusivities are multiplied by the stability
 function
 
-    ``σ(Ri) = σ⁰ + σᵟ * step(Ri, Riᶜ, Riʷ)``
+    ``σ(Ri) = σ⁻ + (σ⁺ - σ⁻) * step(Ri, Riᶜ, Riʷ)``
     
 where ``σ⁰``, ``σᵟ``, ``Riᶜ``, and ``Riʷ`` are free parameters,
 and ``step`` is a smooth step function defined by
 
-    ``step(x, c, w) = 1/2 * (1 + tanh((x - c) / w))``.
+    ``step(x, c, w) = (1 + tanh((x - c) / w)) / 2``.
 """
 Base.@kwdef struct RiDependentDiffusivities{T} <: AbstractParameters
      Cᴷu⁻  :: T = 0.02   # Convection diffusivity parameter for velocity
@@ -109,15 +109,17 @@ const RiD = RiDependentDiffusivities
 
 @inline function Richardson_number(m, i)
     N² = ∂B∂z(m, i)
-    return ifelse(N² == 0, 0.0, N² / shear_squared(m, i))
+    return ifelse(N² == 0, N², N² / shear_squared(m, i))
 end
 
-@inline step(x, c, w) = 1/2 * (1 + tanh((x - c) / w))
+@inline cell_Richardson_number(m, i) = oncell(Richardson_number, m, i)
+
+@inline step(x, c, w) = (1 + tanh((x - c) / w)) / 2
 
 @inline stability_function(Ri, σ⁻, σ⁺, c, w) = σ⁻ + (σ⁺ - σ⁻) * step(Ri, c, w)
 
 @inline Cᴷu(m::Model{L, <:RiD}, i) where L = stability_function(
-                                                                Richardson_number(m, i),
+                                                                cell_Richardson_number(m, i),
                                                                 m.eddy_diffusivities.Cᴷu⁻,
                                                                 m.eddy_diffusivities.Cᴷu⁺,
                                                                 m.eddy_diffusivities.CᴷRiᶜ,
@@ -127,7 +129,7 @@ end
 @inline Cᴷv(m::Model{L, <:RiD}, i) where L = Cᴷu(m, i)
 
 @inline Cᴷc(m::Model{L, <:RiD}, i) where L = stability_function(
-                                                                Richardson_number(m, i),
+                                                                cell_Richardson_number(m, i),
                                                                 m.eddy_diffusivities.Cᴷc⁻,
                                                                 m.eddy_diffusivities.Cᴷc⁺,
                                                                 m.eddy_diffusivities.CᴷRiᶜ,
@@ -138,7 +140,7 @@ end
 @inline CᴷS(m::Model{L, <:RiD}, i) where L = Cᴷc(m, i)
 
 @inline Cᴷe(m::Model{L, <:RiD}, i) where L = stability_function(
-                                                                Richardson_number(m, i),
+                                                                cell_Richardson_number(m, i),
                                                                 m.eddy_diffusivities.Cᴷe⁻,
                                                                 m.eddy_diffusivities.Cᴷe⁺,
                                                                 m.eddy_diffusivities.CᴷRiᶜ,
