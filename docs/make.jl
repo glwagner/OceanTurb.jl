@@ -7,7 +7,8 @@ makedocs(
        clean = true,
      doctest = false,
    checkdocs = :all,
-      format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true"),
+      format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true",
+                               mathengine = Documenter.MathJax2()),
      authors = "Gregory L. Wagner",
     sitename = "OceanTurb.jl",
 
@@ -26,6 +27,7 @@ makedocs(
                       ]
 )
 
-deploydocs(
-  repo = "github.com/glwagner/OceanTurb.jl.git",
-)
+deploydocs(        repo = "github.com/glwagner/OceanTurb.jl.git",
+              versions = ["stable" => "v^", "v#.#", "dev" => "dev"],
+          push_preview = true
+          )
