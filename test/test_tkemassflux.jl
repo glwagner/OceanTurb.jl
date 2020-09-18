@@ -77,7 +77,7 @@ wall_models = (
                                                                 tke_equation,
                                                                 wall_model,
                                                                 eddy_diffusivity_model)
-                            println("testing... OK")
+                            println("testing... OK") # this is a hack to avoid travis-ci timeout
                         end
                     end
                 end
