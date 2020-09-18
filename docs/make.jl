@@ -2,6 +2,10 @@ using
   Documenter,
   OceanTurb
 
+# Set up a timer to print a space ' ' every 240 seconds. This is to avoid Travis CI
+# timing out when building demanding Literate.jl examples.
+Timer(t -> println(" "), 0, interval=240)
+
 makedocs(
      modules = [OceanTurb],
        clean = true,
