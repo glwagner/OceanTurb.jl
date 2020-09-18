@@ -6,11 +6,11 @@ os:
 julia:
   - 1.1
   - 1.5
-  - nightly
+  # - nightly
 
-jobs:
-  allow_failures:
-    - julia: nightly
+# jobs:
+#   allow_failures:
+#     - julia: nightly
 
   include:
     - stage: "Documentation"

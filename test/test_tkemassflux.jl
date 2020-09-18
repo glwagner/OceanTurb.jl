@@ -60,7 +60,7 @@ wall_models = (
 @testset "TKEMassFlux" begin
     @test test_default_model_init()
 
-    println("TKEMassFlux begin:")
+    println("TKEMassFlux tests begin:")
     println(" ")
     
     # Modularity
