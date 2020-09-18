@@ -60,6 +60,9 @@ wall_models = (
 @testset "TKEMassFlux" begin
     @test test_default_model_init()
 
+    println("TKEMassFlux begin:")
+    println(" ")
+    
     # Modularity
     for boundary_layer_depth in boundary_layer_depth_models
         for nonlocal_flux in nonlocal_flux_models
@@ -74,7 +77,7 @@ wall_models = (
                                                                 tke_equation,
                                                                 wall_model,
                                                                 eddy_diffusivity_model)
-
+                            println("testing... OK")
                         end
                     end
                 end
