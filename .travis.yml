@@ -1,11 +1,22 @@
 language: julia
-julia: 1.1
-os: linux
+
+os:
+  - osx
+  - linux
+
+julia:
+  - 1.1
+  - 1.5
+  - nightly
+
+jobs:
+  allow_failures:
+    - julia: nightly
 
 jobs:
   include:
     - stage: "Documentation"
-      julia: 1.1
+      julia: 1.4
       os: linux
       script:
         - julia --project=docs/ -e 'using Pkg; Pkg.instantiate();
