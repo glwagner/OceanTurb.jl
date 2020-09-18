@@ -27,14 +27,14 @@ using OceanTurb
 @use_pyplot_utils # add utilities for plotting OceanTurb Fields
 
      N = 128        # Model resolution
-     L = 128        # Vertical extent of the model domain
+     H = 128        # Vertical extent of the model domain
     Qb = 1e-7       # Surface buoyancy flux (positive implies cooling)
   dTdz = 1e-3       # Interior/initial temperature gradient
     Δt = 10minute   # Time step size
 tfinal = 8hour      # Final time
 
 # Build the model with a Backward Euler timestepper
-model = KPP.Model(N=N, L=L, stepper=:BackwardEuler)
+model = KPP.Model(N=N, H=H, stepper=:BackwardEuler)
 
 # Set initial condition
 T₀(z) = 20 + dTdz * z
@@ -65,10 +65,6 @@ to produce
 which compares various flavors of the 'KPP' boundary layer model
 with one another.
 
-Check our
-[diffusion examples notebook](https://github.com/glwagner/OceanTurb.jl/blob/master/examples/diffusion_example.ipynb)
-and scripts in `examples/` to get started.
-
 # The turbulence models
 
 Check the documentation or `src/models/` for the latest update
@@ -76,7 +72,7 @@ on turbulence models we have implemented.
 
 # Authors
 
-[Gregory Wagner](glwagner.github.io).
+[Gregory Wagner](https://glwagner.github.io).
 
 
 [docs-img]: https://img.shields.io/badge/docs-latest-blue.svg
