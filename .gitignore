@@ -4,6 +4,7 @@
 docs/build
 *.DS_Store
 examples/.ipynb_checkpoints/
+**/Manifest.toml
 
 *.mem
 *.png

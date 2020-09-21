@@ -3,6 +3,8 @@ using
     LinearAlgebra,
     Test
 
+Timer(t -> println(" "), 0, interval=240)
+
 #
 # Run tests
 #
