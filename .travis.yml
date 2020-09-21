@@ -12,6 +12,7 @@ julia:
 #   allow_failures:
 #     - julia: nightly
 
+jobs:
   include:
     - stage: "Documentation"
       julia: 1.5
