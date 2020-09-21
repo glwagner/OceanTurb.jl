@@ -75,8 +75,8 @@ on turbulence models we have implemented.
 [Gregory Wagner](https://glwagner.github.io).
 
 
-[docs-img]: https://img.shields.io/badge/docs-latest-blue.svg
-[docs-url]: https://glwagner.github.io/OceanTurb.jl/latest/
+[docs-img]: https://img.shields.io/badge/docs-dev-blue.svg
+[docs-url]: https://glwagner.github.io/OceanTurb.jl/dev/
 
 [travis-img]: https://travis-ci.com/glwagner/OceanTurb.jl.svg?branch=master
 [travis-url]: https://travis-ci.com/github/glwagner/OceanTurb.jl
