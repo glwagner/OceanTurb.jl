@@ -7,22 +7,23 @@
 #
 
 Base.@kwdef struct SimpleMixingLength{T} <: AbstractParameters
-    Cᴸᵟ :: T = 1.0
-    Cᴸʷ :: T = 3.4684
     Cᴸᵇ :: T = 3.9302
 end
 
 @inline function mixing_length(m::Model{<:SimpleMixingLength}, i)
-    # Two mixing lengths based on stratification and distance from surface:
-    @inbounds ℓᶻ = - m.mixing_length.Cᴸʷ * m.grid.zc[i]
+    # Two mixing lengths:
+    
+    # 1. Based on distance from surface (and limited by grid spacing)
+    @inbounds ℓᶻ = - m.grid.zc[i]
+
+    # 2. Based on stratification
     ℓᵇ = nan2inf(m.mixing_length.Cᴸᵇ * sqrt_e(m, i) / oncell(sqrt_∂B∂z, m, i))
 
-    # Take hard minimum:
+    # Take hard minimum between the two:
     ℓ = min(ℓᶻ, ℓᵇ)
 
-    # Finally, limit by some factor of the local cell width
-    ℓᵐⁱⁿ = m.mixing_length.Cᴸᵟ * Δf(m.grid, i)
-    ℓ = max(ℓ, ℓᵐⁱⁿ)
+    # Limit mixing length to half cell width
+    ℓ = max(ℓ, Δf(m.grid, i) / 2)
 
     return ℓ
 end
@@ -75,35 +76,3 @@ end
         return max(ℓ, ℓᵟ) # limits mixing length to be larger than grid spacing
     end
 end
-
-#
-# Mixing length model from Tan et al 2018.
-#
-
-#=
-Base.@kwdef struct TanEtAl2018MixingLength{T} <: AbstractParameters
-       Cᴸᵟ :: T = 1.0
-       Cᴸʷ :: T = 0.4
-    Cᵃunst :: T = -100.0
-    Cᵃstab :: T = 2.7
-    Cⁿunst :: T = 0.2   
-    Cⁿstab :: T = -1.0
-end
-
-@inline ζ(Ca, Qb, u★, z) = Ca * Qb / u★^3 * z
- 
-@inline function mixing_length(m::Model{<:TanEtAl2018MixingLength}, i)
-    if isunstable(m)
-        Cκ, Ca, Cn = m.mixing_length.Cᴸʷ, m.mixing_length.Cᵃunst, m.mixing_length.Cⁿunst
-        ℓᶻ = @inbounds Cκ * m.grid.zc[i] * (1 - ζ(Ca, m.state.Qb, u★(m)^3, m.grid.zc[i]))^Cn
-    else
-        Cκ, Ca, Cn = m.mixing_length.Cᴸʷ, m.mixing_length.Cᵃstab, m.mixing_length.Cⁿstab
-        ℓᶻ = @inbounds Cκ * m.grid.zc[i] * (1 - ζ(Ca, m.state.Qb, u★(m)^3, m.grid.zc[i]))^Cn
-    end
-
-    ℓᵟ = m.mixing_length.Cᴸᵟ * Δf(m.grid, i)
-    ℓ = max(ℓᶻ, ℓᵟ)
-
-    return ℓ
-end
-=#
