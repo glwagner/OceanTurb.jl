@@ -37,7 +37,7 @@ end
 "Returns a velocity scale associated with convection across grid cell i."
 @inline wΔ³(m, i=m.grid.N) = max(zero(eltype(m.grid)), m.state.Qb) * Δc(m.grid, i)
 
-mutable struct Model{L, K, W, N, E, H, K0, C, ST, G, TS, S, BC, T} <: AbstractModel{TS, G, T}
+mutable struct Model{L, K, A, W, N, E, H, K0, C, ST, G, TS, S, BC, T} <: AbstractModel{TS, G, T}
 
                        clock :: Clock{T}
                         grid :: G
@@ -46,6 +46,7 @@ mutable struct Model{L, K, W, N, E, H, K0, C, ST, G, TS, S, BC, T} <: AbstractMo
                          bcs :: BC
                mixing_length :: L
           eddy_diffusivities :: K
+       convective_adjustment :: A
               tke_wall_model :: W
                 tke_equation :: E
         boundary_layer_depth :: H
@@ -62,6 +63,7 @@ include("mixing_length.jl")
 include("tke_equation.jl")
 include("wall_models.jl")
 include("diffusivities.jl")
+include("convective_adjustment.jl")
 
 function ModelBoundaryConditions(FT=Float64; U = DefaultBoundaryConditions(FT),
                                              V = DefaultBoundaryConditions(FT),
@@ -77,6 +79,7 @@ function Model(;
                               constants = Constants(),
                           mixing_length = SimpleMixingLength(),
                      eddy_diffusivities = IndependentDiffusivities(),
+                  convective_adjustment = nothing,
                          tke_wall_model = PrescribedSurfaceTKEFlux(),
                            tke_equation = TKEParameters(),
                    boundary_layer_depth = nothing,
@@ -105,6 +108,7 @@ function Model(;
                  bcs, 
                  mixing_length, 
                  eddy_diffusivities,
+                 convective_adjustment,
                  tke_wall_model, 
                  tke_equation, 
                  boundary_layer_depth,
@@ -114,7 +118,6 @@ function Model(;
                  State(grid, mixing_length, boundary_layer_depth, nonlocal_flux)
                 )
 end
-
 
 @inline RU(m, i) = @inbounds   m.constants.f * m.solution.V[i] - ∂z_NLᵁ(m, i)
 @inline RV(m, i) = @inbounds - m.constants.f * m.solution.U[i] - ∂z_NLⱽ(m, i)
