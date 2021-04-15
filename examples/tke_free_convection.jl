@@ -82,7 +82,7 @@ Qᶿ = Qᵇ / (constants.α * constants.g)
 # Build the model with a Backward Euler timestepper
 model = TKEMassFlux.Model(                  grid = UniformGrid(N=N, H=H), 
                                          stepper = :BackwardEuler,
-                           convective_adjustment = TKEMassFlux.FluxProportionalConvectiveAdjustment(Cᴬ=10.0),
+                           convective_adjustment = TKEMassFlux.VariablePrandtlConvectiveAdjustment(),
                                        constants = constants)
 
 # Set initial condition
