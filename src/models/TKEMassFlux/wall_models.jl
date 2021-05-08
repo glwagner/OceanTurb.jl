@@ -43,9 +43,8 @@ Base.@kwdef struct PrescribedSurfaceTKEFlux{T} <: AbstractParameters
     CʷwΔ :: T = 1.0
 end
 
-@inline (boundary_tke::PrescribedSurfaceTKEFlux)(model) = 
-    - model.tke_equation.Cᴰ * (   boundary_tke.Cʷu★ * u★(model)^3
-                                + boundary_tke.CʷwΔ * wΔ³(model)  )
+@inline prescribed_surface_tke_flux(model) =  - model.tke_equation.Cᴰ * (   model.tke_wall_model.Cʷu★ * u★(model)^3
+                                                                          + model.tke_wall_model.CʷwΔ * wΔ³(model) )  
 
 TKEBoundaryConditions(T, wall_model::PrescribedSurfaceTKEFlux) =
-    FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), FluxBoundaryCondition(wall_model))
+    FieldBoundaryConditions(GradientBoundaryCondition(-zero(T)), FluxBoundaryCondition(prescribed_surface_tke_flux))
